@@ -11,7 +11,7 @@
   <meta property="og:title" content="Centro de Alto Rendimiento La Fábrica">
   <meta property="og:description" content="Formamos jugadores completos: técnica, fuerza y mentalidad. Villa María del Triunfo, Lima Sur.">
   <meta property="og:type" content="website">
-  <!-- Imagen al compartir el enlace (requiere subir img/logo.png) -->
+  <!-- Imagen al compartir el enlace -->
   <meta property="og:image" content="https://radyz910632604-tech.github.io/web-la-fabrica/img/logo.png">
 
   <link rel="icon" type="image/png" href="favicon.png">
@@ -30,6 +30,7 @@
       --muted: #b5ad9c;
       --accent: #f5b914;      /* dorado */
       --accent-dark: #d69a06;
+      --hot: #ffffff;
       --gold-grad: linear-gradient(135deg, #ffd955 0%, #f5b914 45%, #c88a04 100%);
       --wa: #25d366;
       --wa-dark: #1ebe5a;
@@ -134,7 +135,6 @@
         linear-gradient(180deg, rgba(10,10,10,.6) 0%, rgba(10,10,10,.82) 55%, var(--bg) 100%),
         radial-gradient(circle at 80% 20%, rgba(245,185,20,.18), transparent 50%);
     }
-    .hero-crest { width: clamp(110px, 28vw, 170px); height: auto; margin-bottom: 18px; filter: drop-shadow(0 10px 30px rgba(245,185,20,.35)); }
     .hero-tag {
       display: inline-flex; align-items: center; gap: 8px;
       background: rgba(245,185,20,.12);
@@ -180,23 +180,16 @@
     /* ---------- Qué entrenamos ---------- */
     .training { background: var(--bg-2); }
     .section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; margin-bottom: 40px; }
-    .cat-chip { display: inline-flex; align-items: center; gap: 10px; background: #fff; color: #0a0a0a; padding: 12px 20px; border-radius: 999px; font-weight: 800; }
+    .cat-chip { display: inline-flex; align-items: center; gap: 10px; background: var(--hot); color: #0a0a0a; padding: 12px 20px; border-radius: 999px; font-weight: 800; }
     .cat-chip small { font-weight: 500; opacity: .9; }
     .train-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
     .train-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; transition: transform .2s, border-color .2s; }
     .train-card:hover { transform: translateY(-4px); border-color: var(--accent); }
     .train-card .photo-slot { border: 0; border-radius: 0; aspect-ratio: 4 / 3; }
     .train-card .body { padding: 20px; }
-    .train-ico { width: 56px; height: 56px; border-radius: 14px; background: rgba(245,185,20,.12); border: 1px solid rgba(245,185,20,.35); display: grid; place-items: center; font-size: 1.7rem; margin-bottom: 14px; }
-    .train-card .body { padding: 24px 22px; }
     .train-card .num { font-family: var(--display); color: var(--accent); font-size: 1.1rem; letter-spacing: .1em; }
     .train-card h3 { margin: 4px 0 8px; }
     .train-card p { margin: 0; color: var(--muted); font-size: .95rem; }
-
-    /* ---------- Galería ---------- */
-    .gallery { columns: 3 260px; column-gap: 14px; }
-    .gallery figure { margin: 0 0 14px; break-inside: avoid; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: var(--card); }
-    .gallery img { width: 100%; height: auto; }
 
     /* ---------- Planes ---------- */
     .plans-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; align-items: stretch; }
@@ -343,8 +336,6 @@
       .pillar strong { font-size: 1.25rem; }
       .section-head { margin-bottom: 28px; }
       .wa-float { width: 58px; height: 58px; right: 14px; bottom: 14px; }
-      .gallery { columns: 2; column-gap: 10px; }
-      .gallery figure { margin-bottom: 10px; }
     }
   </style>
 </head>
@@ -354,14 +345,13 @@
   <header class="header" id="header">
     <div class="container">
       <a href="#inicio" class="logo" aria-label="La Fábrica, ir al inicio">
-        <!-- LOGO: sube tu logo como img/logo.png (fondo transparente) -->
-        <img src="img/logo.png" alt="" onerror="this.remove()">
+        <!-- LOGO: img/logo.png -->
+        <img src="img/logo.png" alt="">
         <span class="logo-text">LA FÁBRICA</span>
       </a>
       <nav class="nav" id="nav">
         <a href="#nosotros">Nosotros</a>
         <a href="#entrenamos">Entrenamos</a>
-        <a href="#galeria">Galería</a>
         <a href="#planes">Planes</a>
         <a href="#historia">Historias</a>
         <a href="#ubicacion">Ubicación</a>
@@ -380,7 +370,6 @@
         <img src="img/hero.jpg" alt="Jugadores y familias de La Fábrica en la cancha">
       </div>
       <div class="container">
-        <img class="hero-crest" src="img/logo.png" alt="Escudo de La Fábrica" onerror="this.remove()">
         <span class="hero-tag"><span class="dot"></span> Villa María del Triunfo · Lima Sur</span>
         <h1>
           <small>Centro de Alto Rendimiento</small>
@@ -413,9 +402,8 @@
     <section id="nosotros">
       <div class="container about-grid">
         <div class="photo-slot about-photo reveal">
-          <!-- FOTO COACH: sube el póster del coach como img/coach.jpg -->
-          <img src="img/coach.jpg" alt="Coach Juan Kenciño" loading="lazy" style="object-position: center 15%;"
-               onerror="this.onerror=null;this.src='https://placehold.co/800x1000/191714/f5b914?text=Sube+img/coach.jpg'">
+          <!-- FOTO COACH: img/coach.jpg -->
+          <img src="img/coach.jpg" alt="Coach Juan Kenciño" loading="lazy" style="object-position: center 15%;">
           <div class="badge">
             <strong>Coach Juan Kenciño</strong>
             <span>Director técnico · La Fábrica</span>
@@ -450,58 +438,49 @@
 
         <div class="train-grid">
           <article class="train-card reveal">
+            <div class="photo-slot">
+              <!-- FOTO: img/equipo-adultos.jpg -->
+              <img src="img/equipo-adultos.jpg" alt="Equipo de adultos de La Fábrica con la copa" loading="lazy">
+            </div>
             <div class="body">
-              <div class="train-ico">⚽</div>
               <span class="num">01</span>
               <h3>Físico-técnico</h3>
               <p>Dominio del balón, pase, conducción y definición bajo carga física, como en un partido real.</p>
             </div>
           </article>
           <article class="train-card reveal">
+            <div class="photo-slot">
+              <!-- FOTO: img/campeones-1.jpg -->
+              <img src="img/campeones-1.jpg" alt="Niños de La Fábrica con el coach y la copa" loading="lazy">
+            </div>
             <div class="body">
-              <div class="train-ico">🧠</div>
               <span class="num">02</span>
               <h3>Cognitivo</h3>
               <p>Toma de decisiones, lectura de juego, concentración y reacción. Pensar rápido para jugar mejor.</p>
             </div>
           </article>
           <article class="train-card reveal">
+            <div class="photo-slot">
+              <!-- FOTO: img/equipo.jpg -->
+              <img src="img/equipo.jpg" alt="Jugadores y equipo técnico de La Fábrica" loading="lazy">
+            </div>
             <div class="body">
-              <div class="train-ico">⚡</div>
               <span class="num">03</span>
               <h3>Potencia física</h3>
               <p>Fuerza, salto, velocidad y explosividad para ganar duelos y llegar primero a cada balón.</p>
             </div>
           </article>
           <article class="train-card reveal">
+            <div class="photo-slot">
+              <!-- FOTO: img/campeones-3.jpg -->
+              <img src="img/campeones-3.jpg" alt="Niños campeones de La Fábrica" loading="lazy">
+            </div>
             <div class="body">
-              <div class="train-ico">🏃</div>
               <span class="num">04</span>
               <h3>Agilidad</h3>
               <p>Coordinación, cambios de dirección y equilibrio para moverse con soltura en espacios reducidos.</p>
             </div>
           </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== GALERÍA ===================== -->
-    <section id="galeria" style="padding-bottom: 20px;">
-      <div class="container">
-        <div class="section-head reveal">
-          <div>
-            <span class="eyebrow">Galería</span>
-            <h2>La familia <span class="hl">La Fábrica</span></h2>
-            <p class="lead">Niños, jóvenes y adultos que entrenan, compiten y celebran con nosotros.</p>
-          </div>
-        </div>
-        <!-- FOTOS: para agregar más, copia un <figure> y cambia el src -->
-        <div class="gallery">
-          <figure class="reveal"><img src="img/campeones-1.jpg" alt="Niños de La Fábrica con el coach y la copa" loading="lazy" width="900" height="1200"></figure>
-          <figure class="reveal"><img src="img/equipo.jpg" alt="Jugadores y equipo técnico de La Fábrica" loading="lazy" width="1600" height="1200"></figure>
-          <figure class="reveal"><img src="img/campeones-3.jpg" alt="Niños campeones con la copa" loading="lazy" onerror="this.closest('figure').remove()"></figure>
-          <figure class="reveal"><img src="img/campeones-2.jpg" alt="Jugadores de La Fábrica con la copa" loading="lazy" width="900" height="1200"></figure>
-          <figure class="reveal"><img src="img/equipo-adultos.jpg" alt="Equipo de adultos campeón" loading="lazy" onerror="this.closest('figure').remove()"></figure>
         </div>
       </div>
     </section>
@@ -669,10 +648,10 @@
             </a>
           </div>
           <div class="tiktok-previews">
-            <!-- FOTOS TIKTOK: capturas verticales de tus mejores videos (ej: img/tiktok1.jpg, 540x960) -->
-            <div class="photo-slot"><img src="https://placehold.co/540x960/191714/f5b914?text=VIDEO+1" alt="Video de TikTok 1" loading="lazy"></div>
-            <div class="photo-slot"><img src="https://placehold.co/540x960/191714/f5b914?text=VIDEO+2" alt="Video de TikTok 2" loading="lazy"></div>
-            <div class="photo-slot"><img src="https://placehold.co/540x960/191714/f5b914?text=VIDEO+3" alt="Video de TikTok 3" loading="lazy"></div>
+            <!-- FOTOS TIKTOK: puedes cambiarlas por capturas de tus videos -->
+            <div class="photo-slot"><img src="img/campeones-2.jpg" alt="Niños de La Fábrica con la copa" loading="lazy"></div>
+            <div class="photo-slot"><img src="img/hero.jpg" alt="Familia La Fábrica" loading="lazy"></div>
+            <div class="photo-slot"><img src="img/coach.jpg" alt="Coach Juan Kenciño" loading="lazy"></div>
           </div>
         </div>
       </div>
@@ -697,7 +676,7 @@
       <div class="footer-grid">
         <div>
           <a href="#inicio" class="logo" style="margin-bottom: 14px;">
-            <img src="img/logo.png" alt="" onerror="this.remove()">
+            <img src="img/logo.png" alt="">
             <span class="logo-text">LA FÁBRICA</span>
           </a>
           <p>Centro de Alto Rendimiento de fútbol. Formamos jugadores completos: técnica, fuerza y mentalidad.</p>
