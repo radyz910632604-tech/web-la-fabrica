@@ -7,15 +7,14 @@ La página ya busca estos archivos. Súbelos a `img/` con **exactamente** este n
 
 | Archivo | Qué foto | Estado |
 |---|---|---|
-| `img/logo.png` | Escudo de La Fábrica (PNG con fondo transparente) | **Falta subir** |
-| `img/coach.jpg` | Póster del Coach Juan Kenciño | **Falta subir** |
-| `img/campeones-3.jpg` | Niños con la copa plateada (de noche) | **Falta subir** (opcional) |
-| `img/equipo-adultos.jpg` | Equipo de adultos en cancha de tierra con la copa | **Falta subir** (opcional) |
+| `img/logo.png` | Escudo de La Fábrica (PNG con fondo transparente) | Listo |
+| `img/coach.jpg` | Póster del Coach Juan Kenciño | Listo |
+| `img/campeones-3.jpg` | Niños con la copa plateada (de noche) | Listo |
+| `img/equipo-adultos.jpg` | Equipo de adultos en cancha de tierra con la copa | Listo |
 | `img/hero.jpg` | Foto grupal de portada | Listo |
 | `img/equipo.jpg` | Jugadores y equipo técnico | Listo |
 | `img/campeones-1.jpg`, `img/campeones-2.jpg` | Niños con la copa | Listo |
 
-Mientras falten: el logo no se muestra, el coach muestra una imagen de relleno y las fotos opcionales no aparecen en la galería.
 
 Las fotos de la historia del jugador de EE.UU. y de TikTok siguen con imágenes de relleno (busca `FOTO` en `index.html`).
 
