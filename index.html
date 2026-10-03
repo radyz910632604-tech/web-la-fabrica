@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>document.documentElement.classList.add("js");</script>
   <title>La Fábrica | Centro de Alto Rendimiento de Fútbol en Villa María del Triunfo</title>
   <meta name="description" content="Centro de Alto Rendimiento La Fábrica: entrenamiento de fútbol en Villa María del Triunfo, Lima Sur. Formamos jugadores completos: técnica, fuerza y mentalidad. Coach Juan Kenciño.">
   <meta name="theme-color" content="#0a0a0a">
@@ -315,14 +316,15 @@
     .wa-float:hover .tip, .wa-float.show-tip .tip { opacity: 1; transform: none; }
 
     /* ---------- Animaciones ---------- */
-    .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
-    .reveal.visible { opacity: 1; transform: none; }
+    /* Solo se ocultan si JavaScript funciona; así el contenido siempre es visible */
+    .js .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+    .js .reveal.visible { opacity: 1; transform: none; }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
     @keyframes ring { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(1.6); opacity: 0; } }
     @keyframes marquee { to { transform: translateX(-50%); } }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition: none !important; }
-      .reveal { opacity: 1; transform: none; }
+      .js .reveal { opacity: 1; transform: none; }
       html { scroll-behavior: auto; }
     }
 
@@ -772,6 +774,7 @@
 
       // ---------- Animación al aparecer ----------
       var items = document.querySelectorAll(".reveal");
+      setTimeout(function () { items.forEach(function (el) { el.classList.add("visible"); }); }, 3000);
       if ("IntersectionObserver" in window) {
         var io = new IntersectionObserver(function (entries) {
           entries.forEach(function (e) {
