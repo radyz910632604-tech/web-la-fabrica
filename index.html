@@ -174,7 +174,8 @@
     .quote { font-family: var(--display); font-size: clamp(1.8rem, 5vw, 2.4rem); line-height: 1.05; color: var(--accent); margin: 22px 0; border-left: 4px solid var(--accent); padding-left: 16px; }
     .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 26px; }
     .pillar { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 12px; text-align: center; }
-    .pillar .ico { font-size: 1.7rem; }
+    .pillar .ico img { width: 56px; height: 56px; margin: 0 auto; filter: drop-shadow(0 8px 10px rgba(0,0,0,.55)); transition: transform .3s ease; }
+    .pillar:hover .ico img { transform: translateY(-4px) scale(1.08) rotate(-4deg); }
     .pillar strong { display: block; font-family: var(--display); font-size: 1.5rem; font-weight: 400; margin-top: 4px; }
 
     /* ---------- Qué entrenamos ---------- */
@@ -213,7 +214,8 @@
     .story-card { display: grid; grid-template-columns: 1fr 1.1fr; background: var(--card); border: 1px solid var(--line); border-radius: 26px; overflow: hidden; }
     .story-card .photo-slot { border: 0; border-radius: 0; min-height: 360px; }
     .story-body { padding: 44px 40px; display: flex; flex-direction: column; justify-content: center; }
-    .flags { font-size: 1.8rem; margin-bottom: 10px; letter-spacing: 4px; }
+    .flags { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-weight: 800; letter-spacing: .08em; color: var(--accent); }
+    .flags img { width: 52px; height: 52px; filter: drop-shadow(0 6px 8px rgba(0,0,0,.5)); }
     .story-body h2 { font-size: clamp(2.2rem, 6vw, 3.2rem); }
     .story-body p { color: #e6e1d6; margin: 0 0 14px; }
     .timeline { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
@@ -224,7 +226,8 @@
     .location-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 32px; align-items: stretch; }
     .loc-info { display: flex; flex-direction: column; gap: 14px; }
     .loc-item { display: flex; gap: 14px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
-    .loc-item .ico { width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px; background: rgba(245,185,20,.12); display: grid; place-items: center; font-size: 1.3rem; }
+    .loc-item .ico { width: 52px; height: 52px; flex-shrink: 0; border-radius: 14px; background: rgba(245,185,20,.12); display: grid; place-items: center; }
+    .loc-item .ico img { width: 36px; height: 36px; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
     .loc-item strong { display: block; }
     .loc-item span { color: var(--muted); font-size: .93rem; }
     .map { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); min-height: 380px; background: var(--card); }
@@ -279,6 +282,7 @@
     .wa-float::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--wa); animation: ring 2.2s infinite; z-index: -1; }
     .wa-float:hover { transform: scale(1.08); }
     .wa-float svg { width: 34px; height: 34px; }
+    .wa-float .tip img { display: inline-block; width: 20px; height: 20px; vertical-align: -4px; }
     .wa-float .tip {
       position: absolute; right: 74px; white-space: nowrap;
       background: #fff; color: #0a0a0a; font-weight: 700; font-size: .85rem;
@@ -416,9 +420,9 @@
           <p class="quote">“El entrenador de las futuras estrellas”</p>
           <p class="lead">Nuestro concepto es simple: no basta con tener buena técnica. Formamos <strong>jugadores completos</strong>, preparados para competir dentro y fuera de la cancha, trabajando tres pilares de forma integral:</p>
           <div class="pillars">
-            <div class="pillar"><div class="ico">⚽</div><strong>Técnica</strong></div>
-            <div class="pillar"><div class="ico">💪</div><strong>Fuerza</strong></div>
-            <div class="pillar"><div class="ico">🧠</div><strong>Mentalidad</strong></div>
+            <div class="pillar"><div class="ico"><img src="img/iconos/balon.png" alt="" width="128" height="128" loading="lazy"></div><strong>Técnica</strong></div>
+            <div class="pillar"><div class="ico"><img src="img/iconos/biceps.png" alt="" width="128" height="128" loading="lazy"></div><strong>Fuerza</strong></div>
+            <div class="pillar"><div class="ico"><img src="img/iconos/cerebro.png" alt="" width="128" height="128" loading="lazy"></div><strong>Mentalidad</strong></div>
           </div>
         </div>
       </div>
@@ -572,7 +576,7 @@
           </div>
           <div class="story-body">
             <span class="eyebrow">Historia destacada</span>
-            <div class="flags" aria-hidden="true">🇺🇸 ➜ 🇵🇪</div>
+            <div class="flags"><img src="img/iconos/avion.png" alt="" width="128" height="128" loading="lazy"><span>EE.UU. → Perú</span></div>
             <h2>De Estados Unidos a <span class="hl">La Fábrica</span></h2>
             <p>Un jugador de la <strong>segunda división de Estados Unidos</strong> nos encontró por redes sociales mientras pasaba sus vacaciones en Perú.</p>
             <p>No quiso perder ritmo: vino a Villa María del Triunfo, entrenó con nosotros y quedó tan conforme con el trabajo que <strong>volverá a entrenar en su próxima visita</strong>.</p>
@@ -598,21 +602,21 @@
         <div class="location-grid">
           <div class="loc-info reveal">
             <div class="loc-item">
-              <div class="ico">📍</div>
+              <div class="ico"><img src="img/iconos/ubicacion.png" alt="" width="128" height="128" loading="lazy"></div>
               <div>
                 <strong>Villa María del Triunfo</strong>
                 <span>Lima Sur, Perú</span>
               </div>
             </div>
             <div class="loc-item">
-              <div class="ico">🚆</div>
+              <div class="ico"><img src="img/iconos/tren.png" alt="" width="128" height="128" loading="lazy"></div>
               <div>
                 <strong>A una cuadra de la estación Pumacahua</strong>
                 <span>Línea 1 del Metro de Lima. Llegas fácil desde cualquier punto de la ciudad.</span>
               </div>
             </div>
             <div class="loc-item">
-              <div class="ico">💬</div>
+              <div class="ico"><img src="img/iconos/mensaje.png" alt="" width="128" height="128" loading="lazy"></div>
               <div>
                 <strong>¿Necesitas indicaciones?</strong>
                 <span>Escríbenos y te enviamos la ubicación exacta por WhatsApp.</span>
@@ -703,7 +707,7 @@
 
   <!-- ===================== WHATSAPP FLOTANTE ===================== -->
   <a class="wa-float js-wa" id="waFloat" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">
-    <span class="tip">¿Hablamos? 👋</span>
+    <span class="tip">¿Hablamos? <img src="img/iconos/saludo.png" alt="" width="20" height="20"></span>
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
   </a>
 

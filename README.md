@@ -20,3 +20,6 @@ Las fotos de la historia del jugador de EE.UU. y de TikTok siguen con imágenes 
 
 ## WhatsApp
 El número y el mensaje están al inicio del `<script>` (`WA_NUMBER` y `WA_MESSAGE`).
+
+## Íconos 3D
+Los íconos de `img/iconos/` son de [Microsoft Fluent Emoji](https://github.com/microsoft/fluentui-emoji) (licencia MIT).
