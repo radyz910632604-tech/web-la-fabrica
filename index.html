@@ -409,10 +409,21 @@
     .game-box { max-width: 480px; width: 100%; justify-self: center; }
     .game-stage { position: relative; border-radius: 18px; overflow: hidden; border: 2px solid var(--accent); box-shadow: 0 20px 50px -20px rgba(245,185,20,.45); aspect-ratio: 1; }
     #gCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
-    .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; text-align: center; background: rgba(8,8,8,.72); }
+    .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: safe center; overflow-y: auto; gap: 10px; padding: 20px; text-align: center; background: rgba(8,8,8,.72); }
     .game-overlay[hidden] { display: none; }
     .game-overlay .g-hero { width: auto; height: 120px; image-rendering: pixelated; filter: drop-shadow(0 8px 10px rgba(0,0,0,.6)); animation: hero-idle 1.6s ease-in-out infinite; }
     @keyframes hero-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .g-cup { flex-shrink: 0; width: 82px; height: 152px; background: url("img/iconos/juan-copa.png") 0 0 / 800% 100% no-repeat; image-rendering: pixelated; filter: drop-shadow(0 8px 12px rgba(0,0,0,.6)); }
+    .g-cup[hidden], .g-hero[hidden] { display: none; }
+    .game-bar { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+    .g-ctrl { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--accent); background: var(--card); color: var(--accent); font: inherit; font-weight: 800; cursor: pointer; transition: background .2s, color .2s; }
+    .g-ctrl svg { width: 18px; height: 18px; }
+    .g-ctrl:hover:not(:disabled) { background: var(--accent); color: #0a0a0a; }
+    .g-ctrl:disabled { opacity: .4; cursor: default; }
+    .g-paused { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: rgba(8,8,8,.55); color: var(--text); }
+    .g-paused[hidden] { display: none; }
+    .g-paused strong { font-family: var(--display); font-weight: 400; font-size: 2.6rem; color: var(--accent); letter-spacing: .08em; }
+    .g-paused span { color: #e6e1d6; font-size: .9rem; }
     .game-overlay strong { font-family: var(--display); font-weight: 400; font-size: 2.2rem; line-height: 1; }
     .game-overlay p { margin: 0 0 6px; color: #e6e1d6; }
     .g-cta { color: var(--accent); font-weight: 700; margin-top: 4px; }
@@ -429,6 +440,7 @@
     .pad-up { grid-column: 2; grid-row: 1; } .pad-left { grid-column: 1; grid-row: 2; } .pad-down { grid-column: 2; grid-row: 2; } .pad-right { grid-column: 3; grid-row: 2; }
     @media (hover: none), (max-width: 820px) { .game-pad { display: grid; } }
     @media (max-width: 820px) { .game-grid { grid-template-columns: 1fr; gap: 28px; } }
+    @media (max-width: 560px) { .g-cup { width: 56px; height: 104px; } .game-overlay { gap: 6px; padding: 12px; } .game-overlay strong { font-size: 1.8rem; } .game-overlay .g-quote { font-size: .78rem; margin-bottom: 2px; } .game-overlay p { margin-bottom: 0; font-size: .85rem; } .game-overlay .btn { padding: 11px 22px; font-size: .9rem; } .g-cta { font-size: .78rem; } }
 
     /* ---------- Footer ---------- */
     .footer { background: #050505; padding: 56px 0 100px; border-top: 1px solid var(--line); }
@@ -921,7 +933,7 @@
           <h2>Ayuda a Juan a <span class="hl">recoger los balones</span></h2>
           <p class="lead">Después de cada entrenamiento, el coach recoge los balones. Guíalo por la cancha: cada balón que recoge se suma a su fila. Puedes cruzar los bordes y salir por el lado contrario, pero no choques con tu propia fila.</p>
           <ul class="game-help">
-            <li><b>Computadora:</b> flechas o W A S D</li>
+            <li><b>Computadora:</b> flechas o W A S D · <b>P</b> para pausar</li>
             <li><b>Celular:</b> desliza el dedo o usa los botones</li>
           </ul>
           <p class="game-challenge"><b>Reto de crack:</b> los profesionales no nacen siendo buenos. Se vuelven buenos repitiendo, fallando y volviendo a intentar. ¿Puedes superar el récord?</p>
@@ -933,14 +945,20 @@
             <img id="gJuan" src="img/iconos/juan-corre.png" alt="" style="display:none">
             <canvas id="gCanvas" width="720" height="720" aria-label="Juego: Juan recoge balones"></canvas>
             <div class="g-toast" id="gToast" aria-live="polite"></div>
+            <div class="g-paused" id="gPaused" hidden><strong>Pausa</strong><span>Toca “Continuar” o presiona P</span></div>
             <div class="game-overlay" id="gOverlay">
-              <img class="g-hero" src="img/iconos/juan-pixel.png" alt="" width="156" height="260">
+              <img class="g-hero" id="gHero" src="img/iconos/juan-pixel.png" alt="" width="156" height="260">
+              <div class="g-cup" id="gCup" role="img" aria-label="Juan salta celebrando con la copa" hidden></div>
               <strong id="gTitle">¿Listo, coach?</strong>
               <p id="gMsg">Recoge todos los balones que puedas.</p>
               <p class="g-quote" id="gQuote" hidden></p>
               <button class="btn btn-wa" id="gStart" type="button">Jugar</button>
               <a class="g-cta" id="gCta" href="https://wa.me/51917168725?text=Hola%2C%20jugu%C3%A9%20el%20mini%20juego%20y%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" hidden>¿Quieres entrenar como un profesional? Agenda tu clase de prueba →</a>
             </div>
+          </div>
+          <div class="game-bar">
+            <button class="g-ctrl" id="gPlay" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg><span>Iniciar</span></button>
+            <button class="g-ctrl" id="gPause" type="button" disabled><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg><span>Pausa</span></button>
           </div>
           <div class="game-pad" aria-label="Controles">
             <button class="pad-btn pad-up" data-dir="up" aria-label="Arriba"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6l-7 8h14z"/></svg></button><button class="pad-btn pad-left" data-dir="left" aria-label="Izquierda"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 12l8 7V5z"/></svg></button><button class="pad-btn pad-down" data-dir="down" aria-label="Abajo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 18l7-8H5z"/></svg></button><button class="pad-btn pad-right" data-dir="right" aria-label="Derecha"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 12l-8-7v14z"/></svg></button>
@@ -1113,7 +1131,7 @@
         }
         function turn(d) {
           var m = {up: {x: 0, y: -1}, down: {x: 0, y: 1}, left: {x: -1, y: 0}, right: {x: 1, y: 0}}[d];
-          if (!m || !running) return;
+          if (!m || !running || paused) return;
           if (m.x === -dir.x && m.y === -dir.y) return;
           next = m;
         }
@@ -1138,7 +1156,30 @@
           elQuote.textContent = m.frase; elQuote.hidden = false;
           toast.classList.remove("show");
           bStart.textContent = "Volver a jugar"; cta.hidden = false; ov.hidden = false;
+          setPaused(false); bPause.disabled = true; playLabel.textContent = "Reiniciar";
+          celebrate();
         }
+        // Celebración: Juan levanta la copa (cuadros 1-4) y salta en bucle (5-8)
+        var cup = document.getElementById("gCup"), heroImg = document.getElementById("gHero"), cupT;
+        function celebrate() {
+          heroImg.hidden = true; cup.hidden = false; clearInterval(cupT);
+          var f = 0;
+          cup.style.backgroundPositionX = "0%";
+          cupT = setInterval(function () {
+            f = f < 7 ? f + 1 : 4;
+            cup.style.backgroundPositionX = (f * 100 / 7) + "%";
+          }, 150);
+        }
+        // Inicio y pausa
+        var bPlay = document.getElementById("gPlay"), bPause = document.getElementById("gPause"), elPaused = document.getElementById("gPaused");
+        var playLabel = bPlay.querySelector("span"), pauseLabel = bPause.querySelector("span"), paused = false;
+        var icoPause = bPause.querySelector("svg").innerHTML, icoPlay = '<path d="M7 5v14l12-7z"/>';
+        function setPaused(v) {
+          paused = v; elPaused.hidden = !v;
+          pauseLabel.textContent = v ? "Continuar" : "Pausa";
+          bPause.querySelector("svg").innerHTML = v ? icoPlay : icoPause;
+        }
+        function togglePause() { if (!running) return; setPaused(!paused); last = 0; }
         function drawField() {
           for (var i = 0; i < N; i++) { ctx.fillStyle = i % 2 ? "#1f5a2a" : "#236330"; ctx.fillRect(0, i * C, cv.width, C); }
           ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 2;
@@ -1189,15 +1230,18 @@
         }
         function loop(ts) {
           if (!last) last = ts; var dt = Math.min(ts - last, 100); last = ts;
-          if (running) { runT += dt / 1000; acc += dt; while (acc >= step && running) { acc -= step; tick(); } }
-          draw(running ? Math.min(acc / step, 1) : 1);
+          if (running && !paused) { runT += dt / 1000; acc += dt; while (acc >= step && running) { acc -= step; tick(); } }
+          if (!paused) draw(running ? Math.min(acc / step, 1) : 1);
           requestAnimationFrame(loop);
         }
-        function start() { reset(); ov.hidden = true; running = true; last = 0; }
+        function start() { reset(); ov.hidden = true; running = true; last = 0; clearInterval(cupT); cup.hidden = true; heroImg.hidden = false; setPaused(false); bPause.disabled = false; playLabel.textContent = "Reiniciar"; }
         bStart.addEventListener("click", start);
+        bPlay.addEventListener("click", start);
+        bPause.addEventListener("click", togglePause);
         document.addEventListener("keydown", function (e) {
           var k = {ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", w: "up", s: "down", a: "left", d: "right", W: "up", S: "down", A: "left", D: "right"}[e.key];
-          if (k && running) { e.preventDefault(); turn(k); }
+          if ((e.key === "p" || e.key === "P" || e.key === "Escape") && running) { e.preventDefault(); togglePause(); return; }
+          if (k && running && !paused) { e.preventDefault(); turn(k); }
         });
         document.querySelectorAll(".pad-btn").forEach(function (b) {
           b.addEventListener("pointerdown", function (e) { e.preventDefault(); turn(b.dataset.dir); });
