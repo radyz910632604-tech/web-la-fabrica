@@ -411,7 +411,8 @@
     #gCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
     .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px; text-align: center; background: rgba(8,8,8,.72); }
     .game-overlay[hidden] { display: none; }
-    .game-overlay img { width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--accent); }
+    .game-overlay .g-hero { width: auto; height: 120px; image-rendering: pixelated; filter: drop-shadow(0 8px 10px rgba(0,0,0,.6)); animation: hero-idle 1.6s ease-in-out infinite; }
+    @keyframes hero-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
     .game-overlay strong { font-family: var(--display); font-weight: 400; font-size: 2.2rem; line-height: 1; }
     .game-overlay p { margin: 0 0 6px; color: #e6e1d6; }
     .g-cta { color: var(--accent); font-weight: 700; margin-top: 4px; }
@@ -922,9 +923,10 @@
         <div class="game-box reveal">
           <div class="game-stage">
             <img id="gBall" src="img/iconos/pilar-tecnica.png" alt="" style="display:none">
-            <canvas id="gCanvas" width="480" height="480" aria-label="Juego: Juan recoge balones"></canvas>
+            <img id="gJuan" src="img/iconos/juan-pixel.png" alt="" style="display:none">
+            <canvas id="gCanvas" width="720" height="720" aria-label="Juego: Juan recoge balones"></canvas>
             <div class="game-overlay" id="gOverlay">
-              <img src="img/iconos/juan.png" alt="" width="128" height="128">
+              <img class="g-hero" src="img/iconos/juan-pixel.png" alt="" width="156" height="260">
               <strong id="gTitle">¿Listo, coach?</strong>
               <p id="gMsg">Recoge todos los balones que puedas.</p>
               <button class="btn btn-wa" id="gStart" type="button">Jugar</button>
@@ -1078,13 +1080,13 @@
         var ctx = cv.getContext("2d"), N = 16, C = cv.width / N;
         var ov = document.getElementById("gOverlay"), bStart = document.getElementById("gStart"), cta = document.getElementById("gCta");
         var elScore = document.getElementById("gScore"), elBest = document.getElementById("gBest");
-        var head = new Image(); head.src = document.querySelector(".game-overlay img").src;
+        var juan = document.getElementById("gJuan"), face = 1, runT = 0, dust = [];
         var ball = document.getElementById("gBall");
         var best = 0; try { best = +localStorage.getItem("lfBest") || 0; } catch (e) {}
         elBest.textContent = best;
         var snake, prev, dir, next, food, score, step, acc, last, running = false, pulse = 0;
         function reset() {
-          snake = [{x: 5, y: 8}]; prev = snake.map(function (p) { return {x: p.x, y: p.y}; });
+          snake = [{x: 5, y: 8}]; face = 1; dust = []; prev = snake.map(function (p) { return {x: p.x, y: p.y}; });
           dir = {x: 1, y: 0}; next = dir; score = 0; step = 170; acc = 0; elScore.textContent = 0; place();
         }
         function place() {
@@ -1098,7 +1100,8 @@
           next = m;
         }
         function tick() {
-          dir = next; prev = snake.map(function (p) { return {x: p.x, y: p.y}; });
+          dir = next; if (dir.x) face = dir.x; dust.push({x: (snake[0].x + .5) * C - dir.x * C * .3, y: (snake[0].y + .9) * C - dir.y * C * .3, t: 0});
+          prev = snake.map(function (p) { return {x: p.x, y: p.y}; });
           var h = {x: (snake[0].x + dir.x + N) % N, y: (snake[0].y + dir.y + N) % N};
           var grow = h.x === food.x && h.y === food.y;
           var body = grow ? snake : snake.slice(0, -1);
@@ -1126,7 +1129,25 @@
           if (img.complete && img.naturalWidth) ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
           else { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
         }
+        // Juan corriendo: rebote, inclinación, balanceo y giro según la dirección
+        function drawJuan(x, y) {
+          var h = C * 2.5, w = h * (juan.naturalWidth / juan.naturalHeight || .6);
+          var ph = runT * 14, bob = running ? Math.abs(Math.sin(ph)) : 0;
+          var lift = bob * C * .22, sway = running ? Math.sin(ph) * .09 : 0, lean = running ? (dir.x ? .12 : 0) : 0;
+          var squash = running ? 1 - (1 - bob) * .06 : 1;
+          var foot = y + C * .45;
+          ctx.fillStyle = "rgba(0,0,0," + (.35 - bob * .15) + ")";
+          ctx.beginPath(); ctx.ellipse(x, foot, w * (.42 - bob * .08), C * .14, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.save();
+          ctx.translate(x, foot - lift);
+          ctx.scale(face, 1);
+          ctx.rotate(lean + sway);
+          ctx.scale(1 / squash, squash);
+          if (juan.complete && juan.naturalWidth) { ctx.imageSmoothingEnabled = false; ctx.drawImage(juan, -w / 2, -h, w, h); ctx.imageSmoothingEnabled = true; }
+          ctx.restore();
+        }
         function draw(t) {
+          var hx, hy;
           drawField(); pulse += .08;
           var fr = C * .42 + Math.sin(pulse) * 2;
           ctx.fillStyle = "rgba(245,185,20,.25)"; ctx.beginPath(); ctx.arc((food.x + .5) * C, (food.y + .5) * C, fr + 6, 0, Math.PI * 2); ctx.fill();
@@ -1135,12 +1156,19 @@
             var a = prev[i] || snake[i], b = snake[i];
             if (Math.abs(b.x - a.x) > 1 || Math.abs(b.y - a.y) > 1) a = b; // al cruzar un borde aparece del otro lado
             var x = (a.x + (b.x - a.x) * t + .5) * C, y = (a.y + (b.y - a.y) * t + .5) * C;
-            if (i === 0) sprite(head, x, y, C * .62, true); else sprite(ball, x, y, C * .4);
+            if (i === 0) { hx = x; hy = y; } else sprite(ball, x, y, C * .4);
           }
+          // Polvo que levanta al correr
+          for (var k = dust.length - 1; k >= 0; k--) {
+            var d = dust[k]; d.t += .05; if (d.t >= 1) { dust.splice(k, 1); continue; }
+            ctx.fillStyle = "rgba(230,215,170," + (.45 * (1 - d.t)) + ")";
+            ctx.beginPath(); ctx.arc(d.x, d.y - d.t * 8, 3 + d.t * 9, 0, Math.PI * 2); ctx.fill();
+          }
+          drawJuan(hx, hy);
         }
         function loop(ts) {
           if (!last) last = ts; var dt = Math.min(ts - last, 100); last = ts;
-          if (running) { acc += dt; while (acc >= step && running) { acc -= step; tick(); } }
+          if (running) { runT += dt / 1000; acc += dt; while (acc >= step && running) { acc -= step; tick(); } }
           draw(running ? Math.min(acc / step, 1) : 1);
           requestAnimationFrame(loop);
         }
