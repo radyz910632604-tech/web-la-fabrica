@@ -409,11 +409,11 @@
     .game-box { max-width: 480px; width: 100%; justify-self: center; }
     .game-stage { position: relative; border-radius: 18px; overflow: hidden; border: 2px solid var(--accent); box-shadow: 0 20px 50px -20px rgba(245,185,20,.45); aspect-ratio: 1; }
     #gCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
-    .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: safe center; overflow-y: auto; gap: 10px; padding: 20px; text-align: center; background: rgba(8,8,8,.72); }
+    .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: safe center; overflow-y: auto; gap: 8px; padding: 20px; text-align: center; background: rgba(8,8,8,.72); }
     .game-overlay[hidden] { display: none; }
     .game-overlay .g-hero { width: auto; height: 120px; image-rendering: pixelated; filter: drop-shadow(0 8px 10px rgba(0,0,0,.6)); animation: hero-idle 1.6s ease-in-out infinite; }
     @keyframes hero-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-    .g-cup { flex-shrink: 0; width: 82px; height: 152px; background: url("img/iconos/juan-copa.png") 0 0 / 800% 100% no-repeat; image-rendering: pixelated; filter: drop-shadow(0 8px 12px rgba(0,0,0,.6)); }
+    .g-cup { flex-shrink: 0; width: 64px; height: 118px; background: url("img/iconos/juan-copa.png") 0 0 / 800% 100% no-repeat; image-rendering: pixelated; filter: drop-shadow(0 8px 12px rgba(0,0,0,.6)); }
     .g-cup[hidden], .g-hero[hidden] { display: none; }
     .game-bar { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
     .g-ctrl { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--accent); background: var(--card); color: var(--accent); font: inherit; font-weight: 800; cursor: pointer; transition: background .2s, color .2s; }
@@ -426,8 +426,13 @@
     .g-paused span { color: #e6e1d6; font-size: .9rem; }
     .game-overlay strong { font-family: var(--display); font-weight: 400; font-size: 2.2rem; line-height: 1; }
     .game-overlay p { margin: 0 0 6px; color: #e6e1d6; }
-    .g-cta { color: var(--accent); font-weight: 700; margin-top: 4px; }
-    .game-overlay .g-quote { font-style: italic; color: var(--accent); max-width: 340px; margin: 0 0 8px; font-weight: 600; }
+    .g-cta { display: block; text-align: center; margin: 14px auto 0; padding: 12px 18px; border-radius: 14px; background: rgba(245,185,20,.12); border: 1px solid var(--accent); color: var(--accent); font-weight: 800; text-decoration: none; }
+    .g-cta[hidden] { display: none; }
+    .g-cta:hover { background: var(--accent); color: #0a0a0a; }
+    .game-overlay .g-quote { font-style: italic; color: var(--accent); max-width: 360px; margin: 0 0 8px; font-weight: 600; }
+    .game-overlay .g-quote[hidden], .g-record[hidden] { display: none; }
+    .g-quote cite { display: block; margin-top: 6px; font-style: normal; font-weight: 800; color: #fff; font-size: .9rem; }
+    .game-overlay .g-record { margin: -4px 0 2px; color: var(--accent); font-weight: 800; letter-spacing: .06em; }
     .game-challenge { color: var(--muted); font-size: .95rem; border-left: 3px solid var(--accent); padding-left: 12px; margin: 0; }
     .game-challenge b { color: var(--text); }
     .g-toast { position: absolute; top: 14px; left: 50%; z-index: 3; transform: translate(-50%, -20px); opacity: 0; pointer-events: none; white-space: nowrap;
@@ -440,7 +445,7 @@
     .pad-up { grid-column: 2; grid-row: 1; } .pad-left { grid-column: 1; grid-row: 2; } .pad-down { grid-column: 2; grid-row: 2; } .pad-right { grid-column: 3; grid-row: 2; }
     @media (hover: none), (max-width: 820px) { .game-pad { display: grid; } }
     @media (max-width: 820px) { .game-grid { grid-template-columns: 1fr; gap: 28px; } }
-    @media (max-width: 560px) { .g-cup { width: 56px; height: 104px; } .game-overlay { gap: 6px; padding: 12px; } .game-overlay strong { font-size: 1.8rem; } .game-overlay .g-quote { font-size: .78rem; margin-bottom: 2px; } .game-overlay p { margin-bottom: 0; font-size: .85rem; } .game-overlay .btn { padding: 11px 22px; font-size: .9rem; } .g-cta { font-size: .78rem; } }
+    @media (max-width: 560px) { .g-cup { width: 56px; height: 104px; } .game-overlay { gap: 6px; padding: 12px; } .game-overlay strong { font-size: 1.8rem; } .game-overlay .g-quote { font-size: .78rem; margin-bottom: 2px; } .game-overlay p { margin-bottom: 0; font-size: .85rem; } .game-overlay .btn { padding: 11px 22px; font-size: .9rem; } .g-cta { font-size: .9rem; } }
 
     /* ---------- Footer ---------- */
     .footer { background: #050505; padding: 56px 0 100px; border-top: 1px solid var(--line); }
@@ -951,11 +956,12 @@
               <div class="g-cup" id="gCup" role="img" aria-label="Juan salta celebrando con la copa" hidden></div>
               <strong id="gTitle">¿Listo, coach?</strong>
               <p id="gMsg">Recoge todos los balones que puedas.</p>
-              <p class="g-quote" id="gQuote" hidden></p>
+              <p class="g-record" id="gRecord" hidden>⭐ ¡Nuevo récord! ⭐</p>
+              <blockquote class="g-quote" id="gQuote" hidden><span id="gQuoteText"></span><cite>— Coach Quema ⚽</cite></blockquote>
               <button class="btn btn-wa" id="gStart" type="button">Jugar</button>
-              <a class="g-cta" id="gCta" href="https://wa.me/51917168725?text=Hola%2C%20jugu%C3%A9%20el%20mini%20juego%20y%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" hidden>¿Quieres entrenar como un profesional? Agenda tu clase de prueba →</a>
             </div>
           </div>
+          <a class="g-cta" id="gCta" href="https://wa.me/51917168725?text=Hola%2C%20jugu%C3%A9%20el%20mini%20juego%20y%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" hidden>¿Quieres ser jugador profesional? Empieza a entrenar de verdad →</a>
           <div class="game-bar">
             <button class="g-ctrl" id="gPlay" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg><span>Iniciar</span></button>
             <button class="g-ctrl" id="gPause" type="button" disabled><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg><span>Pausa</span></button>
@@ -1113,13 +1119,17 @@
         elBest.textContent = best;
         var snake, prev, dir, next, food, score, step, acc, last, running = false, pulse = 0, toastT;
         var toast = document.getElementById("gToast"), elQuote = document.getElementById("gQuote");
-        function mensajeFinal(balones, esRecord) {
-          if (esRecord && balones > 0) return { titulo: "¡Nuevo récord! ⭐", frase: "Así juegan las futuras estrellas. Ahora demuéstralo en la cancha: el coach te está esperando." };
-          if (balones <= 5) return { titulo: "¡Fin del entrenamiento!", frase: "Todo crack empezó por aquí. Messi también falló miles de veces antes de ser el mejor. ¡Vuelve a intentarlo!" };
-          if (balones <= 14) return { titulo: "¡Buen entrenamiento!", frase: "Vas mejorando. Así se entrena: un poco mejor cada día. Los profesionales se hacen con constancia." };
-          return { titulo: "¡Nivel alto rendimiento!", frase: "Tienes concentración y reflejos de jugador. Imagina lo que puedes lograr en la cancha de verdad." };
-        }
-        var frasesJuego = { 5: "¡Buen inicio, crack!", 10: "Los campeones no se rinden", 15: "Disciplina + trabajo = estrella", 20: "¡Así se entrena en La Fábrica!", 25: "¡Futura estrella! ⭐" };
+        // Frases finales (rotan al azar), firmadas por el Coach Quema
+        var frasesFinales = [
+          "“Aquí jugaste con los dedos. Para ser profesional, tienes que jugar con el corazón y entrenar con los pies. Te espero en la cancha, campeón.” ❤️⚽",
+          "“Los balones de la pantalla no te hacen crack. Los de la cancha, sí. ¡Ven a entrenar!” 🔥",
+          "“Todos los profesionales empezaron entrenando en una cancha como la nuestra. La tuya te está esperando.” 🏟️✨"
+        ];
+        // Frases del coach al recoger cada balón
+        var frasesCoach = ["¡Miauuu! 😼", "¡Ese es mi galáctico! 🌟", "¡Full chocolatero! 🍫", "¡Miauuu! 😼🔥", "¡Ese es mi galáctico! 🚀", "¡Full chocolatero! 🍫⚽"];
+        // Frases especiales cada 5 balones
+        var frasesJuego = { 5: "¡Buen inicio, crack! 🔥", 10: "Los campeones no se rinden 💪", 15: "Disciplina + trabajo = estrella ⭐", 20: "¡Así se entrena en La Fábrica! 🏆", 25: "¡Futura estrella! 🌟👑" };
+        var pops = [];
         function showToast(t) { toast.textContent = t; toast.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(function () { toast.classList.remove("show"); }, 2000); }
         function reset() {
           snake = [{x: 5, y: 8}]; face = 1; dust = []; prev = snake.map(function (p) { return {x: p.x, y: p.y}; });
@@ -1143,17 +1153,18 @@
           var body = grow ? snake : snake.slice(0, -1);
           if (body.some(function (p) { return p.x === h.x && p.y === h.y; })) return over();
           snake.unshift(h);
-          if (grow) { score++; elScore.textContent = score; if (frasesJuego[score]) showToast(frasesJuego[score]); step = Math.max(80, step - 4); prev.push(prev[prev.length - 1]); place(); }
+          if (grow) { score++; elScore.textContent = score; if (frasesJuego[score]) showToast(frasesJuego[score]); else pops = [{x: (h.x + .5) * C, y: (h.y + .5) * C, t: 0, txt: frasesCoach[Math.floor(Math.random() * frasesCoach.length)]}]; step = Math.max(80, step - 4); prev.push(prev[prev.length - 1]); place(); }
           else snake.pop();
         }
         function over() {
           running = false;
           var esRecord = score > best;
           if (esRecord) { best = score; elBest.textContent = best; try { localStorage.setItem("lfBest", best); } catch (e) {} }
-          var m = mensajeFinal(score, esRecord);
-          document.getElementById("gTitle").textContent = m.titulo;
-          document.getElementById("gMsg").textContent = "Juan recogió " + score + (score === 1 ? " balón." : " balones.");
-          elQuote.textContent = m.frase; elQuote.hidden = false;
+          document.getElementById("gTitle").textContent = "¡Fin del juego!";
+          document.getElementById("gMsg").textContent = "Recogiste " + score + (score === 1 ? " balón." : " balones.");
+          document.getElementById("gRecord").hidden = !(esRecord && score > 0);
+          document.getElementById("gQuoteText").textContent = frasesFinales[Math.floor(Math.random() * frasesFinales.length)];
+          elQuote.hidden = false; pops = [];
           toast.classList.remove("show");
           bStart.textContent = "Volver a jugar"; cta.hidden = false; ov.hidden = false;
           setPaused(false); bPause.disabled = true; playLabel.textContent = "Reiniciar";
@@ -1227,6 +1238,15 @@
             ctx.beginPath(); ctx.arc(d.x, d.y - d.t * 8, 3 + d.t * 9, 0, Math.PI * 2); ctx.fill();
           }
           drawJuan(hx, hy);
+          // Frases flotantes del coach
+          for (var q = pops.length - 1; q >= 0; q--) {
+            var pp = pops[q]; if (!paused) pp.t += .018; if (pp.t >= 1) { pops.splice(q, 1); continue; }
+            var px = Math.min(Math.max(pp.x, 120), cv.width - 120), py = Math.max(pp.y - C * 1.6 - pp.t * C * 1.4, 34);
+            ctx.save(); ctx.globalAlpha = pp.t < .15 ? pp.t / .15 : 1 - Math.max(0, (pp.t - .6) / .4);
+            ctx.font = "800 " + Math.round(C * .72) + "px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.lineWidth = 6; ctx.strokeStyle = "rgba(8,8,8,.85)"; ctx.strokeText(pp.txt, px, py);
+            ctx.fillStyle = "#ffd84a"; ctx.fillText(pp.txt, px, py); ctx.restore();
+          }
         }
         function loop(ts) {
           if (!last) last = ts; var dt = Math.min(ts - last, 100); last = ts;
@@ -1234,7 +1254,7 @@
           if (!paused) draw(running ? Math.min(acc / step, 1) : 1);
           requestAnimationFrame(loop);
         }
-        function start() { reset(); ov.hidden = true; running = true; last = 0; clearInterval(cupT); cup.hidden = true; heroImg.hidden = false; setPaused(false); bPause.disabled = false; playLabel.textContent = "Reiniciar"; }
+        function start() { reset(); pops = []; cta.hidden = true; ov.hidden = true; running = true; last = 0; clearInterval(cupT); cup.hidden = true; heroImg.hidden = false; setPaused(false); bPause.disabled = false; playLabel.textContent = "Reiniciar"; }
         bStart.addEventListener("click", start);
         bPlay.addEventListener("click", start);
         bPause.addEventListener("click", togglePause);
