@@ -51,4 +51,4 @@ Guarda cada foto en la carpeta `img/` y reemplaza el archivo actual con el mismo
 | 03 · Potencia física | `img/equipo.jpg` |
 | 04 · Agilidad | `img/campeones-3.jpg` |
 
-Esas mismas fotos también se usan en otras partes de la página. Si prefieres no tocarlas, sube las nuevas con otro nombre (por ejemplo `img/fisico-tecnico.jpg`) y pídeme que cambie la tarjeta.
+Esas 4 fotos solo se usan en estas tarjetas, así que reemplazarlas no cambia nada más de la página. Usa JPG de unos 1200 px de ancho para que cargue rápido en el celular.
