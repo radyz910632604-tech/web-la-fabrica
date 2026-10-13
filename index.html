@@ -107,7 +107,9 @@
       z-index: 50;
       transition: background .25s ease, border-color .25s ease;
       border-bottom: 1px solid transparent;
+      background: linear-gradient(180deg, rgba(10,10,10,.7) 0%, rgba(10,10,10,0) 100%);
     }
+    .header .nav a { text-shadow: 0 1px 6px rgba(0,0,0,.7); }
     .header.scrolled { background: rgba(10,10,10,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-color: var(--line); }
     .header .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
     .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
@@ -135,7 +137,7 @@
       content: "";
       position: absolute; inset: 0; z-index: -1;
       background:
-        linear-gradient(180deg, rgba(10,10,10,.6) 0%, rgba(10,10,10,.82) 55%, var(--bg) 100%),
+        linear-gradient(180deg, rgba(10,10,10,.28) 0%, rgba(10,10,10,.45) 40%, rgba(10,10,10,.82) 78%, var(--bg) 100%),
         radial-gradient(circle at 80% 20%, rgba(245,185,20,.18), transparent 50%);
     }
     .hero-tag {
@@ -149,11 +151,14 @@
     }
     .hero-tag .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1.6s infinite; }
     .hero h1 { font-size: clamp(3.2rem, 13vw, 7.5rem); }
-    .hero h1 small { display: block; font-size: .36em; color: var(--muted); letter-spacing: .12em; margin-bottom: 6px; }
+    .hero h1 small { display: block; font-size: .36em; color: #e8e2d6; letter-spacing: .12em; margin-bottom: 6px; }
+    .hero h1, .hero-claim, .hero-coach, .hero-stats { text-shadow: 0 2px 12px rgba(0,0,0,.75); }
+    .hero-coach { font-size: clamp(1rem, 3.4vw, 1.2rem); margin: -14px 0 28px; max-width: 620px; color: #f1ece2; }
+    .hero-coach strong { color: var(--text); }
     .hero-claim { font-size: clamp(1.15rem, 4vw, 1.5rem); font-weight: 600; margin: 20px 0 30px; max-width: 620px; }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 14px; }
     .hero-stats { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 44px; padding-top: 26px; border-top: 1px solid var(--line); }
-    .hero-stats div { font-size: .85rem; color: var(--muted); }
+    .hero-stats div { font-size: .85rem; color: #d9d2c4; }
     .hero-stats strong { display: block; font-family: var(--display); font-size: 2.2rem; color: var(--text); line-height: 1; font-weight: 400; }
 
     /* ---------- Marquee ---------- */
@@ -461,8 +466,9 @@
       .container { padding: 0 16px; }
       .train-grid, .plans-grid { grid-template-columns: 1fr; }
       .hero-actions .btn { width: 100%; }
-      .hero-stats { gap: 20px; }
-      .hero-stats strong { font-size: 1.9rem; }
+      .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 30px; padding-top: 18px; }
+      .hero-stats div { font-size: .72rem; line-height: 1.3; }
+      .hero-stats strong { font-size: 1.35rem; margin-bottom: 4px; }
       .pillars { gap: 8px; }
       .pillar { padding: 16px 10px; }
       .pillar p { font-size: .84rem; }
@@ -488,7 +494,7 @@
         <a href="#nosotros">Nosotros</a>
         <a href="#entrenamiento">Entrenamos</a>
         <a href="#planes">Planes</a>
-        <a href="#historia">Historias</a>
+        <a href="#historia">Historia</a>
         <a href="#ubicacion">Ubicación</a>
       </nav>
       <button class="menu-btn" id="menuBtn" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav">
@@ -511,17 +517,18 @@
           LA <span class="hl">FÁBRICA</span>
         </h1>
         <p class="hero-claim">Formamos jugadores completos: <span class="hl">técnica, fuerza y mentalidad</span>.</p>
+        <p class="hero-coach">Entrena con el <strong>Coach Juan Kenciño</strong>, <span class="hl">el entrenador de las futuras estrellas</span>.</p>
         <div class="hero-actions">
-          <a class="btn btn-wa btn-lg js-wa" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
+          <a class="btn btn-wa btn-lg" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
-            Escríbenos por WhatsApp
+            Agenda tu clase de prueba
           </a>
           <a class="btn btn-ghost btn-lg" href="#planes">Ver planes</a>
         </div>
         <div class="hero-stats">
-          <div><strong>2017+</strong>Categorías</div>
-          <div><strong>4</strong>Áreas de trabajo</div>
-          <div><strong>1 cuadra</strong>de Est. Pumacahua</div>
+          <div><strong>2017 → Libre</strong>Niños, jóvenes y adultos</div>
+          <div><strong>EE.UU.</strong>Jugadores del extranjero entrenan aquí</div>
+          <div><strong>1 cuadra</strong>de la estación Pumacahua</div>
         </div>
       </div>
     </section>
@@ -590,7 +597,7 @@
             <h2>Entrenamiento <span class="hl">integral</span></h2>
             <p class="lead">Sesiones diseñadas para desarrollar todas las capacidades que exige el fútbol moderno.</p>
           </div>
-          <div class="cat-chip">Categorías <span>2017</span> <small>en adelante</small></div>
+          <div class="cat-chip">Categorías: <span>desde 2017 hasta Libre</span></div>
         </div>
 
         <div class="train-grid">
@@ -722,7 +729,7 @@
             </a>
           </article>
         </div>
-        <p class="plans-note"><a href="https://wa.me/51917168725?text=Hola%2C%20quiero%20que%20me%20asesoren%20sobre%20los%20planes" target="_blank" rel="noopener">¿Dudas sobre horarios o qué plan le conviene a tu hijo? <span>Escríbenos y te asesoramos →</span></a></p>
+        <p class="plans-note"><a href="https://wa.me/51917168725?text=Hola%2C%20quiero%20que%20me%20asesoren%20sobre%20los%20planes" target="_blank" rel="noopener">¿Dudas sobre horarios o qué plan te conviene a ti o a tu hijo? <span>Escríbenos y te asesoramos →</span></a></p>
       </div>
     </section>
 
@@ -846,7 +853,7 @@
     <section class="final-cta">
       <div class="container">
         <h2>¿Listo para entrar a La Fábrica?</h2>
-        <p>La próxima estrella puede ser tu hijo. Dale la oportunidad de entrenar con el <strong>Coach Juan Kenciño</strong>, el entrenador de las futuras estrellas.</p>
+        <p>La próxima estrella puede ser tu hijo, o puedes ser tú. Dale la oportunidad de entrenar con el <strong>Coach Juan Kenciño</strong>, el entrenador de las futuras estrellas.</p>
         <p class="cta-offer"><span>Primera clase de prueba: <strong>S/30</strong></span> <span>· Sin compromiso</span></p>
         <a class="btn btn-wa btn-lg" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
@@ -867,7 +874,7 @@
           </a>
           <p>Centro de Alto Rendimiento de fútbol. Formamos jugadores completos: técnica, fuerza y mentalidad.</p>
           <p>Dirigido por el <strong class="f-strong">Coach Juan Kenciño, el entrenador de las futuras estrellas</strong>.</p>
-          <p>Categorías 2017 en adelante.</p>
+          <p>Categorías desde 2017 hasta Libre.</p>
         </div>
         <nav class="f-explore" aria-label="Secciones">
           <h4>Explora</h4>
