@@ -189,6 +189,13 @@
     .about-full { grid-column: 1 / -1; margin-top: -24px; }
     .tagline { font-size: 1.15rem; font-weight: 700; color: var(--text); margin: 0 0 16px; }
     .coach-quote { margin: 24px 0; padding: 20px 22px; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 14px; }
+    .coach-video { display: inline-flex; align-items: center; gap: 14px; margin: -8px 0 24px; padding: 10px 20px 10px 10px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); text-decoration: none; transition: border-color .25s, transform .25s, box-shadow .25s; }
+    .coach-video:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 12px 30px -14px rgba(245,185,20,.6); }
+    .cv-play { position: relative; width: 44px; height: 44px; border-radius: 50%; background: var(--gold-grad); color: #0a0a0a; display: grid; place-items: center; flex-shrink: 0; }
+    .cv-play svg { width: 20px; height: 20px; margin-left: 3px; }
+    .cv-play::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent); animation: ring 2s infinite; }
+    .coach-video b { display: block; font-size: .98rem; }
+    .coach-video small { color: var(--muted); font-size: .82rem; }
     .coach-quote p { margin: 0 0 10px; font-size: 1.05rem; font-style: italic; color: #e6e1d6; }
     .coach-quote cite { font-style: normal; font-weight: 700; color: var(--accent); font-size: .92rem; }
     .about-close { text-align: center; margin-top: 40px; }
@@ -574,6 +581,10 @@
             <p>“Cada niño que entra a esta cancha trae un sueño. Mi trabajo es que salga preparado para cumplirlo, con disciplina, con fe y con hambre de ganar.”</p>
             <cite>— Coach Juan Kenciño</cite>
           </blockquote>
+          <a class="coach-video" href="https://vt.tiktok.com/ZSbotVnc5/" target="_blank" rel="noopener">
+            <span class="cv-play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+            <span><b>Mira la historia del Coach Juan</b><small>Video en TikTok</small></span>
+          </a>
           <p class="lead">No basta con tener buena técnica. Aquí formamos <strong>jugadores completos</strong>, preparados para competir dentro y fuera de la cancha, trabajando cuatro pilares de forma integral:</p>
         </div>
         <div class="about-full">
