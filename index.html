@@ -912,7 +912,7 @@
         <div class="game-copy reveal">
           <span class="eyebrow">Mini juego</span>
           <h2>Ayuda a Juan a <span class="hl">recoger los balones</span></h2>
-          <p class="lead">Después de cada entrenamiento, el coach recoge los balones. Guíalo por la cancha: cada balón que recoge se suma a su fila. No choques con los bordes ni con tu propia fila.</p>
+          <p class="lead">Después de cada entrenamiento, el coach recoge los balones. Guíalo por la cancha: cada balón que recoge se suma a su fila. Puedes cruzar los bordes y salir por el lado contrario, pero no choques con tu propia fila.</p>
           <ul class="game-help">
             <li><b>Computadora:</b> flechas o W A S D</li>
             <li><b>Celular:</b> desliza el dedo o usa los botones</li>
@@ -1099,10 +1099,10 @@
         }
         function tick() {
           dir = next; prev = snake.map(function (p) { return {x: p.x, y: p.y}; });
-          var h = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+          var h = {x: (snake[0].x + dir.x + N) % N, y: (snake[0].y + dir.y + N) % N};
           var grow = h.x === food.x && h.y === food.y;
           var body = grow ? snake : snake.slice(0, -1);
-          if (h.x < 0 || h.y < 0 || h.x >= N || h.y >= N || body.some(function (p) { return p.x === h.x && p.y === h.y; })) return over();
+          if (body.some(function (p) { return p.x === h.x && p.y === h.y; })) return over();
           snake.unshift(h);
           if (grow) { score++; elScore.textContent = score; step = Math.max(80, step - 4); prev.push(prev[prev.length - 1]); place(); }
           else snake.pop();
@@ -1133,6 +1133,7 @@
           sprite(ball, (food.x + .5) * C, (food.y + .5) * C, fr);
           for (var i = snake.length - 1; i >= 0; i--) {
             var a = prev[i] || snake[i], b = snake[i];
+            if (Math.abs(b.x - a.x) > 1 || Math.abs(b.y - a.y) > 1) a = b; // al cruzar un borde aparece del otro lado
             var x = (a.x + (b.x - a.x) * t + .5) * C, y = (a.y + (b.y - a.y) * t + .5) * C;
             if (i === 0) sprite(head, x, y, C * .62, true); else sprite(ball, x, y, C * .4);
           }
