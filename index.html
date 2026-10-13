@@ -326,6 +326,10 @@
     .social-box > * { position: relative; z-index: 1; }
     .tiktok-handle { font-family: var(--display); font-size: clamp(2rem, 7vw, 3rem); line-height: 1; margin: 6px 0 18px; word-break: break-word; }
     .btn-tiktok { background: #fff; color: #000; }
+    .social-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .social-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.04); text-decoration: none; font-weight: 700; font-size: .92rem; transition: border-color .2s, color .2s, transform .2s; }
+    .social-btn svg { width: 20px; height: 20px; }
+    .social-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
     .btn-tiktok:hover { background: #e9e9e9; transform: translateY(-2px); }
     .tiktok-previews { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .tiktok-previews .photo-slot { aspect-ratio: 9 / 16; border-radius: 12px; }
@@ -730,8 +734,8 @@
             <div class="loc-item">
               <div class="ico"><img src="img/iconos/ubicacion.png" alt="" width="128" height="128" loading="lazy"></div>
               <div>
-                <strong>Villa María del Triunfo</strong>
-                <span>Lima Sur, Perú</span>
+                <strong>Santa Cruz de Flores 494</strong>
+                <span>Villa María del Triunfo, Lima Sur</span>
               </div>
             </div>
             <div class="loc-item">
@@ -748,14 +752,13 @@
                 <span>Escríbenos y te enviamos la ubicación exacta por WhatsApp.</span>
               </div>
             </div>
-            <a class="btn btn-ghost" href="https://www.google.com/maps/search/?api=1&query=Estacion+Pumacahua+Villa+Maria+del+Triunfo+Lima" target="_blank" rel="noopener">Abrir en Google Maps</a>
+            <a class="btn btn-ghost" href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener">Abrir en Google Maps</a>
           </div>
           <div class="map reveal">
-            <!-- MAPA: si tienes la dirección exacta, cambia el texto después de "q=" por tu dirección o
-                 pega aquí el iframe de Google Maps > Compartir > Insertar un mapa -->
+            <!-- MAPA: Santa Cruz de Flores 494, Villa María del Triunfo (coordenadas -12.182351, -76.9474786) -->
             <iframe
-              src="https://maps.google.com/maps?q=Estaci%C3%B3n%20Pumacahua%2C%20Villa%20Mar%C3%ADa%20del%20Triunfo%2C%20Lima&z=16&output=embed"
-              title="Mapa de ubicación de La Fábrica cerca de la estación Pumacahua"
+              src="https://maps.google.com/maps?q=-12.182351,-76.9474786&z=17&output=embed"
+              title="Mapa: La Fábrica, Santa Cruz de Flores 494, Villa María del Triunfo"
               loading="lazy"
               referrerpolicy="no-referrer-when-downgrade"
               allowfullscreen></iframe>
@@ -769,13 +772,17 @@
       <div class="container">
         <div class="social-box reveal">
           <div>
-            <span class="eyebrow">Síguenos en TikTok</span>
+            <span class="eyebrow">Síguenos en redes</span>
             <p class="tiktok-handle">@lafabrica.futbol.pe</p>
             <p class="lead" style="margin-bottom: 22px;">Mira nuestros entrenamientos, ejercicios y el progreso de nuestros jugadores.</p>
             <a class="btn btn-tiktok" href="https://www.tiktok.com/@lafabrica.futbol.pe" target="_blank" rel="noopener">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
               Ver en TikTok
             </a>
+            <div class="social-links">
+              <a class="social-btn" href="https://instagram.com/coach_kencino" target="_blank" rel="noopener" aria-label="Instagram del Coach Juan Kenciño"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1.1.4 2.2.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1.1.4-2.2.4-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1.1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1.1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 4.6a5.2 5.2 0 1 0 0 10.4 5.2 5.2 0 0 0 0-10.4zm0 8.6a3.4 3.4 0 1 1 0-6.8 3.4 3.4 0 0 1 0 6.8zm5.4-9.9a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg><span>@coach_kencino</span></a>
+              <a class="social-btn" href="https://www.facebook.com/profile.php?id=100063921047837" target="_blank" rel="noopener" aria-label="Facebook de La Fábrica"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z"/></svg><span>Facebook</span></a>
+            </div>
           </div>
           <div class="tiktok-previews">
             <!-- FOTOS TIKTOK: puedes cambiarlas por capturas de tus videos -->
@@ -817,13 +824,17 @@
           <ul>
             <li>WhatsApp: <a class="js-wa" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">+51 917 168 725</a></li>
             <li>TikTok: <a href="https://www.tiktok.com/@lafabrica.futbol.pe" target="_blank" rel="noopener">@lafabrica.futbol.pe</a></li>
+            <li>Instagram: <a href="https://instagram.com/coach_kencino" target="_blank" rel="noopener">@coach_kencino</a></li>
+            <li>Facebook: <a href="https://www.facebook.com/profile.php?id=100063921047837" target="_blank" rel="noopener">La Fábrica</a></li>
           </ul>
         </div>
         <div>
           <h4>Dirección</h4>
           <ul>
+            <li>Santa Cruz de Flores 494</li>
             <li>Villa María del Triunfo, Lima Sur</li>
             <li>A una cuadra de la estación Pumacahua</li>
+            <li><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener">Ver en Google Maps →</a></li>
           </ul>
         </div>
       </div>
