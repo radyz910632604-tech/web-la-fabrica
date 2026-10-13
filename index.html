@@ -133,13 +133,14 @@
       overflow: hidden;
     }
     .hero-bg { position: absolute; inset: 0; z-index: -2; }
-    .hero-bg img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.6) contrast(1.15) brightness(.9); }
+    .hero-bg img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.95) contrast(1.1) brightness(.95); }
     .hero { isolation: isolate; }
     /* Foto nítida; la lectura se controla solo con degradados (sin blur) */
     .hero::before {
       content: "";
       position: absolute; inset: 0; z-index: -1;
       background:
+        radial-gradient(circle at 80% 40%, rgba(245,180,0,.12) 0%, rgba(245,180,0,0) 60%),
         linear-gradient(90deg, rgba(8,8,8,.95) 0%, rgba(8,8,8,.85) 35%, rgba(8,8,8,.40) 70%, rgba(8,8,8,.25) 100%),
         linear-gradient(180deg, rgba(8,8,8,.60) 0%, rgba(8,8,8,0) 25%, rgba(8,8,8,0) 65%, rgba(8,8,8,1) 100%);
     }
