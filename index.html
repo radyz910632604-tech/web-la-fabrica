@@ -923,7 +923,7 @@
         <div class="game-box reveal">
           <div class="game-stage">
             <img id="gBall" src="img/iconos/pilar-tecnica.png" alt="" style="display:none">
-            <img id="gJuan" src="img/iconos/juan-pixel.png" alt="" style="display:none">
+            <img id="gJuan" src="img/iconos/juan-corre.png" alt="" style="display:none">
             <canvas id="gCanvas" width="720" height="720" aria-label="Juego: Juan recoge balones"></canvas>
             <div class="game-overlay" id="gOverlay">
               <img class="g-hero" src="img/iconos/juan-pixel.png" alt="" width="156" height="260">
@@ -1129,21 +1129,20 @@
           if (img.complete && img.naturalWidth) ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
           else { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
         }
-        // Juan corriendo: rebote, inclinación, balanceo y giro según la dirección
+        // Juan corriendo: 4 cuadros de carrera (img/iconos/juan-corre.png), volteado según la dirección
         function drawJuan(x, y) {
-          var h = C * 2.5, w = h * (juan.naturalWidth / juan.naturalHeight || .6);
-          var ph = runT * 14, bob = running ? Math.abs(Math.sin(ph)) : 0;
-          var lift = bob * C * .22, sway = running ? Math.sin(ph) * .09 : 0, lean = running ? (dir.x ? .12 : 0) : 0;
-          var squash = running ? 1 - (1 - bob) * .06 : 1;
+          var fw = juan.naturalWidth / 4, fh = juan.naturalHeight;
+          var h = C * 2.5, w = h * (fw / fh || .81);
+          var frame = running ? Math.floor(runT * 11) % 4 : 1;
           var foot = y + C * .45;
-          ctx.fillStyle = "rgba(0,0,0," + (.35 - bob * .15) + ")";
-          ctx.beginPath(); ctx.ellipse(x, foot, w * (.42 - bob * .08), C * .14, 0, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = "rgba(0,0,0,.32)";
+          ctx.beginPath(); ctx.ellipse(x, foot, w * .32, C * .13, 0, 0, Math.PI * 2); ctx.fill();
+          if (!(juan.complete && fw)) return;
           ctx.save();
-          ctx.translate(x, foot - lift);
+          ctx.translate(x, foot);
           ctx.scale(face, 1);
-          ctx.rotate(lean + sway);
-          ctx.scale(1 / squash, squash);
-          if (juan.complete && juan.naturalWidth) { ctx.imageSmoothingEnabled = false; ctx.drawImage(juan, -w / 2, -h, w, h); ctx.imageSmoothingEnabled = true; }
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(juan, frame * fw, 0, fw, fh, -w / 2, -h, w, h);
           ctx.restore();
         }
         function draw(t) {
