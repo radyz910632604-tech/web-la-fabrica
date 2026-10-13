@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>document.documentElement.classList.add("js");</script>
+  <title>La Fábrica | Centro de Alto Rendimiento de Fútbol en Villa María del Triunfo</title>
+  <meta name="description" content="Centro de Alto Rendimiento La Fábrica: entrenamiento de fútbol en Villa María del Triunfo, Lima Sur. Formamos jugadores completos: técnica, fuerza y mentalidad. Coach Juan Kenciño.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Open Graph (vista previa al compartir en WhatsApp / redes) -->
+  <meta property="og:title" content="Centro de Alto Rendimiento La Fábrica">
+  <meta property="og:description" content="Formamos jugadores completos: técnica, fuerza y mentalidad. Villa María del Triunfo, Lima Sur.">
+  <meta property="og:type" content="website">
+  <!-- Imagen al compartir el enlace -->
+  <meta property="og:image" content="https://radyz910632604-tech.github.io/web-la-fabrica/img/logo.png">
+
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Paleta del logo: negro, dorado y blanco */
+      --bg: #0a0a0a;
+      --bg-2: #121110;
+      --card: #191714;
+      --line: #2e2a21;
+      --text: #ffffff;
+      --muted: #b5ad9c;
+      --accent: #f5b914;      /* dorado */
+      --accent-dark: #d69a06;
+      --hot: #ffffff;
+      --gold-grad: linear-gradient(135deg, #ffd955 0%, #f5b914 45%, #c88a04 100%);
+      --wa: #25d366;
+      --wa-dark: #1ebe5a;
+      --radius: 18px;
+      --max: 1140px;
+      --display: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+      --body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    img { max-width: 100%; display: block; }
+    a { color: inherit; }
+
+    .container { width: 100%; max-width: var(--max); margin: 0 auto; padding: 0 20px; }
+    section { padding: 80px 0; scroll-margin-top: 64px; }
+
+    .eyebrow {
+      display: inline-block;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: .02em; line-height: 1; margin: 0; }
+    h2 { font-size: clamp(2.4rem, 7vw, 3.8rem); margin-bottom: 18px; }
+    h3 { font-size: 1.8rem; }
+    .lead { color: var(--muted); font-size: 1.05rem; max-width: 640px; }
+    .hl { color: var(--accent); }
+
+    /* ---------- Botones ---------- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px 26px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 1rem;
+      text-decoration: none;
+      border: 0;
+      cursor: pointer;
+      transition: transform .15s ease, background .2s ease, box-shadow .2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn svg { width: 22px; height: 22px; flex-shrink: 0; }
+    .btn-wa { background: var(--wa); color: #06260f; box-shadow: 0 10px 30px -10px rgba(37,211,102,.7); }
+    .btn-wa:hover { background: var(--wa-dark); transform: translateY(-2px); }
+    .btn-lg { padding: 19px 32px; font-size: 1.1rem; }
+    .btn-wa-outline { background: transparent; color: var(--wa); border: 2px solid var(--wa); }
+    .btn-wa-outline:hover { background: rgba(37,211,102,.12); transform: translateY(-2px); }
+    .btn-ghost { background: transparent; color: var(--text); border: 2px solid var(--line); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-block { width: 100%; }
+
+    /* ---------- Header ---------- */
+    .header {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 50;
+      transition: background .25s ease, border-color .25s ease;
+      border-bottom: 1px solid transparent;
+      background: rgba(8,8,8,.85);
+      -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    }
+    .header .nav a { text-shadow: 0 1px 6px rgba(0,0,0,.7); }
+    .header.scrolled { background: rgba(10,10,10,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-color: var(--line); }
+    .header .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo img { width: 44px; height: 44px; object-fit: contain; }
+    .logo-text { font-family: var(--display); font-size: 1.6rem; letter-spacing: .04em; }
+    .nav { display: flex; gap: 26px; }
+    .nav a { text-decoration: none; font-weight: 600; font-size: .95rem; color: var(--muted); transition: color .2s; }
+    .nav a:hover { color: var(--accent); }
+    .menu-btn { display: none; background: none; border: 0; color: var(--text); padding: 8px; cursor: pointer; }
+    .menu-btn svg { width: 28px; height: 28px; }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      min-height: 100svh;
+      display: flex;
+      align-items: flex-end;
+      padding: 110px 0 60px;
+      overflow: hidden;
+    }
+    .hero-bg { position: absolute; inset: 0; z-index: -2; }
+    .hero-bg img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.95) contrast(1.1) brightness(.95); }
+    .hero { isolation: isolate; }
+    /* Foto nítida; la lectura se controla solo con degradados (sin blur) */
+    .hero::before {
+      content: "";
+      position: absolute; inset: 0; z-index: -1;
+      background:
+        radial-gradient(circle at 80% 40%, rgba(245,180,0,.12) 0%, rgba(245,180,0,0) 60%),
+        linear-gradient(90deg, rgba(8,8,8,.95) 0%, rgba(8,8,8,.85) 35%, rgba(8,8,8,.40) 70%, rgba(8,8,8,.25) 100%),
+        linear-gradient(180deg, rgba(8,8,8,.60) 0%, rgba(8,8,8,0) 25%, rgba(8,8,8,0) 65%, rgba(8,8,8,1) 100%);
+    }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(245,185,20,.12);
+      border: 1px solid rgba(245,185,20,.35);
+      color: var(--accent);
+      padding: 7px 14px; border-radius: 999px;
+      font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    .hero-tag .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1.6s infinite; }
+    .hero h1 { font-size: clamp(3.2rem, 13vw, 7.5rem); }
+    .hero h1 small { display: block; font-size: .36em; color: #e8e2d6; letter-spacing: .12em; margin-bottom: 6px; }
+    .hero h1, .hero-claim, .hero-coach, .hero-stats { text-shadow: 0 2px 12px rgba(0,0,0,.75); }
+    .hero-coach { font-size: clamp(1rem, 3.4vw, 1.2rem); margin: -14px 0 28px; max-width: 680px; text-wrap: balance; color: #f1ece2; }
+    .hero-coach strong { color: var(--text); }
+    .hero-claim { font-size: clamp(1.15rem, 4vw, 1.5rem); font-weight: 600; margin: 20px 0 30px; max-width: 680px; text-wrap: balance; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 14px; }
+    .hero-stats { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 44px; padding-top: 26px; border-top: 1px solid var(--line); }
+    .hero-stats div { font-size: .85rem; color: #d9d2c4; }
+    .hero-stats strong { display: block; font-family: var(--display); font-size: 2.2rem; color: var(--text); line-height: 1; font-weight: 400; }
+
+    /* ---------- Marquee ---------- */
+    .marquee-wrap { overflow: hidden; padding: 14px 0; margin-top: -24px; position: relative; z-index: 1; }
+    .marquee { background: var(--gold-grad); color: #0a0a0a; overflow: hidden; padding: 12px 0; transform: rotate(-1.5deg) scaleX(1.04); }
+    .marquee-track { display: flex; gap: 40px; width: max-content; animation: marquee 22s linear infinite; font-family: var(--display); font-size: 1.6rem; letter-spacing: .05em; white-space: nowrap; }
+    .marquee-track span::after { content: "✦"; margin-left: 40px; }
+
+    /* ---------- Nosotros ---------- */
+    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+    .photo-slot { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--card); border: 1px solid var(--line); }
+    .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+    .about-photo { aspect-ratio: 4 / 5; }
+    .about-photo .badge {
+      position: absolute; left: 16px; bottom: 16px; right: 16px;
+      background: rgba(10,10,10,.88); backdrop-filter: blur(6px);
+      border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+    }
+    .badge strong { display: block; font-family: var(--display); font-size: 1.6rem; font-weight: 400; line-height: 1.05; }
+    .badge span { color: var(--accent); font-size: .9rem; font-weight: 600; }
+    .quote { font-family: var(--display); font-size: clamp(1.8rem, 5vw, 2.4rem); line-height: 1.05; color: var(--accent); margin: 22px 0; border-left: 4px solid var(--accent); padding-left: 16px; }
+    .about-grid { align-items: start; }
+    .about-grid > .about-photo { margin-top: 8px; }
+    .about-full { grid-column: 1 / -1; margin-top: -24px; }
+    .tagline { font-size: 1.15rem; font-weight: 700; color: var(--text); margin: 0 0 16px; }
+    .coach-quote { margin: 24px 0; padding: 20px 22px; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 14px; }
+    .coach-video { display: inline-flex; align-items: center; gap: 14px; margin: -8px 0 24px; padding: 10px 20px 10px 10px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); text-decoration: none; transition: border-color .25s, transform .25s, box-shadow .25s; }
+    .coach-video:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 12px 30px -14px rgba(245,185,20,.6); }
+    .cv-play { position: relative; width: 44px; height: 44px; border-radius: 50%; background: var(--gold-grad); color: #0a0a0a; display: grid; place-items: center; flex-shrink: 0; }
+    .cv-play svg { width: 20px; height: 20px; margin-left: 3px; }
+    .cv-play::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent); animation: ring 2s infinite; }
+    .coach-video b { display: block; font-size: .98rem; }
+    .coach-video small { color: var(--muted); font-size: .82rem; }
+    .coach-quote p { margin: 0 0 10px; font-size: 1.05rem; font-style: italic; color: #e6e1d6; }
+    .coach-quote cite { font-style: normal; font-weight: 700; color: var(--accent); font-size: .92rem; }
+    .about-close { text-align: center; margin-top: 40px; }
+    .about-slogan { font-family: var(--display); font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1; margin: 0 0 24px; }
+    .about-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+    .pillar p { margin: 8px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.5; }
+    .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 8px; }
+    .pillar { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+    .pillar .ico { position: relative; width: 96px; height: 96px; margin: 0 auto; }
+    .pillar .ico::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 2px; height: 8px; border-radius: 50%; background: rgba(0,0,0,.6); filter: blur(4px); z-index: 0; }
+    .pillar .ico img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; }
+    .ico-ball img { animation: ball-bounce 2.4s ease-in-out infinite; }
+    .ico-ball::after { animation: shadow-pulse 2.4s ease-in-out infinite; }
+    .ico-arm img { transform-origin: 30% 90%; animation: arm-flex 2.4s ease-in-out infinite .3s; }
+    .ico-brain img { animation: brain-pulse 2.4s ease-in-out infinite .6s; }
+    .ico-cross img { animation: cross-glow 3.2s ease-in-out infinite .9s; }
+    .ico-cross::after { animation: shadow-pulse 3.2s ease-in-out infinite .9s; }
+    .pillar:hover .ico img { animation-duration: 1.2s; }
+    @keyframes ball-bounce {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      45% { transform: translateY(-14px) rotate(-180deg); }
+      55% { transform: translateY(-14px) rotate(-200deg); }
+      90% { transform: translateY(0) rotate(-360deg); }
+    }
+    @keyframes shadow-pulse { 0%, 100% { transform: scaleX(1); opacity: 1; } 50% { transform: scaleX(.65); opacity: .5; } }
+    @keyframes arm-flex {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      30% { transform: rotate(-7deg) scale(1.08); }
+      45% { transform: rotate(-5deg) scale(1.06); }
+      60% { transform: rotate(-7deg) scale(1.08); }
+    }
+    @keyframes cross-glow {
+      0%, 100% { transform: translateY(0) scale(1); filter: brightness(1) drop-shadow(0 0 0 rgba(255,200,60,0)); }
+      50% { transform: translateY(-8px) scale(1.04); filter: brightness(1.25) drop-shadow(0 0 18px rgba(255,200,60,.85)); }
+    }
+    @keyframes brain-pulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(245,185,20,0)); }
+      50% { transform: scale(1.07); filter: drop-shadow(0 0 14px rgba(245,185,20,.75)); }
+    }
+    .pillar strong { display: block; font-family: var(--display); font-size: 1.6rem; font-weight: 400; line-height: 1.05; margin-top: 10px; }
+
+    /* ---------- Qué entrenamos ---------- */
+    .training { background: var(--bg-2); }
+    .section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; margin-bottom: 40px; }
+    .cat-chip { display: inline-flex; align-items: center; gap: 10px; background: var(--hot); color: #0a0a0a; padding: 12px 20px; border-radius: 999px; font-weight: 800; }
+    .cat-chip small { font-weight: 500; opacity: .9; }
+    .train-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .train-card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease; --mx: 50%; --my: 50%; }
+    .train-card:hover { transform: translateY(-6px); border-color: var(--accent); box-shadow: 0 18px 40px -18px rgba(245,185,20,.55); }
+    /* Resplandor dorado que sigue al cursor */
+    .train-card::before { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; transition: opacity .35s ease;
+      background: radial-gradient(260px circle at var(--mx) var(--my), rgba(255,210,80,.22), transparent 65%); }
+    /* Haz de luz dorada que cruza la tarjeta */
+    .train-card::after { content: ""; position: absolute; top: -50%; left: -75%; width: 50%; height: 200%; z-index: 3; pointer-events: none;
+      background: linear-gradient(100deg, transparent 0%, rgba(255,225,120,0) 20%, rgba(255,215,90,.45) 50%, rgba(255,225,120,0) 80%, transparent 100%);
+      transform: rotate(12deg); opacity: 0; }
+    .train-card:hover::before { opacity: 1; }
+    .train-card:hover::after { animation: gold-sweep .9s ease-out; }
+    .train-card:hover .photo-slot img { transform: scale(1.06); }
+    .train-card .photo-slot img { transition: transform .6s ease; }
+    .train-card:hover h3 { color: var(--accent); }
+    .train-card h3 { transition: color .3s ease; }
+    @keyframes gold-sweep { 0% { left: -75%; opacity: 1; } 100% { left: 130%; opacity: 1; } }
+    .train-card .photo-slot { border: 0; border-radius: 0; aspect-ratio: 4 / 3; }
+    .train-card .body { padding: 20px; }
+    .train-card .num { font-family: var(--display); color: var(--accent); font-size: 1.1rem; letter-spacing: .1em; }
+    .train-card h3 { margin: 4px 0 8px; }
+    .train-card p { margin: 0; color: var(--muted); font-size: .95rem; }
+
+    /* ---------- Planes ---------- */
+    .plans-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; align-items: stretch; }
+    .plan { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px 22px 22px; display: flex; flex-direction: column; }
+    .plan.featured { border: 2px solid var(--accent); background: linear-gradient(180deg, rgba(245,185,20,.08), var(--card) 45%); }
+    .plan .ribbon { position: absolute; top: -13px; left: 22px; background: var(--accent); color: #0a0a0a; font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; }
+    .plan h3 { font-size: 1.7rem; }
+    .plan-ico { width: 124px; height: 124px; margin: -10px auto 8px; }
+    .plan-ico img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: lighten; }
+    .pi-suelta img { transform-origin: 50% 85%; animation: pi-rock 2.6s ease-in-out infinite; }
+    .pi-3dias img { transform-origin: 50% 10%; animation: pi-swing 3s ease-in-out infinite .3s; }
+    .pi-5dias img { animation: pi-trophy 2.4s ease-in-out infinite .6s; }
+    .pi-1a1 img { animation: pi-float 3.2s ease-in-out infinite .9s; }
+    .plan:hover .plan-ico img { animation-duration: 1.3s; }
+    @keyframes pi-rock { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-6deg) translateY(-3px); } 75% { transform: rotate(6deg) translateY(-3px); } }
+    @keyframes pi-swing { 0%, 100% { transform: rotate(0deg); } 30% { transform: rotate(-7deg); } 60% { transform: rotate(5deg); } 80% { transform: rotate(-2deg); } }
+    @keyframes pi-trophy {
+      0%, 100% { transform: translateY(0) scale(1); filter: brightness(1) drop-shadow(0 0 0 rgba(255,200,60,0)); }
+      50% { transform: translateY(-6px) scale(1.06); filter: brightness(1.2) drop-shadow(0 0 16px rgba(255,200,60,.8)); }
+    }
+    @keyframes pi-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px) scale(1.03); } }
+    .plan .freq { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+    .price { display: flex; align-items: baseline; gap: 6px; margin: 20px 0 18px; }
+    .price:has(+ .per-session) { margin-bottom: 6px; }
+    .per-session { color: var(--accent); font-size: .82rem; font-weight: 700; margin-bottom: 18px; }
+    .price .cur { font-weight: 800; font-size: 1.2rem; color: var(--accent); }
+    .price .amount { font-family: var(--display); font-size: 4rem; line-height: .9; }
+    .price .per { color: var(--muted); font-size: .9rem; }
+    .plan ul { list-style: none; padding: 0; margin: 0 0 24px; flex-grow: 1; }
+    .plan li { position: relative; padding-left: 26px; margin-bottom: 10px; font-size: .95rem; color: #e6e1d6; }
+    .plan li::before { content: ""; position: absolute; left: 0; top: 6px; width: 16px; height: 16px; border-radius: 50%; background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='4'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/11px no-repeat; }
+    .plan .btn { padding: 14px 18px; font-size: .95rem; }
+    .plans-note { text-align: center; color: var(--muted); font-size: .95rem; margin-top: 26px; }
+    .plans-note a { text-decoration: none; }
+    .plans-note a span { color: var(--accent); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+    .plans-note a:hover span { color: var(--text); }
+
+    /* ---------- Historia ---------- */
+    .story { background: var(--bg-2); }
+    .story-card { display: grid; grid-template-columns: 1fr 1.1fr; background: var(--card); border: 1px solid var(--line); border-radius: 26px; overflow: hidden; }
+    .story-card .photo-slot { border: 0; border-radius: 0; min-height: 360px; }
+    .story-body { padding: 44px 40px; display: flex; flex-direction: column; justify-content: center; }
+    .flags { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-weight: 800; letter-spacing: .08em; color: var(--accent); }
+    .flags .flag { width: 30px; height: 20px; border-radius: 3px; box-shadow: 0 2px 6px rgba(0,0,0,.5); flex-shrink: 0; }
+    .flags .plane { width: 44px; height: 44px; filter: drop-shadow(0 6px 8px rgba(0,0,0,.5)); animation: plane-fly 3s ease-in-out infinite; }
+    @keyframes plane-fly { 0%, 100% { transform: translate(-4px, 2px) rotate(-4deg); } 50% { transform: translate(4px, -4px) rotate(4deg); } }
+    .story-punch { font-weight: 700; color: var(--text) !important; font-size: 1.05rem; margin-top: 6px !important; }
+    .story-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+    .story-actions .btn { padding: 14px 20px; font-size: .95rem; }
+    .story-body h2 { font-size: clamp(2.2rem, 6vw, 3.2rem); }
+    .story-body p { color: #e6e1d6; margin: 0 0 14px; }
+
+    /* ---------- Ubicación ---------- */
+    .location-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 32px; align-items: stretch; }
+    .loc-info { display: flex; flex-direction: column; gap: 14px; }
+    .loc-item { display: flex; gap: 14px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+    .loc-item .ico { position: relative; width: 64px; height: 64px; flex-shrink: 0; border-radius: 16px; background: rgba(245,185,20,.12); display: grid; place-items: center; overflow: hidden; }
+    .loc-item .ico > img, .loc-item .msg { width: 52px; height: 52px; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
+    /* Pin: gira sobre su eje */
+    .ico-pin { perspective: 200px; }
+    .ico-pin img { animation: pin-spin 3.2s ease-in-out infinite; }
+    @keyframes pin-spin { 0%, 55% { transform: rotateY(0deg) translateY(0); } 70% { transform: rotateY(180deg) translateY(-4px); } 85%, 100% { transform: rotateY(360deg) translateY(0); } }
+    /* Tren: vibra como en marcha y deja líneas de velocidad */
+    .loc-item .ico-train > img { width: 58px; height: auto; position: relative; z-index: 1; animation: train-run .35s linear infinite; }
+    @keyframes train-run { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(1px, -1px); } 50% { transform: translate(0, 1px); } 75% { transform: translate(-1px, 0); } }
+    .ico-train .speed, .ico-train .speed::before, .ico-train .speed::after { position: absolute; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, rgba(255,210,80,.9)); }
+    .ico-train .speed { left: 0; top: 24px; width: 22px; animation: speed-line .7s linear infinite; }
+    .ico-train .speed::before { content: ""; left: 6px; top: 12px; width: 16px; animation: speed-line .7s linear infinite .25s; }
+    .ico-train .speed::after { content: ""; left: -4px; top: 22px; width: 20px; animation: speed-line .7s linear infinite .45s; }
+    @keyframes speed-line { 0% { transform: translateX(30px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateX(-30px); opacity: 0; } }
+    /* Mensaje: los tres puntos rebotan como "escribiendo..." */
+    .msg { position: relative; }
+    .msg > img:first-child { width: 100%; height: 100%; }
+    .msg .dot { position: absolute; width: 18%; height: 18%; top: 36.6%; animation: typing 1.2s ease-in-out infinite; }
+    .msg .dot:nth-of-type(2) { left: 26.9%; }
+    .msg .dot:nth-of-type(3) { left: 47.6%; animation-delay: .15s; }
+    .msg .dot:nth-of-type(4) { left: 68.3%; animation-delay: .3s; }
+    @keyframes typing { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
+    .loc-item strong { display: block; }
+    .loc-item span { color: var(--muted); font-size: .93rem; }
+    .map { position: relative; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); min-height: 380px; background: var(--card); }
+    .map iframe { position: relative; z-index: 1; width: 100%; height: 100%; min-height: 380px; border: 0; display: block; filter: grayscale(.2) contrast(1.05); }
+    /* Respaldo: se ve si el mapa no carga (por ejemplo, en el visor de archivos del celular) */
+    .map-fallback { position: absolute; inset: 0; z-index: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center; text-decoration: none;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(245,185,20,.16), transparent 55%),
+        repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 1px, transparent 1px 38px),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 38px),
+        var(--card); }
+    .map-fallback img { width: 84px; height: 84px; filter: drop-shadow(0 8px 12px rgba(0,0,0,.6)); animation: pin-spin 3.2s ease-in-out infinite; }
+    .map-fallback strong { font-family: var(--display); font-weight: 400; font-size: 1.9rem; line-height: 1; }
+    .map-fallback span { color: var(--muted); font-size: .95rem; }
+    .map-fallback em { font-style: normal; margin-top: 6px; background: var(--accent); color: #0a0a0a; font-weight: 800; padding: 12px 22px; border-radius: 999px; }
+
+    /* ---------- Redes ---------- */
+    .social-box {
+      position: relative;
+      background: linear-gradient(135deg, #111 0%, #1a1a1a 100%);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      padding: 44px 32px;
+      display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px; align-items: center;
+      overflow: hidden;
+    }
+    .social-box::before { content: ""; position: absolute; width: 320px; height: 320px; border-radius: 50%; background: #25f4ee; filter: blur(110px); opacity: .18; top: -120px; left: -80px; }
+    .social-box::after { content: ""; position: absolute; width: 320px; height: 320px; border-radius: 50%; background: #fe2c55; filter: blur(110px); opacity: .18; bottom: -140px; right: -60px; }
+    .social-box > * { position: relative; z-index: 1; }
+    .tiktok-handle { font-family: var(--display); font-size: clamp(2rem, 7vw, 3rem); line-height: 1; margin: 6px 0 18px; word-break: break-word; }
+    .btn-tiktok { background: #fff; color: #000; }
+    .social-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .social-btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.04); text-decoration: none; font-weight: 700; font-size: .92rem; transition: border-color .2s, color .2s, transform .2s; }
+    .social-btn svg { width: 20px; height: 20px; }
+    .social-btn:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+    .btn-tiktok:hover { background: #e9e9e9; transform: translateY(-2px); }
+    .tiktok-previews { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .tiktok-previews .photo-slot { aspect-ratio: 9 / 16; border-radius: 12px; }
+
+    /* ---------- CTA final ---------- */
+    /* Fondo: img/cta-fondo.jpg (computadora) e img/cta-fondo-movil.jpg (celular) */
+    .final-cta { position: relative; overflow: hidden; text-align: center; padding: 90px 0 100px; color: #0a0a0a;
+      background: #f5b914 url("img/cta-fondo.jpg") center/cover no-repeat; }
+    .final-cta .container { position: relative; z-index: 2; }
+    .cta-title { margin: 0 0 22px; color: #0a0a0a; line-height: .95; }
+    .cta-l1 { display: block; font-size: clamp(2.2rem, 6.5vw, 4.4rem); letter-spacing: .01em; }
+    .cta-l2 { display: inline-block; margin-top: 8px; padding: 6px 34px 4px; background: #0a0a0a; transform: skewX(-8deg) rotate(-2deg); box-shadow: 0 14px 30px -12px rgba(0,0,0,.6); }
+    .cta-l2 > span { display: inline-block; transform: skewX(8deg); color: #fff; font-size: clamp(3rem, 10vw, 6.4rem); font-style: italic; letter-spacing: .01em; }
+    .cta-l2 em { color: var(--accent); font-style: italic; margin-left: 4px; }
+    .final-cta p { max-width: 600px; margin: 0 auto 26px; font-weight: 500; font-size: 1.05rem; }
+    .final-cta .btn-wa { background: #0a0a0a; color: #fff; box-shadow: 0 12px 28px -10px rgba(0,0,0,.55); border: 2px solid rgba(255,215,90,.6); }
+    .final-cta .cta-offer { margin: 0 auto 12px; font-weight: 700; font-size: .92rem; letter-spacing: .02em; }
+    .final-cta .cta-offer span { white-space: nowrap; }
+    .final-cta .btn-wa:hover { background: #1e1b16; }
+
+    /* ---------- Mini juego ---------- */
+    .game { background: var(--bg-2); }
+    .game-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+    .game-help { list-style: none; padding: 0; margin: 18px 0; color: var(--muted); font-size: .95rem; }
+    .game-help li { margin-bottom: 6px; } .game-help b { color: var(--text); }
+    .game-scores { display: flex; gap: 14px; margin-top: 20px; }
+    .game-scores div { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 20px; min-width: 120px; }
+    .game-scores span { display: block; color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; }
+    .game-scores strong { font-family: var(--display); font-weight: 400; font-size: 2.4rem; line-height: 1; color: var(--accent); }
+    .game-box { max-width: 480px; width: 100%; justify-self: center; }
+    .game-stage { position: relative; border-radius: 18px; overflow: hidden; border: 2px solid var(--accent); box-shadow: 0 20px 50px -20px rgba(245,185,20,.45); aspect-ratio: 1; }
+    #gCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    .game-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: safe center; overflow-y: auto; gap: 8px; padding: 20px; text-align: center; background: rgba(8,8,8,.72); }
+    .game-overlay[hidden] { display: none; }
+    .game-overlay .g-hero { width: auto; height: 120px; image-rendering: pixelated; filter: drop-shadow(0 8px 10px rgba(0,0,0,.6)); animation: hero-idle 1.6s ease-in-out infinite; }
+    @keyframes hero-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .g-cup { flex-shrink: 0; width: 64px; height: 118px; background: url("img/iconos/juan-copa.png") 0 0 / 800% 100% no-repeat; image-rendering: pixelated; filter: drop-shadow(0 8px 12px rgba(0,0,0,.6)); }
+    .g-cup[hidden], .g-hero[hidden] { display: none; }
+    .game-bar { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+    .g-ctrl { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--accent); background: var(--card); color: var(--accent); font: inherit; font-weight: 800; cursor: pointer; transition: background .2s, color .2s; }
+    .g-ctrl svg { width: 18px; height: 18px; }
+    .g-ctrl:hover:not(:disabled) { background: var(--accent); color: #0a0a0a; }
+    .g-ctrl:disabled { opacity: .4; cursor: default; }
+    .g-paused { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: rgba(8,8,8,.55); color: var(--text); }
+    .g-paused[hidden] { display: none; }
+    .g-paused strong { font-family: var(--display); font-weight: 400; font-size: 2.6rem; color: var(--accent); letter-spacing: .08em; }
+    .g-paused span { color: #e6e1d6; font-size: .9rem; }
+    .game-overlay strong { font-family: var(--display); font-weight: 400; font-size: 2.2rem; line-height: 1; }
+    .game-overlay p { margin: 0 0 6px; color: #e6e1d6; }
+    .g-cta { display: block; text-align: center; margin: 14px auto 0; padding: 12px 18px; border-radius: 14px; background: rgba(245,185,20,.12); border: 1px solid var(--accent); color: var(--accent); font-weight: 800; text-decoration: none; }
+    .g-cta[hidden] { display: none; }
+    .g-cta:hover { background: var(--accent); color: #0a0a0a; }
+    .game-overlay .g-quote { font-style: italic; color: var(--accent); max-width: 360px; margin: 0 0 8px; font-weight: 600; }
+    .game-overlay .g-quote[hidden], .g-record[hidden] { display: none; }
+    .g-quote cite { display: block; margin-top: 6px; font-style: normal; font-weight: 800; color: #fff; font-size: .9rem; }
+    .game-overlay .g-record { margin: -4px 0 2px; color: var(--accent); font-weight: 800; letter-spacing: .06em; }
+    .game-challenge { color: var(--muted); font-size: .95rem; border-left: 3px solid var(--accent); padding-left: 12px; margin: 0; }
+    .game-challenge b { color: var(--text); }
+    .g-toast { position: absolute; top: 14px; left: 50%; z-index: 3; transform: translate(-50%, -20px); opacity: 0; pointer-events: none; white-space: nowrap;
+      background: rgba(8,8,8,.85); border: 1px solid var(--accent); color: var(--accent); font-weight: 800; padding: 8px 16px; border-radius: 999px; transition: opacity .3s, transform .3s; }
+    .g-toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .game-pad { display: none; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 56px); gap: 8px; justify-content: center; margin-top: 14px; }
+    .pad-btn { border: 1px solid var(--line); background: var(--card); color: var(--accent); border-radius: 14px; display: grid; place-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    .pad-btn:active { background: var(--accent); color: #0a0a0a; }
+    .pad-btn svg { width: 26px; height: 26px; }
+    .pad-up { grid-column: 2; grid-row: 1; } .pad-left { grid-column: 1; grid-row: 2; } .pad-down { grid-column: 2; grid-row: 2; } .pad-right { grid-column: 3; grid-row: 2; }
+    @media (hover: none), (max-width: 820px) { .game-pad { display: grid; } }
+    @media (max-width: 820px) { .game-grid { grid-template-columns: 1fr; gap: 28px; } }
+    @media (max-width: 560px) { .g-cup { width: 56px; height: 104px; } .game-overlay { gap: 6px; padding: 12px; } .game-overlay strong { font-size: 1.8rem; } .game-overlay .g-quote { font-size: .78rem; margin-bottom: 2px; } .game-overlay p { margin-bottom: 0; font-size: .85rem; } .game-overlay .btn { padding: 11px 22px; font-size: .9rem; } .g-cta { font-size: .9rem; } }
+
+    /* ---------- Footer ---------- */
+    .footer { background: #050505; padding: 56px 0 100px; border-top: 1px solid var(--line); }
+    .footer-grid { display: grid; grid-template-columns: 1.35fr .8fr 1.15fr 1.15fr; gap: 32px; }
+    .footer li a { display: inline-flex; align-items: flex-start; gap: 10px; padding: 4px 0; color: var(--muted); transition: color .2s; }
+    .footer li a b { color: var(--text); font-weight: 600; transition: color .2s; }
+    .footer li a:hover, .footer li a:hover b { color: var(--accent); }
+    .footer .fi { width: 18px; height: 18px; flex-shrink: 0; color: var(--accent); margin-top: 2px; }
+    .f-explore .fi { width: 14px; height: 14px; margin-top: 4px; }
+    .f-strong { color: var(--text); font-weight: 700; }
+    .footer h4 { font-family: var(--display); font-weight: 400; font-size: 1.4rem; letter-spacing: .05em; margin: 0 0 12px; }
+    .footer p, .footer li { color: var(--muted); font-size: .93rem; margin: 0 0 8px; }
+    .footer ul { list-style: none; padding: 0; margin: 0; }
+    .footer a { text-decoration: none; }
+    .footer a:hover { color: var(--accent); }
+    .copy { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: #7a7366; font-size: .82rem; text-align: center; }
+
+    /* ---------- WhatsApp flotante ---------- */
+    .wa-float {
+      position: fixed; right: 18px; bottom: 18px; z-index: 100;
+      width: 62px; height: 62px; border-radius: 50%;
+      background: var(--wa); color: #fff;
+      display: grid; place-items: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,.45);
+      transition: transform .2s;
+      text-decoration: none;
+    }
+    .wa-float::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--wa); animation: ring 2.2s infinite; z-index: -1; }
+    .wa-float:hover { transform: scale(1.08); }
+    .wa-float svg { width: 34px; height: 34px; }
+    .wa-float .tip img { display: inline-block; width: 20px; height: 20px; vertical-align: -4px; }
+    .wa-float .tip {
+      position: absolute; right: 74px; white-space: nowrap;
+      background: #fff; color: #0a0a0a; font-weight: 700; font-size: .85rem;
+      padding: 8px 12px; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,.3);
+      opacity: 0; transform: translateX(8px); transition: .25s; pointer-events: none;
+    }
+    .wa-float:hover .tip, .wa-float.show-tip .tip { opacity: 1; transform: none; }
+
+    /* ---------- Animaciones ---------- */
+    /* Solo se ocultan si JavaScript funciona; así el contenido siempre es visible */
+    .js .reveal { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+    .js .reveal.visible { opacity: 1; transform: none; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+    @keyframes ring { 0% { transform: scale(1); opacity: .6; } 100% { transform: scale(1.6); opacity: 0; } }
+    @keyframes marquee { to { transform: translateX(-50%); } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .js .reveal { opacity: 1; transform: none; }
+      html { scroll-behavior: auto; }
+    }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 1000px) {
+      .train-grid, .plans-grid { grid-template-columns: repeat(2, 1fr); }
+      .plans-grid { row-gap: 26px; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+    }
+    /* Celular: oscurecido parejo para que la foto no compita con el texto (se mantiene el fundido abajo) */
+    @media (max-width: 768px) {
+      .hero::before {
+        background:
+          linear-gradient(180deg, rgba(8,8,8,0) 65%, rgba(8,8,8,1) 100%),
+          rgba(8,8,8,.75);
+      }
+    }
+    @media (max-width: 820px) {
+      section { padding: 64px 0; }
+      .nav {
+        position: fixed; top: 64px; left: 0; right: 0;
+        flex-direction: column; gap: 0;
+        background: rgba(10,10,10,.98); border-bottom: 1px solid var(--line);
+        max-height: 0; overflow: hidden; transition: max-height .3s ease;
+      }
+      .nav.open { max-height: 420px; }
+      .nav a { padding: 16px 20px; border-top: 1px solid var(--line); font-size: 1.05rem; color: var(--text); }
+      .menu-btn { display: block; }
+      .header.menu-open { background: rgba(10,10,10,.98); }
+      .about-grid, .location-grid, .social-box, .story-card { grid-template-columns: 1fr; }
+      .about-grid { gap: 32px; }
+      .final-cta { background-image: url("img/cta-fondo-movil.jpg"); background-position: 8% bottom; padding: 56px 0 330px; }
+      .about-full { grid-column: auto; }
+      .pillars { grid-template-columns: repeat(2, 1fr); }
+      .about-photo { aspect-ratio: 4 / 4; }
+      .story-card .photo-slot { min-height: 0; aspect-ratio: 4 / 5; }
+      .story-body { padding: 30px 22px; }
+      .story-actions .btn { width: 100%; }
+      .social-box { padding: 32px 22px; }
+      .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+      .f-brand { order: 1; } .f-contact { order: 2; } .f-address { order: 3; } .f-explore { order: 4; }
+      .footer li a { padding: 8px 0; }
+      .map, .map iframe { min-height: 320px; }
+    }
+    @media (max-width: 560px) {
+      .container { padding: 0 16px; }
+      .train-grid, .plans-grid { grid-template-columns: 1fr; }
+      .hero-actions .btn { width: 100%; }
+      .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 30px; padding-top: 18px; }
+      .hero-stats div { font-size: .72rem; line-height: 1.3; }
+      .hero-stats strong { font-size: 1.35rem; margin-bottom: 4px; }
+      .pillars { gap: 8px; }
+      .pillar { padding: 16px 10px; }
+      .pillar p { font-size: .84rem; }
+      .about-actions .btn { width: 100%; }
+      .pillar strong { font-size: 1.25rem; }
+      .pillar .ico { width: 88px; height: 88px; }
+      .section-head { margin-bottom: 28px; }
+      .wa-float { width: 58px; height: 58px; right: 14px; bottom: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="header" id="header">
+    <div class="container">
+      <a href="#inicio" class="logo" aria-label="La Fábrica, ir al inicio">
+        <!-- LOGO: img/logo.png -->
+        <img src="img/logo.png" alt="">
+        <span class="logo-text">LA FÁBRICA</span>
+      </a>
+      <nav class="nav" id="nav">
+        <a href="#nosotros">Nosotros</a>
+        <a href="#entrenamiento">Entrenamos</a>
+        <a href="#planes">Planes</a>
+        <a href="#historia">Historia</a>
+        <a href="#ubicacion">Ubicación</a>
+      </nav>
+      <button class="menu-btn" id="menuBtn" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ===================== 1. HERO ===================== -->
+    <section class="hero" id="inicio">
+      <div class="hero-bg">
+        <!-- FOTO HERO: img/hero.jpg -->
+        <img src="img/hero.jpg" alt="Jugadores y familias de La Fábrica en la cancha">
+      </div>
+      <div class="container">
+        <span class="hero-tag"><span class="dot"></span> Villa María del Triunfo · Lima Sur</span>
+        <h1>
+          <small>Centro de Alto Rendimiento</small>
+          LA <span class="hl">FÁBRICA</span>
+        </h1>
+        <p class="hero-claim">Formamos jugadores completos: <span class="hl">técnica, fuerza y mentalidad</span>.</p>
+        <p class="hero-coach">Entrena con el <strong>Coach Juan Kenciño</strong>, <span class="hl">el entrenador de las futuras estrellas</span>.</p>
+        <div class="hero-actions">
+          <a class="btn btn-wa btn-lg" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
+            Agenda tu clase de prueba
+          </a>
+          <a class="btn btn-ghost btn-lg" href="#planes">Ver planes</a>
+        </div>
+        <div class="hero-stats">
+          <div><strong>2017 → Libre</strong>Niños, jóvenes y adultos</div>
+          <div><strong>EE.UU.</strong>Jugadores del extranjero entrenan aquí</div>
+          <div><strong>1 cuadra</strong>de la estación Pumacahua</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="marquee-wrap" aria-hidden="true"><div class="marquee">
+      <div class="marquee-track">
+        <span>TÉCNICA</span><span>FUERZA</span><span>MENTALIDAD</span><span>AGILIDAD</span><span>POTENCIA</span><span>ALTO RENDIMIENTO</span>
+        <span>TÉCNICA</span><span>FUERZA</span><span>MENTALIDAD</span><span>AGILIDAD</span><span>POTENCIA</span><span>ALTO RENDIMIENTO</span>
+      </div>
+    </div></div>
+
+    <!-- ===================== 2. NOSOTROS ===================== -->
+    <section id="nosotros">
+      <div class="container about-grid">
+        <div class="photo-slot about-photo reveal">
+          <!-- FOTO COACH: img/coach.jpg -->
+          <img src="img/coach.jpg" alt="Coach Juan Kenciño" loading="lazy" style="object-position: center 15%;">
+          <div class="badge">
+            <strong>Coach Juan Kenciño</strong>
+            <span>Director técnico · La Fábrica</span>
+          </div>
+        </div>
+        <div class="reveal">
+          <span class="eyebrow">Nosotros</span>
+          <h2>Aquí se <span class="hl">fabrican</span> jugadores</h2>
+          <p class="tagline">El talento abre la puerta. El trabajo te hace entrar.</p>
+          <p class="lead">En el Centro de Alto Rendimiento La Fábrica entrena el <strong>Coach Juan “Quema” Kenciño</strong>, conocido como:</p>
+          <p class="quote">“El entrenador de las futuras estrellas”</p>
+          <p class="lead">Su trabajo ya cruzó fronteras: <strong>jugadores profesionales del extranjero</strong> lo han buscado para entrenar con él aquí, en Lima Sur.</p>
+          <blockquote class="coach-quote">
+            <p>“Cada niño que entra a esta cancha trae un sueño. Mi trabajo es que salga preparado para cumplirlo, con disciplina, con fe y con hambre de ganar.”</p>
+            <cite>— Coach Juan Kenciño</cite>
+          </blockquote>
+          <a class="coach-video" href="https://vt.tiktok.com/ZSbotVnc5/" target="_blank" rel="noopener">
+            <span class="cv-play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span>
+            <span><b>Mira la historia del Coach Juan</b><small>Video en TikTok</small></span>
+          </a>
+          <p class="lead">No basta con tener buena técnica. Aquí formamos <strong>jugadores completos</strong>, preparados para competir dentro y fuera de la cancha, trabajando cuatro pilares de forma integral:</p>
+        </div>
+        <div class="about-full">
+          <div class="pillars reveal">
+            <div class="pillar"><div class="ico ico-ball"><img src="img/iconos/pilar-tecnica.png" alt="Balón de fútbol" width="240" height="240" loading="lazy"></div><strong>Técnica</strong><p>Dominio del balón, precisión y lectura de juego. La base de todo gran jugador.</p></div>
+            <div class="pillar"><div class="ico ico-arm"><img src="img/iconos/pilar-fuerza.png" alt="Brazo musculoso" width="240" height="240" loading="lazy"></div><strong>Fuerza</strong><p>Potencia física y agilidad para ganar cada duelo y llegar primero a cada pelota.</p></div>
+            <div class="pillar"><div class="ico ico-brain"><img src="img/iconos/pilar-mentalidad.png" alt="Cerebro" width="240" height="240" loading="lazy"></div><strong>Mentalidad</strong><p>Disciplina, confianza y fe. Porque los partidos también se ganan en la cabeza.</p></div>
+            <div class="pillar"><div class="ico ico-cross"><img src="img/iconos/pilar-espiritu.png" alt="Cruz dorada" width="240" height="240" loading="lazy"></div><strong>Entrenamos el espíritu</strong><p>Fe, humildad y valores para crecer como deportista y como persona.</p></div>
+          </div>
+          <div class="about-close reveal">
+            <p class="about-slogan">Las estrellas no nacen. <span class="hl">Se fabrican.</span></p>
+            <div class="about-actions">
+              <a class="btn btn-tiktok" href="https://www.tiktok.com/@lafabrica.futbol.pe" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
+                Ver entrenamientos en TikTok
+              </a>
+              <a class="btn btn-wa js-wa" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
+                Agenda tu clase de prueba
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 3. QUÉ ENTRENAMOS ===================== -->
+    <section class="training" id="entrenamiento">
+      <div class="container">
+        <div class="section-head reveal">
+          <div>
+            <span class="eyebrow">Qué entrenamos</span>
+            <h2>Entrenamiento <span class="hl">integral</span></h2>
+            <p class="lead">Sesiones diseñadas para desarrollar todas las capacidades que exige el fútbol moderno.</p>
+          </div>
+          <div class="cat-chip">Categorías: <span>desde 2017 hasta Libre</span></div>
+        </div>
+
+        <div class="train-grid">
+          <article class="train-card reveal">
+            <div class="photo-slot">
+              <!-- FOTO: img/equipo-adultos.jpg -->
+              <img src="img/equipo-adultos.jpg" alt="Equipo de adultos de La Fábrica con la copa" loading="lazy">
+            </div>
+            <div class="body">
+              <span class="num">01</span>
+              <h3>Físico-técnico</h3>
+              <p>Conducción entre conos y remate al arco con marca. Técnica bajo esfuerzo, como en un partido real.</p>
+            </div>
+          </article>
+          <article class="train-card reveal">
+            <div class="photo-slot">
+              <!-- FOTO: img/campeones-1.jpg -->
+              <img src="img/campeones-1.jpg" alt="Niños de La Fábrica con el coach y la copa" loading="lazy">
+            </div>
+            <div class="body">
+              <span class="num">02</span>
+              <h3>Cognitivo</h3>
+              <p>Reacción a señales y conos de colores: cabeza levantada, lectura rápida y decisión. Pensar rápido para jugar mejor.</p>
+            </div>
+          </article>
+          <article class="train-card reveal">
+            <div class="photo-slot">
+              <!-- FOTO: img/equipo.jpg -->
+              <img src="img/equipo.jpg" alt="Jugadores y equipo técnico de La Fábrica" loading="lazy">
+            </div>
+            <div class="body">
+              <span class="num">03</span>
+              <h3>Potencia física</h3>
+              <p>Saltos con vallas, sprints de salida y trabajo con liga y trineo para ganar explosividad y velocidad.</p>
+            </div>
+          </article>
+          <article class="train-card reveal">
+            <div class="photo-slot">
+              <!-- FOTO: img/campeones-3.jpg -->
+              <img src="img/campeones-3.jpg" alt="Niños campeones de La Fábrica" loading="lazy">
+            </div>
+            <div class="body">
+              <span class="num">04</span>
+              <h3>Agilidad</h3>
+              <p>Escalera de coordinación y cambios de dirección entre conos: pies rápidos sin perder el equilibrio.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 4. PLANES Y PRECIOS ===================== -->
+    <section id="planes">
+      <div class="container">
+        <div class="section-head reveal">
+          <div>
+            <span class="eyebrow">Planes y precios</span>
+            <h2>Elige tu <span class="hl">plan</span></h2>
+            <p class="lead">Mientras más entrenas, más avanzas y menos pagas por sesión. Precios en soles. Reserva tu cupo directo por WhatsApp.</p>
+          </div>
+        </div>
+
+        <!-- Cada botón abre WhatsApp con su propio mensaje (no llevan la clase js-wa) -->
+        <div class="plans-grid">
+          <article class="plan reveal">
+            <div class="plan-ico pi-suelta"><img src="img/iconos/plan-suelta.png" alt="Cono y balón" width="240" height="240" loading="lazy"></div>
+            <h3>Clase suelta</h3>
+            <div class="freq">Ideal para probar</div>
+            <div class="price"><span class="cur">S/</span><span class="amount">30</span><span class="per">por clase</span></div>
+            <ul>
+              <li>1 sesión de entrenamiento</li>
+              <li>Conoce nuestra metodología</li>
+              <li>Sin compromiso</li>
+            </ul>
+            <a class="btn btn-wa-outline btn-block" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20reservar%20una%20clase%20suelta" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
+              Reservar clase
+            </a>
+          </article>
+
+          <article class="plan reveal">
+            <div class="plan-ico pi-3dias"><img src="img/iconos/plan-3dias.png" alt="Calendario con 3 días marcados" width="240" height="240" loading="lazy"></div>
+            <h3>3 veces por semana</h3>
+            <div class="freq">Constancia que se nota</div>
+            <div class="price"><span class="cur">S/</span><span class="amount">250</span><span class="per">al mes</span></div>
+            <div class="per-session">Sale a S/21 por sesión</div>
+            <ul>
+              <li>3 entrenamientos semanales (12 al mes aprox.)</li>
+              <li>Físico-técnico, cognitivo, potencia y agilidad</li>
+              <li>Seguimiento del progreso</li>
+            </ul>
+            <a class="btn btn-wa-outline btn-block" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20del%20plan%203%20veces%20por%20semana" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
+              Reservar plan
+            </a>
+          </article>
+
+          <article class="plan featured reveal">
+            <span class="ribbon">Mejor precio por sesión</span>
+            <div class="plan-ico pi-5dias"><img src="img/iconos/plan-5dias.png" alt="Trofeo dorado" width="240" height="240" loading="lazy"></div>
+            <h3>5 días a la semana</h3>
+            <div class="freq">Máximo rendimiento</div>
+            <div class="price"><span class="cur">S/</span><span class="amount">300</span><span class="per">al mes</span></div>
+            <div class="per-session">Sale a S/15 por sesión, la mitad que una clase suelta</div>
+            <ul>
+              <li>Todo lo del plan 3 veces por semana</li>
+              <li>Entrenamiento de lunes a viernes</li>
+              <li>Programa integral completo para dar el salto</li>
+            </ul>
+            <a class="btn btn-wa btn-block" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20del%20plan%205%20d%C3%ADas%20a%20la%20semana" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
+              Quiero este plan
+            </a>
+          </article>
+
+          <article class="plan reveal">
+            <div class="plan-ico pi-1a1"><img src="img/iconos/plan-1a1.png" alt="Coach entrenando a un niño" width="240" height="240" loading="lazy"></div>
+            <h3>Personalizado 1 a 1</h3>
+            <div class="freq">Trabajo a tu medida</div>
+            <div class="price"><span class="cur">S/</span><span class="amount">100</span><span class="per">por hora</span></div>
+            <ul>
+              <li>Sesión individual con nuestros profesores</li>
+              <li>Enfocada en tus puntos a mejorar</li>
+              <li>Horario a coordinar</li>
+            </ul>
+            <a class="btn btn-wa-outline btn-block" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20reservar%20un%20entrenamiento%20personalizado%201%20a%201" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
+              Reservar sesión
+            </a>
+          </article>
+        </div>
+        <p class="plans-note"><a href="https://wa.me/51917168725?text=Hola%2C%20quiero%20que%20me%20asesoren%20sobre%20los%20planes" target="_blank" rel="noopener">¿Dudas sobre horarios o qué plan te conviene a ti o a tu hijo? <span>Escríbenos y te asesoramos →</span></a></p>
+      </div>
+    </section>
+
+    <!-- ===================== 5. HISTORIA DESTACADA ===================== -->
+    <section class="story" id="historia">
+      <div class="container">
+        <div class="story-card reveal">
+          <div class="photo-slot">
+            <!-- FOTO HISTORIA: img/historia.jpg -->
+            <img src="img/historia.jpg" alt="Keuv, jugador de la segunda división de Estados Unidos, junto al Coach Juan Kenciño en La Fábrica" loading="lazy" style="object-position: center 35%;">
+          </div>
+          <div class="story-body">
+            <span class="eyebrow">Historia destacada</span>
+            <div class="flags"><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff"><rect y="1.54" width="30" height="1.54"/><rect y="4.62" width="30" height="1.54"/><rect y="7.69" width="30" height="1.54"/><rect y="10.77" width="30" height="1.54"/><rect y="13.85" width="30" height="1.54"/><rect y="16.92" width="30" height="1.54"/></g><rect width="12" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2" cy="2" r=".6"/><circle cx="6" cy="2" r=".6"/><circle cx="10" cy="2" r=".6"/><circle cx="4" cy="4.2" r=".6"/><circle cx="8" cy="4.2" r=".6"/><circle cx="2" cy="6.4" r=".6"/><circle cx="6" cy="6.4" r=".6"/><circle cx="10" cy="6.4" r=".6"/><circle cx="4" cy="8.6" r=".6"/><circle cx="8" cy="8.6" r=".6"/></g></svg><span>EE.UU.</span><img class="plane" src="img/iconos/avion.png" alt="" width="128" height="128" loading="lazy"><span>Perú</span><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#d91023"/><rect x="10" width="10" height="20" fill="#fff"/></svg></div>
+            <h2>De Estados Unidos a <span class="hl">La Fábrica</span></h2>
+            <p><strong>Keuv</strong> juega en la <strong>segunda división de Estados Unidos</strong>. Vino al Perú de vacaciones, pero un jugador de verdad no se toma vacaciones del fútbol.</p>
+            <p>Buscó en redes dónde entrenar en serio y encontró al <strong>Coach Juan Kenciño</strong>. Cruzó Lima hasta Villa María del Triunfo, entrenó con nosotros y quedó tan conforme con el trabajo que <strong>ya confirmó que volverá en su próxima visita</strong>.</p>
+            <!-- FRASE DE KEUV: cuando la tengas, reemplaza el texto y borra las marcas de comentario de este bloque
+            <blockquote class="coach-quote">
+              <p>“Frase real de Keuv sobre su experiencia entrenando con Juan”</p>
+              <cite>— Keuv, jugador de la segunda división de EE.UU.</cite>
+            </blockquote>
+            -->
+            <p class="story-punch">Un profesional viajó miles de kilómetros para entrenar aquí. Tu hijo lo tiene <span class="hl">a una cuadra de la estación Pumacahua</span>.</p>
+            <div class="story-actions">
+              <a class="btn btn-tiktok" href="https://vt.tiktok.com/ZSbogDB4c/" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
+                Ver el entrenamiento en TikTok
+              </a>
+              <a class="btn btn-wa" href="https://wa.me/51917168725?text=Hola%2C%20vi%20la%20historia%20de%20Keuv%20y%20quiero%20que%20mi%20hijo%20entrene%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
+                Quiero que mi hijo entrene aquí
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 6. UBICACIÓN ===================== -->
+    <section id="ubicacion">
+      <div class="container">
+        <div class="section-head reveal">
+          <div>
+            <span class="eyebrow">Ubicación</span>
+            <h2>Encuéntranos en <span class="hl">Lima Sur</span></h2>
+          </div>
+        </div>
+        <div class="location-grid">
+          <div class="loc-info reveal">
+            <div class="loc-item">
+              <div class="ico ico-pin"><img src="img/iconos/loc-pin.png" alt="" width="240" height="240" loading="lazy"></div>
+              <div>
+                <strong>Santa Cruz de Flores 494</strong>
+                <span>Villa María del Triunfo, Lima Sur</span>
+              </div>
+            </div>
+            <div class="loc-item">
+              <div class="ico ico-train"><span class="speed"></span><img src="img/iconos/loc-tren.png" alt="" width="320" height="241" loading="lazy"></div>
+              <div>
+                <strong>A una cuadra de la estación Pumacahua</strong>
+                <span>Línea 1 del Metro de Lima. Llegas fácil desde cualquier punto de la ciudad.</span>
+              </div>
+            </div>
+            <div class="loc-item">
+              <div class="ico ico-msg"><div class="msg"><img src="img/iconos/loc-mensaje.png" alt="" width="240" height="240" loading="lazy"><img class="dot" src="img/iconos/loc-punto.png" alt="" width="48" height="48"><img class="dot" src="img/iconos/loc-punto.png" alt="" width="48" height="48"><img class="dot" src="img/iconos/loc-punto.png" alt="" width="48" height="48"></div></div>
+              <div>
+                <strong>¿Necesitas indicaciones?</strong>
+                <span>Escríbenos y te enviamos la ubicación exacta por WhatsApp.</span>
+              </div>
+            </div>
+            <a class="btn btn-ghost" href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener">Abrir en Google Maps</a>
+          </div>
+          <div class="map reveal">
+            <!-- MAPA: Santa Cruz de Flores 494, Villa María del Triunfo (coordenadas -12.182351, -76.9474786) -->
+            <a class="map-fallback" href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener">
+              <img src="img/iconos/loc-pin.png" alt="" width="240" height="240" loading="lazy">
+              <strong>Santa Cruz de Flores 494</strong>
+              <span>Villa María del Triunfo · a una cuadra de la estación Pumacahua</span>
+              <em>Toca para abrir el mapa</em>
+            </a>
+            <iframe
+              src="https://maps.google.com/maps?q=-12.182351,-76.9474786&z=17&output=embed"
+              title="Mapa: La Fábrica, Santa Cruz de Flores 494, Villa María del Triunfo"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              allowfullscreen></iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 7. REDES ===================== -->
+    <section id="redes" style="padding-top: 0;">
+      <div class="container">
+        <div class="social-box reveal">
+          <div>
+            <span class="eyebrow">Síguenos en redes</span>
+            <p class="tiktok-handle">@lafabrica.futbol.pe</p>
+            <p class="lead" style="margin-bottom: 22px;">Mira nuestros entrenamientos, ejercicios y el progreso de nuestros jugadores.</p>
+            <a class="btn btn-tiktok" href="https://www.tiktok.com/@lafabrica.futbol.pe" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
+              Ver en TikTok
+            </a>
+            <div class="social-links">
+              <a class="social-btn" href="https://instagram.com/coach_kencino" target="_blank" rel="noopener" aria-label="Instagram del Coach Juan Kenciño"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.2c3.2 0 3.6 0 4.8.1 1.2.1 1.8.2 2.2.4.6.2 1 .5 1.4.9.4.4.7.8.9 1.4.2.4.4 1.1.4 2.2.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 1.2-.2 1.8-.4 2.2-.2.6-.5 1-.9 1.4-.4.4-.8.7-1.4.9-.4.2-1.1.4-2.2.4-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-1.2-.1-1.8-.2-2.2-.4-.6-.2-1-.5-1.4-.9-.4-.4-.7-.8-.9-1.4-.2-.4-.4-1.1-.4-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8c.1-1.2.2-1.8.4-2.2.2-.6.5-1 .9-1.4.4-.4.8-.7 1.4-.9.4-.2 1.1-.4 2.2-.4C8.4 2.2 8.8 2.2 12 2.2zm0 4.6a5.2 5.2 0 1 0 0 10.4 5.2 5.2 0 0 0 0-10.4zm0 8.6a3.4 3.4 0 1 1 0-6.8 3.4 3.4 0 0 1 0 6.8zm5.4-9.9a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg><span>@coach_kencino</span></a>
+              <a class="social-btn" href="https://www.facebook.com/profile.php?id=100063921047837" target="_blank" rel="noopener" aria-label="Facebook de La Fábrica"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z"/></svg><span>Facebook</span></a>
+            </div>
+          </div>
+          <div class="tiktok-previews">
+            <!-- FOTOS TIKTOK: puedes cambiarlas por capturas de tus videos -->
+            <div class="photo-slot"><img src="img/campeones-2.jpg" alt="Niños de La Fábrica con la copa" loading="lazy"></div>
+            <div class="photo-slot"><img src="img/hero.jpg" alt="Familia La Fábrica" loading="lazy"></div>
+            <div class="photo-slot"><img src="img/coach.jpg" alt="Coach Juan Kenciño" loading="lazy"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== MINI JUEGO ===================== -->
+    <section class="game" id="juego">
+      <div class="container game-grid">
+        <div class="game-copy reveal">
+          <span class="eyebrow">Mini juego</span>
+          <h2>Ayuda a Juan a <span class="hl">recoger los balones</span></h2>
+          <p class="lead">Después de cada entrenamiento, el coach recoge los balones. Guíalo por la cancha: cada balón que recoge se suma a su fila. Puedes cruzar los bordes y salir por el lado contrario, pero no choques con tu propia fila.</p>
+          <ul class="game-help">
+            <li><b>Computadora:</b> flechas o W A S D · <b>P</b> para pausar</li>
+            <li><b>Celular:</b> desliza el dedo o usa los botones</li>
+            <li>😼 <b>¡Cuidado con los gatos!</b> Al llegar a 5, 10, 15 y 20 balones llega una oleada de gatos (1, 2, 3 y hasta 4). Primero parpadean (aún no hacen nada) y luego, si Juan los toca, pierdes.</li>
+            <li>🍫 <b>Chocolate:</b> cómelo y por 3 segundos Juan puede pasar por encima de su propia fila.</li>
+          </ul>
+          <p class="game-challenge"><b>Reto de crack:</b> los profesionales no nacen siendo buenos. Se vuelven buenos repitiendo, fallando y volviendo a intentar. ¿Puedes superar el récord?</p>
+          <div class="game-scores"><div><span>Balones</span><strong id="gScore">0</strong></div><div><span>Récord</span><strong id="gBest">0</strong></div></div>
+        </div>
+        <div class="game-box reveal">
+          <div class="game-stage">
+            <img id="gBall" src="img/iconos/pilar-tecnica.png" alt="" style="display:none">
+            <img id="gCat" src="img/iconos/gato.png" alt="" style="display:none">
+            <img id="gChoco" src="img/iconos/chocolate.png" alt="" style="display:none">
+            <img id="gPower" src="img/iconos/juan-poder.png" alt="" style="display:none">
+            <img id="gJuan" src="img/iconos/juan-corre.png" alt="" style="display:none">
+            <canvas id="gCanvas" width="720" height="720" aria-label="Juego: Juan recoge balones"></canvas>
+            <div class="g-toast" id="gToast" aria-live="polite"></div>
+            <div class="g-paused" id="gPaused" hidden><strong>Pausa</strong><span>Toca “Continuar” o presiona P</span></div>
+            <div class="game-overlay" id="gOverlay">
+              <img class="g-hero" id="gHero" src="img/iconos/juan-pixel.png" alt="" width="156" height="260">
+              <div class="g-cup" id="gCup" role="img" aria-label="Juan salta celebrando con la copa" hidden></div>
+              <strong id="gTitle">¿Listo, coach?</strong>
+              <p id="gMsg">Recoge todos los balones que puedas.</p>
+              <p class="g-record" id="gRecord" hidden>⭐ ¡Nuevo récord! ⭐</p>
+              <blockquote class="g-quote" id="gQuote" hidden><span id="gQuoteText"></span><cite>— Coach Quema ⚽</cite></blockquote>
+              <button class="btn btn-wa" id="gStart" type="button">Jugar</button>
+            </div>
+          </div>
+          <a class="g-cta" id="gCta" href="https://wa.me/51917168725?text=Hola%2C%20jugu%C3%A9%20el%20mini%20juego%20y%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" hidden>¿Quieres ser jugador profesional? Empieza a entrenar de verdad →</a>
+          <div class="game-bar">
+            <button class="g-ctrl" id="gPlay" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg><span>Iniciar</span></button>
+            <button class="g-ctrl" id="gPause" type="button" disabled><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg><span>Pausa</span></button>
+          </div>
+          <div class="game-pad" aria-label="Controles">
+            <button class="pad-btn pad-up" data-dir="up" aria-label="Arriba"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6l-7 8h14z"/></svg></button><button class="pad-btn pad-left" data-dir="left" aria-label="Izquierda"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 12l8 7V5z"/></svg></button><button class="pad-btn pad-down" data-dir="down" aria-label="Abajo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 18l7-8H5z"/></svg></button><button class="pad-btn pad-right" data-dir="right" aria-label="Derecha"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 12l-8-7v14z"/></svg></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CTA FINAL ===================== -->
+    <section class="final-cta">
+      <div class="container">
+        <h2 class="cta-title"><span class="cta-l1">¿Listo para entrar a</span><span class="cta-l2"><span>La Fábrica<em>?</em></span></span></h2>
+        <p>La próxima estrella puede ser tu hijo, o puedes ser tú. Dale la oportunidad de entrenar con el <strong>Coach Juan Kenciño</strong>, el entrenador de las futuras estrellas.</p>
+        <p class="cta-offer"><span>Primera clase de prueba: <strong>S/30</strong></span> <span>· Sin compromiso</span></p>
+        <a class="btn btn-wa btn-lg" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
+          Agenda su clase de prueba
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== 8. FOOTER ===================== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="f-brand">
+          <a href="#inicio" class="logo" style="margin-bottom: 14px;">
+            <img src="img/logo.png" alt="">
+            <span class="logo-text">LA FÁBRICA</span>
+          </a>
+          <p>Centro de Alto Rendimiento de fútbol. Formamos jugadores completos: técnica, fuerza y mentalidad.</p>
+          <p>Dirigido por el <strong class="f-strong">Coach Juan Kenciño, el entrenador de las futuras estrellas</strong>.</p>
+          <p>Categorías desde 2017 hasta Libre.</p>
+        </div>
+        <nav class="f-explore" aria-label="Secciones">
+          <h4>Explora</h4>
+          <ul>
+            <li><a href="#nosotros"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Nosotros</a></li>
+            <li><a href="#entrenamiento"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Entrenamiento</a></li>
+            <li><a href="#planes"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Planes y precios</a></li>
+            <li><a href="#historia"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Historia destacada</a></li>
+            <li><a href="#juego"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Mini juego</a></li>
+          </ul>
+        </nav>
+        <div class="f-contact">
+          <h4>Contacto</h4>
+          <ul>
+            <li><a class="js-wa" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 20.5l1.3-4A8.5 8.5 0 1 1 8 19.6z"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.6-2-1-1 1c-1.2-.5-2.4-1.7-2.9-2.9l1-1-1-2z"/></svg><span>WhatsApp: <b>+51 917 168 725</b></span></a></li>
+            <li><a href="https://www.tiktok.com/@lafabrica.futbol.pe" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5"/><path d="M14 3c.4 2.6 2.4 4.6 5 5"/></svg><span>TikTok: <b>@lafabrica.futbol.pe</b></span></a></li>
+            <li><a href="https://www.instagram.com/coach_kencino" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/></svg><span>Instagram del Coach: <b>@coach_kencino</b></span></a></li>
+            <!-- FACEBOOK: cambia "La Fábrica" por el nombre exacto de la página -->
+            <li><a href="https://www.facebook.com/profile.php?id=100063921047837" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg><span>Facebook: <b>La Fábrica</b></span></a></li>
+          </ul>
+        </div>
+        <div class="f-address">
+          <h4>Dirección y horarios</h4>
+          <ul>
+            <li><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg><span><b>Santa Cruz de Flores 494</b><br>Villa María del Triunfo, Lima Sur</span></a></li>
+            <li><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l1.5-4M15 21l-1.5-4"/><circle cx="9" cy="14" r=".6" fill="currentColor"/><circle cx="15" cy="14" r=".6" fill="currentColor"/></svg><span>A una cuadra de la estación Pumacahua</span></a></li>
+            <li><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span><b>Ver en Google Maps →</b></span></a></li>
+            <!-- HORARIOS: cuando los tengas, reemplaza este enlace por el texto, por ejemplo: Lun a vie 4:00 – 8:00 p. m. -->
+            <li><a href="https://wa.me/51917168725?text=Hola%2C%20quiero%20saber%20los%20horarios%20de%20entrenamiento%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Horarios: <b>consúltalos por WhatsApp</b></span></a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="copy">© <span id="year">2026</span> Centro de Alto Rendimiento La Fábrica. <strong class="f-strong">Las estrellas no nacen, se fabrican.</strong></div>
+    </div>
+  </footer>
+
+  <!-- ===================== WHATSAPP FLOTANTE ===================== -->
+  <a class="wa-float js-wa" id="waFloat" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">
+    <span class="tip">¿Hablamos? <img src="img/iconos/saludo.png" alt="" width="20" height="20"></span>
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
+  </a>
+
+  <!-- Ícono de WhatsApp reutilizable -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="ico-wa" viewBox="0 0 24 24">
+      <path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.39-1.48-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.19 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.69.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35zM12.05 21.5h-.01a9.43 9.43 0 0 1-4.81-1.32l-.35-.21-3.58.94.96-3.49-.23-.36a9.42 9.42 0 0 1-1.44-5.03c0-5.21 4.24-9.45 9.46-9.45 2.53 0 4.9.99 6.69 2.78a9.39 9.39 0 0 1 2.77 6.69c0 5.21-4.24 9.45-9.45 9.45zm8.04-17.5A11.3 11.3 0 0 0 12.05.67C5.79.67.69 5.77.69 12.03c0 2 .52 3.96 1.52 5.68L.6 23.33l5.75-1.51a11.33 11.33 0 0 0 5.69 1.45h.01c6.26 0 11.36-5.1 11.36-11.36 0-3.04-1.18-5.89-3.32-8.04z"/>
+    </symbol>
+  </svg>
+
+  <script>
+    (function () {
+      // ---------- WhatsApp: número y mensaje prellenado ----------
+      var WA_NUMBER = "51917168725";
+      var WA_MESSAGE = "Hola, quiero información sobre los entrenamientos en La Fábrica";
+
+      document.querySelectorAll(".js-wa").forEach(function (link) {
+        link.href = "https://wa.me/" + WA_NUMBER + "?text=" + encodeURIComponent(WA_MESSAGE);
+      });
+
+      // ---------- Header con fondo al hacer scroll ----------
+      var header = document.getElementById("header");
+      function onScroll() { header.classList.toggle("scrolled", window.scrollY > 30); }
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+
+      // ---------- Menú móvil ----------
+      var menuBtn = document.getElementById("menuBtn");
+      var nav = document.getElementById("nav");
+      function setMenu(open) {
+        nav.classList.toggle("open", open);
+        header.classList.toggle("menu-open", open);
+        menuBtn.setAttribute("aria-expanded", String(open));
+        menuBtn.setAttribute("aria-label", open ? "Cerrar menú" : "Abrir menú");
+      }
+      menuBtn.addEventListener("click", function () { setMenu(!nav.classList.contains("open")); });
+      nav.querySelectorAll("a").forEach(function (a) { a.addEventListener("click", function () { setMenu(false); }); });
+
+      // ---------- Luz dorada que sigue al cursor en las tarjetas ----------
+      document.querySelectorAll(".train-card").forEach(function (card) {
+        card.addEventListener("pointermove", function (e) {
+          var r = card.getBoundingClientRect();
+          card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+          card.style.setProperty("--my", (e.clientY - r.top) + "px");
+        });
+      });
+
+      // ---------- Animación al aparecer ----------
+      var items = document.querySelectorAll(".reveal");
+      setTimeout(function () { items.forEach(function (el) { el.classList.add("visible"); }); }, 3000);
+      if ("IntersectionObserver" in window) {
+        var io = new IntersectionObserver(function (entries) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) { e.target.classList.add("visible"); io.unobserve(e.target); }
+          });
+        }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+        items.forEach(function (el) { io.observe(el); });
+      } else {
+        items.forEach(function (el) { el.classList.add("visible"); });
+      }
+
+      // ---------- Tooltip del botón flotante (una vez) ----------
+      var waFloat = document.getElementById("waFloat");
+      setTimeout(function () {
+        waFloat.classList.add("show-tip");
+        setTimeout(function () { waFloat.classList.remove("show-tip"); }, 4000);
+      }, 3500);
+
+
+      // ---------- Mini juego: Juan recoge balones ----------
+      (function () {
+        var cv = document.getElementById("gCanvas"); if (!cv || !cv.getContext) return;
+        var ctx = cv.getContext("2d"), N = 16, C = cv.width / N;
+        var ov = document.getElementById("gOverlay"), bStart = document.getElementById("gStart"), cta = document.getElementById("gCta");
+        var elScore = document.getElementById("gScore"), elBest = document.getElementById("gBest");
+        var juan = document.getElementById("gJuan"), face = 1, runT = 0, dust = [];
+        var ball = document.getElementById("gBall");
+        var best = 0; try { best = +localStorage.getItem("lfBest") || 0; } catch (e) {}
+        elBest.textContent = best;
+        var snake, prev, dir, next, food, score, step, acc, last, running = false, pulse = 0, toastT;
+        var toast = document.getElementById("gToast"), elQuote = document.getElementById("gQuote");
+        // Frases finales (rotan al azar), firmadas por el Coach Quema
+        var frasesFinales = [
+          "“Aquí jugaste con los dedos. Para ser profesional, tienes que jugar con el corazón y entrenar con los pies. Te espero en la cancha, campeón.” ❤️⚽",
+          "“Los balones de la pantalla no te hacen crack. Los de la cancha, sí. ¡Ven a entrenar!” 🔥",
+          "“Todos los profesionales empezaron entrenando en una cancha como la nuestra. La tuya te está esperando.” 🏟️✨"
+        ];
+        // Frases del coach al recoger cada balón
+        var frasesCoach = ["¡Miauuu! 😼", "¡Ese es mi galáctico! 🌟", "¡Full chocolatero! 🍫", "¡Miauuu! 😼🔥", "¡Ese es mi galáctico! 🚀", "¡Full chocolatero! 🍫⚽"];
+        // Frases especiales cada 5 balones
+        var frasesJuego = { 5: "¡Ojo, llegaron los gatos! 😼", 10: "Los campeones no se rinden 💪", 15: "Disciplina + trabajo = estrella ⭐", 20: "¡Así se entrena en La Fábrica! 🏆", 25: "¡Futura estrella! 🌟👑" };
+        var pops = [];
+        // Gatos y chocolate
+        var catImg = document.getElementById("gCat"), chocoImg = document.getElementById("gChoco");
+        var CAT_WARN = 800, CAT_LIVE = 2200, CHOCO_STAY = 6000, CHOCO_POWER = 3000;
+        var cats = [], choco = null, chocoUntil = 0, gameTime = 0, nextCatAt = 0, lostBy = "", catsToSpawn = 0;
+        var powerImg = document.getElementById("gPower");
+        // Oleada de gatos al llegar a 5, 10, 15, 20… balones: 1, 2, 3 y máximo 4 gatos. Entre oleadas no hay gatos.
+        function startWave() { catsToSpawn = Math.min(4, score / 5); nextCatAt = gameTime + 300; }
+        function isFree(x, y) {
+          var hd = snake[0];
+          if (snake.some(function (p) { return p.x === x && p.y === y; })) return false;
+          if (food && food.x === x && food.y === y) return false;
+          if (choco && choco.x === x && choco.y === y) return false;
+          if (cats.some(function (c) { return c.x === x && c.y === y; })) return false;
+          var dx = Math.min(Math.abs(x - hd.x), N - Math.abs(x - hd.x)), dy = Math.min(Math.abs(y - hd.y), N - Math.abs(y - hd.y));
+          if (dx + dy < 4) return false;
+          for (var k = 1; k <= 6; k++) if ((hd.x + dir.x * k + N) % N === x && (hd.y + dir.y * k + N) % N === y) return false;
+          return true;
+        }
+        function freeCell() {
+          for (var i = 0; i < 80; i++) { var x = Math.floor(Math.random() * N), y = Math.floor(Math.random() * N); if (isFree(x, y)) return {x: x, y: y}; }
+          return null;
+        }
+        function catActive(c) { return gameTime - c.born >= CAT_WARN; }
+        function updateHazards() {
+          cats = cats.filter(function (c) { return gameTime - c.born < CAT_WARN + CAT_LIVE; });
+          if (catsToSpawn > 0 && gameTime >= nextCatAt) {
+            var cell = freeCell();
+            if (cell) { cell.born = gameTime; cats.push(cell); catsToSpawn--; }
+            nextCatAt = gameTime + 650;
+          }
+          if (choco && gameTime > choco.until) choco = null;
+        }
+        function maybeChoco() {
+          if (choco || gameTime < chocoUntil) return;
+          if (score === 7 || (score > 7 && Math.random() < .3)) {
+            var cell = freeCell(); if (cell) { cell.until = gameTime + CHOCO_STAY; choco = cell; }
+          }
+        }
+        function showToast(t) { toast.textContent = t; toast.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(function () { toast.classList.remove("show"); }, 2000); }
+        function reset() {
+          snake = [{x: 5, y: 8}]; face = 1; dust = []; prev = snake.map(function (p) { return {x: p.x, y: p.y}; });
+          dir = {x: 1, y: 0}; next = dir; score = 0; step = 170; cats = []; choco = null; chocoUntil = 0; gameTime = 0; nextCatAt = 0; lostBy = ""; catsToSpawn = 0; acc = 0; elScore.textContent = 0; place();
+        }
+        function place() {
+          var tries = 0;
+          do { food = {x: Math.floor(Math.random() * N), y: Math.floor(Math.random() * N)}; tries++; }
+          while (tries < 400 && (snake.some(function (p) { return p.x === food.x && p.y === food.y; }) ||
+                 (cats || []).some(function (c) { return c.x === food.x && c.y === food.y; }) ||
+                 (choco && choco.x === food.x && choco.y === food.y)));
+        }
+        function turn(d) {
+          var m = {up: {x: 0, y: -1}, down: {x: 0, y: 1}, left: {x: -1, y: 0}, right: {x: 1, y: 0}}[d];
+          if (!m || !running || paused) return;
+          if (m.x === -dir.x && m.y === -dir.y) return;
+          next = m;
+        }
+        function tick() {
+          dir = next; if (dir.x) face = dir.x; dust.push({x: (snake[0].x + .5) * C - dir.x * C * .3, y: (snake[0].y + .9) * C - dir.y * C * .3, t: 0});
+          prev = snake.map(function (p) { return {x: p.x, y: p.y}; });
+          var h = {x: (snake[0].x + dir.x + N) % N, y: (snake[0].y + dir.y + N) % N};
+          var grow = h.x === food.x && h.y === food.y;
+          var body = grow ? snake : snake.slice(0, -1);
+          if (cats.some(function (c) { return c.x === h.x && c.y === h.y && catActive(c); })) { lostBy = "gato"; return over(); }
+          if (gameTime >= chocoUntil && body.some(function (p) { return p.x === h.x && p.y === h.y; })) return over();
+          snake.unshift(h);
+          if (choco && h.x === choco.x && h.y === choco.y) { choco = null; chocoUntil = gameTime + CHOCO_POWER; showToast("¡Full chocolatero! 🍫 Atraviesa tu fila"); }
+          if (grow) { score++; elScore.textContent = score; if (frasesJuego[score]) showToast(frasesJuego[score]); else pops = [{x: (h.x + .5) * C, y: (h.y + .5) * C, t: 0, txt: frasesCoach[Math.floor(Math.random() * frasesCoach.length)]}]; step = Math.max(90, step - 4); prev.push(prev[prev.length - 1]); place(); maybeChoco(); if (score % 5 === 0) startWave(); }
+          else snake.pop();
+        }
+        function over() {
+          running = false;
+          var esRecord = score > best;
+          if (esRecord) { best = score; elBest.textContent = best; try { localStorage.setItem("lfBest", best); } catch (e) {} }
+          document.getElementById("gTitle").textContent = "¡Fin del juego!";
+          document.getElementById("gMsg").textContent = (lostBy === "gato" ? "¡Te atrapó un gato! 😼 " : "") + "Recogiste " + score + (score === 1 ? " balón." : " balones.");
+          document.getElementById("gRecord").hidden = !(esRecord && score > 0);
+          document.getElementById("gQuoteText").textContent = frasesFinales[Math.floor(Math.random() * frasesFinales.length)];
+          elQuote.hidden = false; pops = [];
+          toast.classList.remove("show");
+          bStart.textContent = "Volver a jugar"; cta.hidden = false; ov.hidden = false;
+          setPaused(false); bPause.disabled = true; playLabel.textContent = "Reiniciar";
+          celebrate();
+        }
+        // Celebración: Juan levanta la copa (cuadros 1-4) y salta en bucle (5-8)
+        var cup = document.getElementById("gCup"), heroImg = document.getElementById("gHero"), cupT;
+        function celebrate() {
+          heroImg.hidden = true; cup.hidden = false; clearInterval(cupT);
+          var f = 0;
+          cup.style.backgroundPositionX = "0%";
+          cupT = setInterval(function () {
+            f = f < 7 ? f + 1 : 4;
+            cup.style.backgroundPositionX = (f * 100 / 7) + "%";
+          }, 150);
+        }
+        // Inicio y pausa
+        var bPlay = document.getElementById("gPlay"), bPause = document.getElementById("gPause"), elPaused = document.getElementById("gPaused");
+        var playLabel = bPlay.querySelector("span"), pauseLabel = bPause.querySelector("span"), paused = false;
+        var icoPause = bPause.querySelector("svg").innerHTML, icoPlay = '<path d="M7 5v14l12-7z"/>';
+        function setPaused(v) {
+          paused = v; elPaused.hidden = !v;
+          pauseLabel.textContent = v ? "Continuar" : "Pausa";
+          bPause.querySelector("svg").innerHTML = v ? icoPlay : icoPause;
+        }
+        function togglePause() { if (!running) return; setPaused(!paused); last = 0; }
+        function drawField() {
+          for (var i = 0; i < N; i++) { ctx.fillStyle = i % 2 ? "#1f5a2a" : "#236330"; ctx.fillRect(0, i * C, cv.width, C); }
+          ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 2;
+          ctx.strokeRect(6, 6, cv.width - 12, cv.height - 12);
+          ctx.beginPath(); ctx.moveTo(6, cv.height / 2); ctx.lineTo(cv.width - 6, cv.height / 2); ctx.stroke();
+          ctx.beginPath(); ctx.arc(cv.width / 2, cv.height / 2, C * 2.2, 0, Math.PI * 2); ctx.stroke();
+        }
+        function sprite(img, x, y, r, ring) {
+          if (ring) { ctx.fillStyle = "#f5b914"; ctx.beginPath(); ctx.arc(x, y, r + 3, 0, Math.PI * 2); ctx.fill(); }
+          if (img.complete && img.naturalWidth) ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+          else { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+        }
+        // Juan corriendo: 4 cuadros de carrera (img/iconos/juan-corre.png), volteado según la dirección
+        function drawJuan(x, y) {
+          var fw = juan.naturalWidth / 4, fh = juan.naturalHeight;
+          var h = C * 2.5, w = h * (fw / fh || .81);
+          var frame = running ? Math.floor(runT * 11) % 4 : 1;
+          var foot = y + C * .45;
+          ctx.fillStyle = "rgba(0,0,0,.32)";
+          ctx.beginPath(); ctx.ellipse(x, foot, w * .32, C * .13, 0, 0, Math.PI * 2); ctx.fill();
+          if (!(juan.complete && fw)) return;
+          // Con el poder del chocolate usa la animación dorada (img/iconos/juan-poder.png)
+          var spr = (running && chocoUntil > gameTime && powerImg.complete && powerImg.naturalWidth) ? powerImg : juan;
+          ctx.save();
+          ctx.translate(x, foot);
+          ctx.scale(face, 1);
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(spr, frame * fw, 0, fw, fh, -w / 2, -h, w, h);
+          ctx.restore();
+        }
+        function draw(t) {
+          var hx, hy;
+          drawField(); pulse += .08;
+          var fr = C * .42 + Math.sin(pulse) * 2;
+          ctx.fillStyle = "rgba(245,185,20,.25)"; ctx.beginPath(); ctx.arc((food.x + .5) * C, (food.y + .5) * C, fr + 6, 0, Math.PI * 2); ctx.fill();
+          sprite(ball, (food.x + .5) * C, (food.y + .5) * C, fr);
+          for (var i = snake.length - 1; i >= 0; i--) {
+            var a = prev[i] || snake[i], b = snake[i];
+            if (Math.abs(b.x - a.x) > 1 || Math.abs(b.y - a.y) > 1) a = b; // al cruzar un borde aparece del otro lado
+            var x = (a.x + (b.x - a.x) * t + .5) * C, y = (a.y + (b.y - a.y) * t + .5) * C;
+            if (i === 0) { hx = x; hy = y; } else sprite(ball, x, y, C * .4);
+          }
+          // Polvo que levanta al correr
+          for (var k = dust.length - 1; k >= 0; k--) {
+            var d = dust[k]; d.t += .05; if (d.t >= 1) { dust.splice(k, 1); continue; }
+            ctx.fillStyle = "rgba(230,215,170," + (.45 * (1 - d.t)) + ")";
+            ctx.beginPath(); ctx.arc(d.x, d.y - d.t * 8, 3 + d.t * 9, 0, Math.PI * 2); ctx.fill();
+          }
+          // Chocolate
+          if (choco && chocoImg.complete && chocoImg.naturalWidth) {
+            var left = choco.until - gameTime;
+            if (!(left < 1500 && Math.floor(gameTime / 150) % 2)) {
+              var cfw = chocoImg.naturalWidth / 8, cfh = chocoImg.naturalHeight, cw = C * 1.7, ch = cw * cfh / cfw;
+              var cxp = (choco.x + .5) * C, cyp = (choco.y + .5) * C;
+              ctx.fillStyle = "rgba(255,200,60,.28)"; ctx.beginPath(); ctx.arc(cxp, cyp, C * .7 + Math.sin(pulse * 1.5) * 3, 0, Math.PI * 2); ctx.fill();
+              ctx.drawImage(chocoImg, (Math.floor(gameTime / 110) % 8) * cfw, 0, cfw, cfh, cxp - cw / 2, cyp - ch / 2, cw, ch);
+            }
+          }
+          // Gatos: parpadean como aviso y luego quedan activos
+          cats.forEach(function (c) {
+            if (!(catImg.complete && catImg.naturalWidth)) return;
+            var age = gameTime - c.born, act = age >= CAT_WARN, end = CAT_WARN + CAT_LIVE - age;
+            var gx = (c.x + .5) * C, gy = (c.y + .5) * C;
+            ctx.save();
+            if (!act) ctx.globalAlpha = .35 + .45 * Math.abs(Math.sin(age / 90));
+            else if (end < 400) ctx.globalAlpha = end / 400;
+            ctx.strokeStyle = act ? "rgba(255,70,70,.9)" : "rgba(255,216,74,.9)"; ctx.lineWidth = 3;
+            if (!act) ctx.setLineDash([6, 5]);
+            ctx.beginPath(); ctx.arc(gx, gy + C * .1, C * .55, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+            var fw = catImg.naturalWidth / 8, fh = catImg.naturalHeight, w = C * 1.9, hgt = w * fh / fw;
+            ctx.drawImage(catImg, (Math.floor(gameTime / 130) % 8) * fw, 0, fw, fh, gx - w / 2, gy + C * .5 - hgt, w, hgt);
+            if (!act) { ctx.font = "900 " + Math.round(C * .6) + "px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#ffd84a"; ctx.strokeStyle = "#0a0a0a"; ctx.lineWidth = 4; ctx.strokeText("!", gx + C * .55, gy - C * .55); ctx.fillText("!", gx + C * .55, gy - C * .55); }
+            ctx.restore();
+          });
+          // Poder del chocolate: aura dorada y barra de tiempo
+          var powerLeft = chocoUntil - gameTime;
+          if (running && powerLeft > 0) {
+            ctx.fillStyle = "rgba(255,200,60," + (.25 + .15 * Math.sin(pulse * 3)) + ")";
+            ctx.beginPath(); ctx.arc(hx, hy - C * .4, C * 1.05, 0, Math.PI * 2); ctx.fill();
+          }
+          drawJuan(hx, hy);
+          if (running && powerLeft > 0) {
+            var bw = cv.width * .5, bx = (cv.width - bw) / 2, by = cv.height - 30;
+            ctx.fillStyle = "rgba(8,8,8,.75)"; ctx.fillRect(bx - 4, by - 4, bw + 8, 22);
+            ctx.fillStyle = "#f5b914"; ctx.fillRect(bx, by, bw * powerLeft / CHOCO_POWER, 14);
+            ctx.font = "800 " + Math.round(C * .42) + "px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillStyle = "#fff"; ctx.fillText("🍫 " + (powerLeft / 1000).toFixed(1) + " s", cv.width / 2, by - 18);
+          }
+          // Frases flotantes del coach
+          for (var q = pops.length - 1; q >= 0; q--) {
+            var pp = pops[q]; if (!paused) pp.t += .018; if (pp.t >= 1) { pops.splice(q, 1); continue; }
+            ctx.save(); ctx.globalAlpha = pp.t < .15 ? pp.t / .15 : 1 - Math.max(0, (pp.t - .6) / .4);
+            ctx.font = "800 " + Math.round(C * .72) + "px system-ui, sans-serif";
+            var half = ctx.measureText(pp.txt).width / 2 + 10;
+            var px = Math.min(Math.max(pp.x, half), cv.width - half), py = Math.max(pp.y - C * 1.6 - pp.t * C * 1.4, 34); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.lineWidth = 6; ctx.strokeStyle = "rgba(8,8,8,.85)"; ctx.strokeText(pp.txt, px, py);
+            ctx.fillStyle = "#ffd84a"; ctx.fillText(pp.txt, px, py); ctx.restore();
+          }
+        }
+        function loop(ts) {
+          if (!last) last = ts; var dt = Math.min(ts - last, 100); last = ts;
+          if (running && !paused) { gameTime += dt; updateHazards(); runT += dt / 1000; acc += dt; while (acc >= step && running) { acc -= step; tick(); } }
+          if (!paused) draw(running ? Math.min(acc / step, 1) : 1);
+          requestAnimationFrame(loop);
+        }
+        function start() { reset(); pops = []; cta.hidden = true; ov.hidden = true; running = true; last = 0; clearInterval(cupT); cup.hidden = true; heroImg.hidden = false; setPaused(false); bPause.disabled = false; playLabel.textContent = "Reiniciar"; }
+        bStart.addEventListener("click", start);
+        bPlay.addEventListener("click", start);
+        bPause.addEventListener("click", togglePause);
+        document.addEventListener("keydown", function (e) {
+          var k = {ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", w: "up", s: "down", a: "left", d: "right", W: "up", S: "down", A: "left", D: "right"}[e.key];
+          if ((e.key === "p" || e.key === "P" || e.key === "Escape") && running) { e.preventDefault(); togglePause(); return; }
+          if (k && running && !paused) { e.preventDefault(); turn(k); }
+        });
+        document.querySelectorAll(".pad-btn").forEach(function (b) {
+          b.addEventListener("pointerdown", function (e) { e.preventDefault(); turn(b.dataset.dir); });
+        });
+        var sx, sy;
+        cv.addEventListener("touchstart", function (e) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, {passive: true});
+        cv.addEventListener("touchmove", function (e) {
+          if (sx == null) return; var dx = e.touches[0].clientX - sx, dy = e.touches[0].clientY - sy;
+          if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+          turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up")); sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+        }, {passive: true});
+        reset(); requestAnimationFrame(loop);
+      })();
+
+      // ---------- Año actual en el footer ----------
+      document.getElementById("year").textContent = new Date().getFullYear();
+    })();
+  </script>
+</body>
+</html>
