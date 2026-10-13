@@ -241,6 +241,20 @@
     .plan.featured { border: 2px solid var(--accent); background: linear-gradient(180deg, rgba(245,185,20,.08), var(--card) 45%); }
     .plan .ribbon { position: absolute; top: -13px; left: 22px; background: var(--accent); color: #0a0a0a; font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; }
     .plan h3 { font-size: 1.7rem; }
+    .plan-ico { width: 124px; height: 124px; margin: -10px auto 8px; }
+    .plan-ico img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: lighten; }
+    .pi-suelta img { transform-origin: 50% 85%; animation: pi-rock 2.6s ease-in-out infinite; }
+    .pi-3dias img { transform-origin: 50% 10%; animation: pi-swing 3s ease-in-out infinite .3s; }
+    .pi-5dias img { animation: pi-trophy 2.4s ease-in-out infinite .6s; }
+    .pi-1a1 img { animation: pi-float 3.2s ease-in-out infinite .9s; }
+    .plan:hover .plan-ico img { animation-duration: 1.3s; }
+    @keyframes pi-rock { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-6deg) translateY(-3px); } 75% { transform: rotate(6deg) translateY(-3px); } }
+    @keyframes pi-swing { 0%, 100% { transform: rotate(0deg); } 30% { transform: rotate(-7deg); } 60% { transform: rotate(5deg); } 80% { transform: rotate(-2deg); } }
+    @keyframes pi-trophy {
+      0%, 100% { transform: translateY(0) scale(1); filter: brightness(1) drop-shadow(0 0 0 rgba(255,200,60,0)); }
+      50% { transform: translateY(-6px) scale(1.06); filter: brightness(1.2) drop-shadow(0 0 16px rgba(255,200,60,.8)); }
+    }
+    @keyframes pi-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px) scale(1.03); } }
     .plan .freq { color: var(--muted); font-size: .9rem; margin-top: 4px; }
     .price { display: flex; align-items: baseline; gap: 6px; margin: 20px 0 18px; }
     .price:has(+ .per-session) { margin-bottom: 6px; }
@@ -579,6 +593,7 @@
         <!-- Cada botón abre WhatsApp con su propio mensaje (no llevan la clase js-wa) -->
         <div class="plans-grid">
           <article class="plan reveal">
+            <div class="plan-ico pi-suelta"><img src="img/iconos/plan-suelta.png" alt="Cono y balón" width="240" height="240" loading="lazy"></div>
             <h3>Clase suelta</h3>
             <div class="freq">Ideal para probar</div>
             <div class="price"><span class="cur">S/</span><span class="amount">30</span><span class="per">por clase</span></div>
@@ -594,6 +609,7 @@
           </article>
 
           <article class="plan reveal">
+            <div class="plan-ico pi-3dias"><img src="img/iconos/plan-3dias.png" alt="Calendario con 3 días marcados" width="240" height="240" loading="lazy"></div>
             <h3>3 veces por semana</h3>
             <div class="freq">Constancia que se nota</div>
             <div class="price"><span class="cur">S/</span><span class="amount">250</span><span class="per">al mes</span></div>
@@ -611,6 +627,7 @@
 
           <article class="plan featured reveal">
             <span class="ribbon">Mejor precio por sesión</span>
+            <div class="plan-ico pi-5dias"><img src="img/iconos/plan-5dias.png" alt="Trofeo dorado" width="240" height="240" loading="lazy"></div>
             <h3>5 días a la semana</h3>
             <div class="freq">Máximo rendimiento</div>
             <div class="price"><span class="cur">S/</span><span class="amount">300</span><span class="per">al mes</span></div>
@@ -627,6 +644,7 @@
           </article>
 
           <article class="plan reveal">
+            <div class="plan-ico pi-1a1"><img src="img/iconos/plan-1a1.png" alt="Coach entrenando a un niño" width="240" height="240" loading="lazy"></div>
             <h3>Personalizado 1 a 1</h3>
             <div class="freq">Trabajo a tu medida</div>
             <div class="price"><span class="cur">S/</span><span class="amount">100</span><span class="per">por hora</span></div>
