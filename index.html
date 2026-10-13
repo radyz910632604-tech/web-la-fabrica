@@ -422,6 +422,9 @@
     .g-ctrl:disabled { opacity: .4; cursor: default; }
     .g-paused { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; background: rgba(8,8,8,.55); color: var(--text); }
     .g-paused[hidden] { display: none; }
+    .game-overlay .g-nojs { max-width: 320px; font-size: .9rem; color: #fff; background: rgba(245,185,20,.15); border: 1px solid var(--accent); border-radius: 12px; padding: 10px 14px; }
+    .js .game-overlay .g-nojs { display: none; }
+    html:not(.js) #gStart, html:not(.js) .game-bar, html:not(.js) .game-pad { display: none; }
     .g-paused strong { font-family: var(--display); font-weight: 400; font-size: 2.6rem; color: var(--accent); letter-spacing: .08em; }
     .g-paused span { color: #e6e1d6; font-size: .9rem; }
     .game-overlay strong { font-family: var(--display); font-weight: 400; font-size: 2.2rem; line-height: 1; }
@@ -964,6 +967,7 @@
               <p class="g-record" id="gRecord" hidden>⭐ ¡Nuevo récord! ⭐</p>
               <blockquote class="g-quote" id="gQuote" hidden><span id="gQuoteText"></span><cite>— Coach Quema ⚽</cite></blockquote>
               <button class="btn btn-wa" id="gStart" type="button">Jugar</button>
+              <p class="g-nojs">⚠️ Este visor no permite jugar. Abre la página en <b>Safari</b> o <b>Chrome</b> para jugar.</p>
             </div>
           </div>
           <a class="g-cta" id="gCta" href="https://wa.me/51917168725?text=Hola%2C%20jugu%C3%A9%20el%20mini%20juego%20y%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" hidden>¿Quieres ser jugador profesional? Empieza a entrenar de verdad →</a>
@@ -1344,10 +1348,17 @@
           if (!paused) draw(running ? Math.min(acc / step, 1) : 1);
           requestAnimationFrame(loop);
         }
-        function start() { reset(); pops = []; cta.hidden = true; ov.hidden = true; running = true; last = 0; clearInterval(cupT); cup.hidden = true; heroImg.hidden = false; setPaused(false); bPause.disabled = false; playLabel.textContent = "Reiniciar"; }
+        function start() {
+          if (window.innerWidth < 820) { var gb = document.querySelector(".game-box"); if (gb && gb.scrollIntoView) gb.scrollIntoView({block: "end", behavior: "smooth"}); }
+          reset(); pops = []; cta.hidden = true; ov.hidden = true; running = true; last = 0; clearInterval(cupT); cup.hidden = true; heroImg.hidden = false; setPaused(false); bPause.disabled = false; playLabel.textContent = "Reiniciar"; }
         bStart.addEventListener("click", start);
         bPlay.addEventListener("click", start);
         bPause.addEventListener("click", togglePause);
+        // Pausa automática si el niño cambia de app/pestaña o deja de ver la cancha
+        document.addEventListener("visibilitychange", function () { if (document.hidden && running && !paused) setPaused(true); });
+        if ("IntersectionObserver" in window) {
+          new IntersectionObserver(function (es) { es.forEach(function (e) { if (!e.isIntersecting && running && !paused) setPaused(true); }); }, {threshold: .35}).observe(cv);
+        }
         document.addEventListener("keydown", function (e) {
           var k = {ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", w: "up", s: "down", a: "left", d: "right", W: "up", S: "down", A: "left", D: "right"}[e.key];
           if ((e.key === "p" || e.key === "P" || e.key === "Escape") && running) { e.preventDefault(); togglePause(); return; }
