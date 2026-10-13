@@ -382,14 +382,10 @@
     .tiktok-previews .photo-slot { aspect-ratio: 9 / 16; border-radius: 12px; }
 
     /* ---------- CTA final ---------- */
-    .final-cta { position: relative; overflow: hidden; isolation: isolate; text-align: center; padding: 80px 0 90px; color: #0a0a0a;
-      background: radial-gradient(ellipse at 50% 45%, #ffd84a 0%, #f8c51c 45%, #e9ab06 100%); }
+    /* Fondo: img/cta-fondo.jpg (computadora) e img/cta-fondo-movil.jpg (celular) */
+    .final-cta { position: relative; overflow: hidden; text-align: center; padding: 90px 0 100px; color: #0a0a0a;
+      background: #f5b914 url("img/cta-fondo.jpg") center/cover no-repeat; }
     .final-cta .container { position: relative; z-index: 2; }
-    .cta-side { position: absolute; top: 0; bottom: 0; width: 42%; z-index: 0; background-size: cover; background-repeat: no-repeat; }
-    .cta-side-l { left: 0; background-image: url("img/cta-izq.jpg"); background-position: right center;
-      -webkit-mask-image: linear-gradient(90deg, #000 55%, transparent 100%); mask-image: linear-gradient(90deg, #000 55%, transparent 100%); }
-    .cta-side-r { right: 0; background-image: url("img/cta-der.jpg"); background-position: left center;
-      -webkit-mask-image: linear-gradient(270deg, #000 55%, transparent 100%); mask-image: linear-gradient(270deg, #000 55%, transparent 100%); }
     .cta-title { margin: 0 0 22px; color: #0a0a0a; line-height: .95; }
     .cta-l1 { display: block; font-size: clamp(2.2rem, 6.5vw, 4.4rem); letter-spacing: .01em; }
     .cta-l2 { display: inline-block; margin-top: 8px; padding: 6px 34px 4px; background: #0a0a0a; transform: skewX(-8deg) rotate(-2deg); box-shadow: 0 14px 30px -12px rgba(0,0,0,.6); }
@@ -480,8 +476,7 @@
       .header.menu-open { background: rgba(10,10,10,.98); }
       .about-grid, .location-grid, .social-box, .story-card { grid-template-columns: 1fr; }
       .about-grid { gap: 32px; }
-      .cta-side { width: 100%; opacity: .28; -webkit-mask-image: none; mask-image: none; }
-      .cta-side-r { display: none; }
+      .final-cta { background-image: url("img/cta-fondo-movil.jpg"); background-position: 8% bottom; padding: 56px 0 330px; }
       .about-full { grid-column: auto; }
       .pillars { grid-template-columns: repeat(2, 1fr); }
       .about-photo { aspect-ratio: 4 / 4; }
@@ -887,9 +882,6 @@
 
     <!-- ===================== CTA FINAL ===================== -->
     <section class="final-cta">
-      <!-- Decoración de los costados (img/cta-izq.jpg y img/cta-der.jpg) -->
-      <div class="cta-side cta-side-l" aria-hidden="true"></div>
-      <div class="cta-side cta-side-r" aria-hidden="true"></div>
       <div class="container">
         <h2 class="cta-title"><span class="cta-l1">¿Listo para entrar a</span><span class="cta-l2"><span>La Fábrica<em>?</em></span></span></h2>
         <p>La próxima estrella puede ser tu hijo, o puedes ser tú. Dale la oportunidad de entrenar con el <strong>Coach Juan Kenciño</strong>, el entrenador de las futuras estrellas.</p>
