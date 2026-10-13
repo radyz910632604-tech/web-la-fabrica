@@ -416,6 +416,12 @@
     .game-overlay strong { font-family: var(--display); font-weight: 400; font-size: 2.2rem; line-height: 1; }
     .game-overlay p { margin: 0 0 6px; color: #e6e1d6; }
     .g-cta { color: var(--accent); font-weight: 700; margin-top: 4px; }
+    .game-overlay .g-quote { font-style: italic; color: var(--accent); max-width: 340px; margin: 0 0 8px; font-weight: 600; }
+    .game-challenge { color: var(--muted); font-size: .95rem; border-left: 3px solid var(--accent); padding-left: 12px; margin: 0; }
+    .game-challenge b { color: var(--text); }
+    .g-toast { position: absolute; top: 14px; left: 50%; z-index: 3; transform: translate(-50%, -20px); opacity: 0; pointer-events: none; white-space: nowrap;
+      background: rgba(8,8,8,.85); border: 1px solid var(--accent); color: var(--accent); font-weight: 800; padding: 8px 16px; border-radius: 999px; transition: opacity .3s, transform .3s; }
+    .g-toast.show { opacity: 1; transform: translate(-50%, 0); }
     .game-pad { display: none; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 56px); gap: 8px; justify-content: center; margin-top: 14px; }
     .pad-btn { border: 1px solid var(--line); background: var(--card); color: var(--accent); border-radius: 14px; display: grid; place-items: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
     .pad-btn:active { background: var(--accent); color: #0a0a0a; }
@@ -918,6 +924,7 @@
             <li><b>Computadora:</b> flechas o W A S D</li>
             <li><b>Celular:</b> desliza el dedo o usa los botones</li>
           </ul>
+          <p class="game-challenge"><b>Reto de crack:</b> los profesionales no nacen siendo buenos. Se vuelven buenos repitiendo, fallando y volviendo a intentar. ¿Puedes superar el récord?</p>
           <div class="game-scores"><div><span>Balones</span><strong id="gScore">0</strong></div><div><span>Récord</span><strong id="gBest">0</strong></div></div>
         </div>
         <div class="game-box reveal">
@@ -925,12 +932,14 @@
             <img id="gBall" src="img/iconos/pilar-tecnica.png" alt="" style="display:none">
             <img id="gJuan" src="img/iconos/juan-corre.png" alt="" style="display:none">
             <canvas id="gCanvas" width="720" height="720" aria-label="Juego: Juan recoge balones"></canvas>
+            <div class="g-toast" id="gToast" aria-live="polite"></div>
             <div class="game-overlay" id="gOverlay">
               <img class="g-hero" src="img/iconos/juan-pixel.png" alt="" width="156" height="260">
               <strong id="gTitle">¿Listo, coach?</strong>
               <p id="gMsg">Recoge todos los balones que puedas.</p>
+              <p class="g-quote" id="gQuote" hidden></p>
               <button class="btn btn-wa" id="gStart" type="button">Jugar</button>
-              <a class="g-cta" id="gCta" href="https://wa.me/51917168725?text=Hola%2C%20jugu%C3%A9%20el%20mini%20juego%20y%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" hidden>¿Te gustó? Agenda tu clase de prueba →</a>
+              <a class="g-cta" id="gCta" href="https://wa.me/51917168725?text=Hola%2C%20jugu%C3%A9%20el%20mini%20juego%20y%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" hidden>¿Quieres entrenar como un profesional? Agenda tu clase de prueba →</a>
             </div>
           </div>
           <div class="game-pad" aria-label="Controles">
@@ -1084,7 +1093,16 @@
         var ball = document.getElementById("gBall");
         var best = 0; try { best = +localStorage.getItem("lfBest") || 0; } catch (e) {}
         elBest.textContent = best;
-        var snake, prev, dir, next, food, score, step, acc, last, running = false, pulse = 0;
+        var snake, prev, dir, next, food, score, step, acc, last, running = false, pulse = 0, toastT;
+        var toast = document.getElementById("gToast"), elQuote = document.getElementById("gQuote");
+        function mensajeFinal(balones, esRecord) {
+          if (esRecord && balones > 0) return { titulo: "¡Nuevo récord! ⭐", frase: "Así juegan las futuras estrellas. Ahora demuéstralo en la cancha: el coach te está esperando." };
+          if (balones <= 5) return { titulo: "¡Fin del entrenamiento!", frase: "Todo crack empezó por aquí. Messi también falló miles de veces antes de ser el mejor. ¡Vuelve a intentarlo!" };
+          if (balones <= 14) return { titulo: "¡Buen entrenamiento!", frase: "Vas mejorando. Así se entrena: un poco mejor cada día. Los profesionales se hacen con constancia." };
+          return { titulo: "¡Nivel alto rendimiento!", frase: "Tienes concentración y reflejos de jugador. Imagina lo que puedes lograr en la cancha de verdad." };
+        }
+        var frasesJuego = { 5: "¡Buen inicio, crack!", 10: "Los campeones no se rinden", 15: "Disciplina + trabajo = estrella", 20: "¡Así se entrena en La Fábrica!", 25: "¡Futura estrella! ⭐" };
+        function showToast(t) { toast.textContent = t; toast.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(function () { toast.classList.remove("show"); }, 2000); }
         function reset() {
           snake = [{x: 5, y: 8}]; face = 1; dust = []; prev = snake.map(function (p) { return {x: p.x, y: p.y}; });
           dir = {x: 1, y: 0}; next = dir; score = 0; step = 170; acc = 0; elScore.textContent = 0; place();
@@ -1107,14 +1125,18 @@
           var body = grow ? snake : snake.slice(0, -1);
           if (body.some(function (p) { return p.x === h.x && p.y === h.y; })) return over();
           snake.unshift(h);
-          if (grow) { score++; elScore.textContent = score; step = Math.max(80, step - 4); prev.push(prev[prev.length - 1]); place(); }
+          if (grow) { score++; elScore.textContent = score; if (frasesJuego[score]) showToast(frasesJuego[score]); step = Math.max(80, step - 4); prev.push(prev[prev.length - 1]); place(); }
           else snake.pop();
         }
         function over() {
           running = false;
-          if (score > best) { best = score; elBest.textContent = best; try { localStorage.setItem("lfBest", best); } catch (e) {} }
-          document.getElementById("gTitle").textContent = score >= 10 ? "¡Nivel profesional!" : "¡Fin del entrenamiento!";
+          var esRecord = score > best;
+          if (esRecord) { best = score; elBest.textContent = best; try { localStorage.setItem("lfBest", best); } catch (e) {} }
+          var m = mensajeFinal(score, esRecord);
+          document.getElementById("gTitle").textContent = m.titulo;
           document.getElementById("gMsg").textContent = "Juan recogió " + score + (score === 1 ? " balón." : " balones.");
+          elQuote.textContent = m.frase; elQuote.hidden = false;
+          toast.classList.remove("show");
           bStart.textContent = "Volver a jugar"; cta.hidden = false; ov.hidden = false;
         }
         function drawField() {
