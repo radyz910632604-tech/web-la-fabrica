@@ -173,8 +173,19 @@
     .badge strong { display: block; font-family: var(--display); font-size: 1.6rem; font-weight: 400; line-height: 1.05; }
     .badge span { color: var(--accent); font-size: .9rem; font-weight: 600; }
     .quote { font-family: var(--display); font-size: clamp(1.8rem, 5vw, 2.4rem); line-height: 1.05; color: var(--accent); margin: 22px 0; border-left: 4px solid var(--accent); padding-left: 16px; }
-    .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 26px; }
-    .pillar { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 8px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+    .about-grid { align-items: start; }
+    .about-grid > .about-photo { margin-top: 8px; }
+    .about-full { grid-column: 1 / -1; margin-top: -24px; }
+    .tagline { font-size: 1.15rem; font-weight: 700; color: var(--text); margin: 0 0 16px; }
+    .coach-quote { margin: 24px 0; padding: 20px 22px; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 14px; }
+    .coach-quote p { margin: 0 0 10px; font-size: 1.05rem; font-style: italic; color: #e6e1d6; }
+    .coach-quote cite { font-style: normal; font-weight: 700; color: var(--accent); font-size: .92rem; }
+    .about-close { text-align: center; margin-top: 40px; }
+    .about-slogan { font-family: var(--display); font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1; margin: 0 0 24px; }
+    .about-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+    .pillar p { margin: 8px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.5; }
+    .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 8px; }
+    .pillar { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 16px; text-align: center; display: flex; flex-direction: column; align-items: center; }
     .pillar .ico { position: relative; width: 96px; height: 96px; margin: 0 auto; }
     .pillar .ico::after { content: ""; position: absolute; left: 22%; right: 22%; bottom: 2px; height: 8px; border-radius: 50%; background: rgba(0,0,0,.6); filter: blur(4px); z-index: 0; }
     .pillar .ico img { position: relative; z-index: 1; width: 100%; height: 100%; object-fit: contain; }
@@ -206,7 +217,7 @@
       0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(245,185,20,0)); }
       50% { transform: scale(1.07); filter: drop-shadow(0 0 14px rgba(245,185,20,.75)); }
     }
-    .pillar strong { display: flex; align-items: center; flex-grow: 1; font-family: var(--display); font-size: 1.4rem; font-weight: 400; line-height: 1.05; margin-top: 8px; }
+    .pillar strong { display: block; font-family: var(--display); font-size: 1.6rem; font-weight: 400; line-height: 1.05; margin-top: 10px; }
 
     /* ---------- Qué entrenamos ---------- */
     .training { background: var(--bg-2); }
@@ -353,6 +364,7 @@
       .header.menu-open { background: rgba(10,10,10,.98); }
       .about-grid, .location-grid, .social-box, .story-card { grid-template-columns: 1fr; }
       .about-grid { gap: 32px; }
+      .about-full { grid-column: auto; }
       .pillars { grid-template-columns: repeat(2, 1fr); }
       .about-photo { aspect-ratio: 4 / 4; }
       .story-card .photo-slot { min-height: 0; aspect-ratio: 4 / 5; }
@@ -368,7 +380,9 @@
       .hero-stats { gap: 20px; }
       .hero-stats strong { font-size: 1.9rem; }
       .pillars { gap: 8px; }
-      .pillar { padding: 14px 6px; }
+      .pillar { padding: 16px 10px; }
+      .pillar p { font-size: .84rem; }
+      .about-actions .btn { width: 100%; }
       .pillar strong { font-size: 1.25rem; }
       .pillar .ico { width: 88px; height: 88px; }
       .section-head { margin-bottom: 28px; }
@@ -449,14 +463,35 @@
         <div class="reveal">
           <span class="eyebrow">Nosotros</span>
           <h2>Aquí se <span class="hl">fabrican</span> jugadores</h2>
-          <p class="lead">El Centro de Alto Rendimiento La Fábrica está liderado por el <strong>Coach Juan Kenciño</strong>, conocido como:</p>
+          <p class="tagline">El talento abre la puerta. El trabajo te hace entrar.</p>
+          <p class="lead">En el Centro de Alto Rendimiento La Fábrica entrena el <strong>Coach Juan “Quema” Kenciño</strong>, conocido como:</p>
           <p class="quote">“El entrenador de las futuras estrellas”</p>
-          <p class="lead">Nuestro concepto es simple: no basta con tener buena técnica. Formamos <strong>jugadores completos</strong>, preparados para competir dentro y fuera de la cancha, trabajando cuatro pilares de forma integral:</p>
-          <div class="pillars">
-            <div class="pillar"><div class="ico ico-ball"><img src="img/iconos/pilar-tecnica.png" alt="Balón de fútbol" width="240" height="240" loading="lazy"></div><strong>Técnica</strong></div>
-            <div class="pillar"><div class="ico ico-arm"><img src="img/iconos/pilar-fuerza.png" alt="Brazo musculoso" width="240" height="240" loading="lazy"></div><strong>Fuerza</strong></div>
-            <div class="pillar"><div class="ico ico-brain"><img src="img/iconos/pilar-mentalidad.png" alt="Cerebro" width="240" height="240" loading="lazy"></div><strong>Mentalidad</strong></div>
-            <div class="pillar"><div class="ico ico-cross"><img src="img/iconos/pilar-espiritu.png" alt="Cruz dorada" width="240" height="240" loading="lazy"></div><strong>Entrenamos el espíritu</strong></div>
+          <p class="lead">Su trabajo ya cruzó fronteras: <strong>jugadores profesionales del extranjero</strong> lo han buscado para entrenar con él aquí, en Lima Sur.</p>
+          <blockquote class="coach-quote">
+            <p>“Cada niño que entra a esta cancha trae un sueño. Mi trabajo es que salga preparado para cumplirlo, con disciplina, con fe y con hambre de ganar.”</p>
+            <cite>— Coach Juan Kenciño</cite>
+          </blockquote>
+          <p class="lead">No basta con tener buena técnica. Aquí formamos <strong>jugadores completos</strong>, preparados para competir dentro y fuera de la cancha, trabajando cuatro pilares de forma integral:</p>
+        </div>
+        <div class="about-full">
+          <div class="pillars reveal">
+            <div class="pillar"><div class="ico ico-ball"><img src="img/iconos/pilar-tecnica.png" alt="Balón de fútbol" width="240" height="240" loading="lazy"></div><strong>Técnica</strong><p>Dominio del balón, precisión y lectura de juego. La base de todo gran jugador.</p></div>
+            <div class="pillar"><div class="ico ico-arm"><img src="img/iconos/pilar-fuerza.png" alt="Brazo musculoso" width="240" height="240" loading="lazy"></div><strong>Fuerza</strong><p>Potencia física y agilidad para ganar cada duelo y llegar primero a cada pelota.</p></div>
+            <div class="pillar"><div class="ico ico-brain"><img src="img/iconos/pilar-mentalidad.png" alt="Cerebro" width="240" height="240" loading="lazy"></div><strong>Mentalidad</strong><p>Disciplina, confianza y fe. Porque los partidos también se ganan en la cabeza.</p></div>
+            <div class="pillar"><div class="ico ico-cross"><img src="img/iconos/pilar-espiritu.png" alt="Cruz dorada" width="240" height="240" loading="lazy"></div><strong>Entrenamos el espíritu</strong><p>Fe, humildad y valores para crecer como deportista y como persona.</p></div>
+          </div>
+          <div class="about-close reveal">
+            <p class="about-slogan">Las estrellas no nacen. <span class="hl">Se fabrican.</span></p>
+            <div class="about-actions">
+              <a class="btn btn-tiktok" href="https://www.tiktok.com/@lafabrica.futbol.pe" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
+                Ver entrenamientos en TikTok
+              </a>
+              <a class="btn btn-wa js-wa" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
+                Agenda tu clase de prueba
+              </a>
+            </div>
           </div>
         </div>
       </div>
