@@ -227,8 +227,22 @@
     .cat-chip { display: inline-flex; align-items: center; gap: 10px; background: var(--hot); color: #0a0a0a; padding: 12px 20px; border-radius: 999px; font-weight: 800; }
     .cat-chip small { font-weight: 500; opacity: .9; }
     .train-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-    .train-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; transition: transform .2s, border-color .2s; }
-    .train-card:hover { transform: translateY(-4px); border-color: var(--accent); }
+    .train-card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease; --mx: 50%; --my: 50%; }
+    .train-card:hover { transform: translateY(-6px); border-color: var(--accent); box-shadow: 0 18px 40px -18px rgba(245,185,20,.55); }
+    /* Resplandor dorado que sigue al cursor */
+    .train-card::before { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; transition: opacity .35s ease;
+      background: radial-gradient(260px circle at var(--mx) var(--my), rgba(255,210,80,.22), transparent 65%); }
+    /* Haz de luz dorada que cruza la tarjeta */
+    .train-card::after { content: ""; position: absolute; top: -50%; left: -75%; width: 50%; height: 200%; z-index: 3; pointer-events: none;
+      background: linear-gradient(100deg, transparent 0%, rgba(255,225,120,0) 20%, rgba(255,215,90,.45) 50%, rgba(255,225,120,0) 80%, transparent 100%);
+      transform: rotate(12deg); opacity: 0; }
+    .train-card:hover::before { opacity: 1; }
+    .train-card:hover::after { animation: gold-sweep .9s ease-out; }
+    .train-card:hover .photo-slot img { transform: scale(1.06); }
+    .train-card .photo-slot img { transition: transform .6s ease; }
+    .train-card:hover h3 { color: var(--accent); }
+    .train-card h3 { transition: color .3s ease; }
+    @keyframes gold-sweep { 0% { left: -75%; opacity: 1; } 100% { left: 130%; opacity: 1; } }
     .train-card .photo-slot { border: 0; border-radius: 0; aspect-ratio: 4 / 3; }
     .train-card .body { padding: 20px; }
     .train-card .num { font-family: var(--display); color: var(--accent); font-size: 1.1rem; letter-spacing: .1em; }
@@ -857,6 +871,15 @@
       }
       menuBtn.addEventListener("click", function () { setMenu(!nav.classList.contains("open")); });
       nav.querySelectorAll("a").forEach(function (a) { a.addEventListener("click", function () { setMenu(false); }); });
+
+      // ---------- Luz dorada que sigue al cursor en las tarjetas ----------
+      document.querySelectorAll(".train-card").forEach(function (card) {
+        card.addEventListener("pointermove", function (e) {
+          var r = card.getBoundingClientRect();
+          card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+          card.style.setProperty("--my", (e.clientY - r.top) + "px");
+        });
+      });
 
       // ---------- Animación al aparecer ----------
       var items = document.querySelectorAll(".reveal");
