@@ -940,6 +940,8 @@
           <ul class="game-help">
             <li><b>Computadora:</b> flechas o W A S D · <b>P</b> para pausar</li>
             <li><b>Celular:</b> desliza el dedo o usa los botones</li>
+            <li>😼 <b>¡Cuidado con los gatos!</b> Desde los 5 balones aparecen gatos. Primero parpadean (aún no hacen nada) y luego, si Juan los toca, pierdes.</li>
+            <li>🍫 <b>Chocolate:</b> cómelo y por 3 segundos Juan puede pasar por encima de su propia fila.</li>
           </ul>
           <p class="game-challenge"><b>Reto de crack:</b> los profesionales no nacen siendo buenos. Se vuelven buenos repitiendo, fallando y volviendo a intentar. ¿Puedes superar el récord?</p>
           <div class="game-scores"><div><span>Balones</span><strong id="gScore">0</strong></div><div><span>Récord</span><strong id="gBest">0</strong></div></div>
@@ -947,6 +949,8 @@
         <div class="game-box reveal">
           <div class="game-stage">
             <img id="gBall" src="img/iconos/pilar-tecnica.png" alt="" style="display:none">
+            <img id="gCat" src="img/iconos/gato.png" alt="" style="display:none">
+            <img id="gChoco" src="img/iconos/chocolate.png" alt="" style="display:none">
             <img id="gJuan" src="img/iconos/juan-corre.png" alt="" style="display:none">
             <canvas id="gCanvas" width="720" height="720" aria-label="Juego: Juan recoge balones"></canvas>
             <div class="g-toast" id="gToast" aria-live="polite"></div>
@@ -1128,16 +1132,55 @@
         // Frases del coach al recoger cada balón
         var frasesCoach = ["¡Miauuu! 😼", "¡Ese es mi galáctico! 🌟", "¡Full chocolatero! 🍫", "¡Miauuu! 😼🔥", "¡Ese es mi galáctico! 🚀", "¡Full chocolatero! 🍫⚽"];
         // Frases especiales cada 5 balones
-        var frasesJuego = { 5: "¡Buen inicio, crack! 🔥", 10: "Los campeones no se rinden 💪", 15: "Disciplina + trabajo = estrella ⭐", 20: "¡Así se entrena en La Fábrica! 🏆", 25: "¡Futura estrella! 🌟👑" };
+        var frasesJuego = { 5: "¡Ojo, llegaron los gatos! 😼", 10: "Los campeones no se rinden 💪", 15: "Disciplina + trabajo = estrella ⭐", 20: "¡Así se entrena en La Fábrica! 🏆", 25: "¡Futura estrella! 🌟👑" };
         var pops = [];
+        // Gatos y chocolate
+        var catImg = document.getElementById("gCat"), chocoImg = document.getElementById("gChoco");
+        var CAT_WARN = 800, CAT_LIVE = 2200, CHOCO_STAY = 6000, CHOCO_POWER = 3000;
+        var cats = [], choco = null, chocoUntil = 0, gameTime = 0, nextCatAt = 0, lostBy = "";
+        function catsWanted() { return score < 5 ? 0 : Math.min(4, 1 + Math.floor((score - 5) / 5)); }
+        function isFree(x, y) {
+          var hd = snake[0];
+          if (snake.some(function (p) { return p.x === x && p.y === y; })) return false;
+          if (food && food.x === x && food.y === y) return false;
+          if (choco && choco.x === x && choco.y === y) return false;
+          if (cats.some(function (c) { return c.x === x && c.y === y; })) return false;
+          var dx = Math.min(Math.abs(x - hd.x), N - Math.abs(x - hd.x)), dy = Math.min(Math.abs(y - hd.y), N - Math.abs(y - hd.y));
+          if (dx + dy < 4) return false;
+          for (var k = 1; k <= 6; k++) if ((hd.x + dir.x * k + N) % N === x && (hd.y + dir.y * k + N) % N === y) return false;
+          return true;
+        }
+        function freeCell() {
+          for (var i = 0; i < 80; i++) { var x = Math.floor(Math.random() * N), y = Math.floor(Math.random() * N); if (isFree(x, y)) return {x: x, y: y}; }
+          return null;
+        }
+        function catActive(c) { return gameTime - c.born >= CAT_WARN; }
+        function updateHazards() {
+          cats = cats.filter(function (c) { return gameTime - c.born < CAT_WARN + CAT_LIVE; });
+          if (cats.length < catsWanted() && gameTime >= nextCatAt) {
+            var cell = freeCell();
+            if (cell) { cell.born = gameTime; cats.push(cell); }
+            nextCatAt = gameTime + 600 + Math.random() * 900;
+          }
+          if (choco && gameTime > choco.until) choco = null;
+        }
+        function maybeChoco() {
+          if (choco || gameTime < chocoUntil) return;
+          if (score === 7 || (score > 7 && Math.random() < .3)) {
+            var cell = freeCell(); if (cell) { cell.until = gameTime + CHOCO_STAY; choco = cell; }
+          }
+        }
         function showToast(t) { toast.textContent = t; toast.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(function () { toast.classList.remove("show"); }, 2000); }
         function reset() {
           snake = [{x: 5, y: 8}]; face = 1; dust = []; prev = snake.map(function (p) { return {x: p.x, y: p.y}; });
-          dir = {x: 1, y: 0}; next = dir; score = 0; step = 170; acc = 0; elScore.textContent = 0; place();
+          dir = {x: 1, y: 0}; next = dir; score = 0; step = 170; cats = []; choco = null; chocoUntil = 0; gameTime = 0; nextCatAt = 0; lostBy = ""; acc = 0; elScore.textContent = 0; place();
         }
         function place() {
-          do { food = {x: Math.floor(Math.random() * N), y: Math.floor(Math.random() * N)}; }
-          while (snake.some(function (p) { return p.x === food.x && p.y === food.y; }));
+          var tries = 0;
+          do { food = {x: Math.floor(Math.random() * N), y: Math.floor(Math.random() * N)}; tries++; }
+          while (tries < 400 && (snake.some(function (p) { return p.x === food.x && p.y === food.y; }) ||
+                 (cats || []).some(function (c) { return c.x === food.x && c.y === food.y; }) ||
+                 (choco && choco.x === food.x && choco.y === food.y)));
         }
         function turn(d) {
           var m = {up: {x: 0, y: -1}, down: {x: 0, y: 1}, left: {x: -1, y: 0}, right: {x: 1, y: 0}}[d];
@@ -1151,9 +1194,11 @@
           var h = {x: (snake[0].x + dir.x + N) % N, y: (snake[0].y + dir.y + N) % N};
           var grow = h.x === food.x && h.y === food.y;
           var body = grow ? snake : snake.slice(0, -1);
-          if (body.some(function (p) { return p.x === h.x && p.y === h.y; })) return over();
+          if (cats.some(function (c) { return c.x === h.x && c.y === h.y && catActive(c); })) { lostBy = "gato"; return over(); }
+          if (gameTime >= chocoUntil && body.some(function (p) { return p.x === h.x && p.y === h.y; })) return over();
           snake.unshift(h);
-          if (grow) { score++; elScore.textContent = score; if (frasesJuego[score]) showToast(frasesJuego[score]); else pops = [{x: (h.x + .5) * C, y: (h.y + .5) * C, t: 0, txt: frasesCoach[Math.floor(Math.random() * frasesCoach.length)]}]; step = Math.max(80, step - 4); prev.push(prev[prev.length - 1]); place(); }
+          if (choco && h.x === choco.x && h.y === choco.y) { choco = null; chocoUntil = gameTime + CHOCO_POWER; showToast("¡Full chocolatero! 🍫 Atraviesa tu fila"); }
+          if (grow) { score++; elScore.textContent = score; if (frasesJuego[score]) showToast(frasesJuego[score]); else pops = [{x: (h.x + .5) * C, y: (h.y + .5) * C, t: 0, txt: frasesCoach[Math.floor(Math.random() * frasesCoach.length)]}]; step = Math.max(90, step - 4); prev.push(prev[prev.length - 1]); place(); maybeChoco(); }
           else snake.pop();
         }
         function over() {
@@ -1161,7 +1206,7 @@
           var esRecord = score > best;
           if (esRecord) { best = score; elBest.textContent = best; try { localStorage.setItem("lfBest", best); } catch (e) {} }
           document.getElementById("gTitle").textContent = "¡Fin del juego!";
-          document.getElementById("gMsg").textContent = "Recogiste " + score + (score === 1 ? " balón." : " balones.");
+          document.getElementById("gMsg").textContent = (lostBy === "gato" ? "¡Te atrapó un gato! 😼 " : "") + "Recogiste " + score + (score === 1 ? " balón." : " balones.");
           document.getElementById("gRecord").hidden = !(esRecord && score > 0);
           document.getElementById("gQuoteText").textContent = frasesFinales[Math.floor(Math.random() * frasesFinales.length)];
           elQuote.hidden = false; pops = [];
@@ -1237,7 +1282,46 @@
             ctx.fillStyle = "rgba(230,215,170," + (.45 * (1 - d.t)) + ")";
             ctx.beginPath(); ctx.arc(d.x, d.y - d.t * 8, 3 + d.t * 9, 0, Math.PI * 2); ctx.fill();
           }
+          // Chocolate
+          if (choco && chocoImg.complete && chocoImg.naturalWidth) {
+            var left = choco.until - gameTime;
+            if (!(left < 1500 && Math.floor(gameTime / 150) % 2)) {
+              var cfw = chocoImg.naturalWidth / 8, cfh = chocoImg.naturalHeight, cw = C * 1.7, ch = cw * cfh / cfw;
+              var cxp = (choco.x + .5) * C, cyp = (choco.y + .5) * C;
+              ctx.fillStyle = "rgba(255,200,60,.28)"; ctx.beginPath(); ctx.arc(cxp, cyp, C * .7 + Math.sin(pulse * 1.5) * 3, 0, Math.PI * 2); ctx.fill();
+              ctx.drawImage(chocoImg, (Math.floor(gameTime / 110) % 8) * cfw, 0, cfw, cfh, cxp - cw / 2, cyp - ch / 2, cw, ch);
+            }
+          }
+          // Gatos: parpadean como aviso y luego quedan activos
+          cats.forEach(function (c) {
+            if (!(catImg.complete && catImg.naturalWidth)) return;
+            var age = gameTime - c.born, act = age >= CAT_WARN, end = CAT_WARN + CAT_LIVE - age;
+            var gx = (c.x + .5) * C, gy = (c.y + .5) * C;
+            ctx.save();
+            if (!act) ctx.globalAlpha = .35 + .45 * Math.abs(Math.sin(age / 90));
+            else if (end < 400) ctx.globalAlpha = end / 400;
+            ctx.strokeStyle = act ? "rgba(255,70,70,.9)" : "rgba(255,216,74,.9)"; ctx.lineWidth = 3;
+            if (!act) ctx.setLineDash([6, 5]);
+            ctx.beginPath(); ctx.arc(gx, gy + C * .1, C * .55, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+            var fw = catImg.naturalWidth / 8, fh = catImg.naturalHeight, w = C * 1.9, hgt = w * fh / fw;
+            ctx.drawImage(catImg, (Math.floor(gameTime / 130) % 8) * fw, 0, fw, fh, gx - w / 2, gy + C * .5 - hgt, w, hgt);
+            if (!act) { ctx.font = "900 " + Math.round(C * .6) + "px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#ffd84a"; ctx.strokeStyle = "#0a0a0a"; ctx.lineWidth = 4; ctx.strokeText("!", gx + C * .55, gy - C * .55); ctx.fillText("!", gx + C * .55, gy - C * .55); }
+            ctx.restore();
+          });
+          // Poder del chocolate: aura dorada y barra de tiempo
+          var powerLeft = chocoUntil - gameTime;
+          if (running && powerLeft > 0) {
+            ctx.fillStyle = "rgba(255,200,60," + (.25 + .15 * Math.sin(pulse * 3)) + ")";
+            ctx.beginPath(); ctx.arc(hx, hy - C * .4, C * 1.05, 0, Math.PI * 2); ctx.fill();
+          }
           drawJuan(hx, hy);
+          if (running && powerLeft > 0) {
+            var bw = cv.width * .5, bx = (cv.width - bw) / 2, by = cv.height - 30;
+            ctx.fillStyle = "rgba(8,8,8,.75)"; ctx.fillRect(bx - 4, by - 4, bw + 8, 22);
+            ctx.fillStyle = "#f5b914"; ctx.fillRect(bx, by, bw * powerLeft / CHOCO_POWER, 14);
+            ctx.font = "800 " + Math.round(C * .42) + "px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+            ctx.fillStyle = "#fff"; ctx.fillText("🍫 " + (powerLeft / 1000).toFixed(1) + " s", cv.width / 2, by - 18);
+          }
           // Frases flotantes del coach
           for (var q = pops.length - 1; q >= 0; q--) {
             var pp = pops[q]; if (!paused) pp.t += .018; if (pp.t >= 1) { pops.splice(q, 1); continue; }
@@ -1250,7 +1334,7 @@
         }
         function loop(ts) {
           if (!last) last = ts; var dt = Math.min(ts - last, 100); last = ts;
-          if (running && !paused) { runT += dt / 1000; acc += dt; while (acc >= step && running) { acc -= step; tick(); } }
+          if (running && !paused) { gameTime += dt; updateHazards(); runT += dt / 1000; acc += dt; while (acc >= step && running) { acc -= step; tick(); } }
           if (!paused) draw(running ? Math.min(acc / step, 1) : 1);
           requestAnimationFrame(loop);
         }
