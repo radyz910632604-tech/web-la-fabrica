@@ -1601,6 +1601,15 @@
           back = setTimeout(function () { clearInterval(timer); timer = setInterval(tick, 170); play("domi"); g.style.opacity = ""; }, 4 * 8 * 130);
         }
         window.lfDance = dance;
+        // Baila solo de vez en cuando (cada 20 a 35 s), sin interrumpir si está hablando o con el menú abierto
+        var frasesBaile = ["🎶 ¡Pa’ que bailen los cracks! 💃🕺", "🔥 ¡Reparto time! 💃🕺", "😄 ¡A mover el esqueleto, campeón! 🎶", "", "", ""];
+        (function autoDance() {
+          setTimeout(function () {
+            var busy = !menu.hidden || !bubble.classList.contains("hide") || cur !== "domi" || document.hidden;
+            if (!hidden && !busy) { var f = frasesBaile[Math.floor(Math.random() * frasesBaile.length)]; dance(f || null); }
+            autoDance();
+          }, 20000 + Math.random() * 15000);
+        })();
         var lastTap = 0;
         ch.addEventListener("pointerup", function () { var n = Date.now(); if (n - lastTap < 350) { dance("🎶 ¡Reparto time! 💃🕺🔥"); lastTap = 0; } else lastTap = n; });
         function setHidden(v) {
