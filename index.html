@@ -267,6 +267,28 @@
     .train-card h3 { margin: 4px 0 8px; }
     .train-card p { margin: 0; color: var(--muted); font-size: .95rem; }
 
+    /* ---------- Horarios ---------- */
+    .sch-legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .85rem; font-weight: 600; }
+    .sch-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .sch-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+    .lg-libre { background: var(--accent); } .lg-cat { background: #fff; } .lg-full { background: #e25c4b; } .lg-form { background: #8ab4ff; }
+    .sch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+    @media (min-width: 1100px) { .sch-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; } .sch-card { padding: 18px 12px; } .sch-card h3 { font-size: 1.35rem; } }
+    .sch-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px 18px; }
+    .sch-card h3 { font-size: 1.6rem; color: var(--accent); }
+    .sch-when { display: block; color: var(--muted); font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; margin: 2px 0 12px; }
+    .sch-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+    .sch-card li { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; padding: 9px 10px 9px 12px; border-radius: 10px; background: rgba(255,255,255,.04); border-left: 3px solid #fff; }
+    .sch-card li.libre { border-left-color: var(--accent); background: rgba(245,185,20,.08); }
+    .sch-card li.full { border-left-color: #e25c4b; opacity: .75; }
+    .sch-card li.form { border-left-color: #8ab4ff; }
+    .sch-t { grid-column: 1 / -1; font-size: .78rem; color: var(--muted); font-weight: 700; }
+    .sch-c { font-weight: 800; }
+    .sch-full { justify-self: end; font-style: normal; font-size: .7rem; font-weight: 800; text-transform: uppercase; color: #fff; background: #e25c4b; padding: 2px 8px; border-radius: 999px; }
+    .sch-cta { margin-top: 22px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; border-radius: var(--radius); background: rgba(245,185,20,.08); border: 1px solid rgba(245,185,20,.4); }
+    .sch-cta p { margin: 0; font-weight: 600; }
+    @media (max-width: 560px) { .sch-cta .btn { width: 100%; } }
+
     /* ---------- Para quién es ---------- */
     .who { background: var(--bg-2); }
     .who-clubs { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 18px; }
@@ -648,6 +670,7 @@
         <a href="#nosotros">Nosotros</a>
         <a href="#entrenamiento">Entrenamos</a>
         <a href="#planes">Planes</a>
+        <a href="#horarios">Horarios</a>
         <a href="#historia">Historia</a>
         <a href="#ubicacion">Ubicación</a>
       </nav>
@@ -940,6 +963,70 @@
       </div>
     </section>
 
+    <!-- ===================== HORARIOS ===================== -->
+    <section id="horarios">
+      <div class="container">
+        <div class="section-head reveal">
+          <div>
+            <span class="eyebrow">Horarios</span>
+            <h2>Encuentra <span class="hl">tu horario</span></h2>
+            <p class="lead">Horarios por categoría. Los cupos son limitados: reserva el tuyo por WhatsApp.</p>
+          </div>
+          <div class="sch-legend"><span><i class="lg-libre"></i>Categoría Libre</span><span><i class="lg-cat"></i>Menores por año</span><span><i class="lg-form"></i>Niños formativos</span><span><i class="lg-full"></i>Sin cupos</span></div>
+        </div>
+        <div class="sch-grid">
+          <article class="sch-card reveal">
+            <h3>Lunes a viernes</h3><span class="sch-when">Mañanas</span>
+            <ul>
+              <li class="libre"><span class="sch-t">6:00 – 7:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li class="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li class="libre"><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li class="libre"><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+            </ul>
+          </article>
+          <article class="sch-card reveal">
+            <h3>Lunes, miércoles y viernes</h3><span class="sch-when">Tardes</span>
+            <ul>
+              <li class=""><span class="sch-t">4:00 – 5:00 p. m.</span><span class="sch-c">2014 – 2015</span></li>
+              <li class=""><span class="sch-t">5:00 – 6:00 p. m.</span><span class="sch-c">2013 – 2014</span></li>
+              <li class="full"><span class="sch-t">6:00 – 7:00 p. m.</span><span class="sch-c">2017</span><em class="sch-full">Sin cupos</em></li>
+              <li class="libre"><span class="sch-t">7:00 – 8:00 p. m.</span><span class="sch-c">Categoría Libre</span></li>
+            </ul>
+          </article>
+          <article class="sch-card reveal">
+            <h3>Martes y jueves</h3><span class="sch-when">Tardes</span>
+            <ul>
+              <li class=""><span class="sch-t">4:00 – 5:00 p. m.</span><span class="sch-c">Sub-14 a 20 años</span></li>
+              <li class=""><span class="sch-t">5:00 – 6:00 p. m.</span><span class="sch-c">2017</span></li>
+              <li class=""><span class="sch-t">6:00 – 7:00 p. m.</span><span class="sch-c">2013 – 2014 – 2015</span></li>
+              <li class=""><span class="sch-t">7:00 – 8:00 p. m.</span><span class="sch-c">2014 – 2015</span></li>
+            </ul>
+          </article>
+          <article class="sch-card reveal">
+            <h3>Sábado</h3><span class="sch-when">Mañana</span>
+            <ul>
+              <li class="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li class=""><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">2014 – 2015</span></li>
+              <li class=""><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">2013</span></li>
+              <li class="form"><span class="sch-t">10:00 – 11:00 a. m.</span><span class="sch-c">Niños formativos</span></li>
+            </ul>
+          </article>
+          <article class="sch-card reveal">
+            <h3>Domingo</h3><span class="sch-when">Mañana</span>
+            <ul>
+              <li class="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li class=""><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">2013 – 2014 – 2015</span></li>
+              <li class="form"><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">Niños formativos</span></li>
+            </ul>
+          </article>
+        </div>
+        <div class="sch-cta reveal">
+          <p>¿No sabes cuál es tu categoría? Escríbenos y te ubicamos en el horario ideal.</p>
+          <a class="btn btn-wa" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20reservar%20un%20horario%20en%20La%20F%C3%A1brica.%20Mi%20categor%C3%ADa%20es%3A%20" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>Reservar mi horario</a>
+        </div>
+      </div>
+    </section>
+
     <!-- ===================== 5. HISTORIA DESTACADA ===================== -->
     <section class="story" id="historia">
       <div class="container">
@@ -1149,6 +1236,7 @@
             <li><a href="#nosotros"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Nosotros</a></li>
             <li><a href="#entrenamiento"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Entrenamiento</a></li>
             <li><a href="#planes"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Planes y precios</a></li>
+            <li><a href="#horarios"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Horarios</a></li>
             <li><a href="#historia"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Historia destacada</a></li>
             <li><a href="#juego"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Mini juego</a></li>
           </ul>
@@ -1170,7 +1258,7 @@
             <li><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l1.5-4M15 21l-1.5-4"/><circle cx="9" cy="14" r=".6" fill="currentColor"/><circle cx="15" cy="14" r=".6" fill="currentColor"/></svg><span>A una cuadra de la estación Pumacahua</span></a></li>
             <li><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span><b>Ver en Google Maps →</b></span></a></li>
             <!-- HORARIOS: cuando los tengas, reemplaza este enlace por el texto, por ejemplo: Lun a vie 4:00 – 8:00 p. m. -->
-            <li><a href="https://wa.me/51917168725?text=Hola%2C%20quiero%20saber%20los%20horarios%20de%20entrenamiento%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Horarios: <b>consúltalos por WhatsApp</b></span></a></li>
+            <li><a href="#horarios"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Horarios: <b>L–V 6–10 a. m. y 4–8 p. m. · Sáb. y dom. mañanas</b></span></a></li>
           </ul>
         </div>
       </div>
@@ -1556,6 +1644,7 @@
           "para-quien": "¿No sabes si tu hijo tiene el nivel? 🧐 Lo evaluamos en una clase de prueba de S/30 😉",
           nosotros: "Técnica, fuerza, mentalidad y espíritu. ¡Así trabajamos! 💪🔥",
           entrenamiento: "Aquí se suda de verdad 💦 ¡Entrenamiento de alto rendimiento! 🏃‍♂️⚽",
+          horarios: "🕒 Busca tu categoría y elige tu horario. ¡Los cupos vuelan! 🏃‍♂️💨",
           planes: "Psst… 🤫 el plan de 5 días sale a S/15 por sesión. ¡El mejor precio! 💰⭐",
           historia: "Wynslow “Q” Reeves vino desde EE.UU. a entrenar con nosotros 🇺🇸✈️🇵🇪 ¡Tú lo tienes a una cuadra! 😎",
           ubicacion: "Estamos a una cuadra de la estación Pumacahua 🚆📍 ¡Te espero!",
@@ -1566,11 +1655,11 @@
           precio: "💰 Clase de prueba y evaluación: S/30. Planes desde S/250 al mes (3 veces por semana) y S/300 (5 días) 🔥 Personalizado 1 a 1: S/100 la hora.",
           nivel: "🧐 ¡Fácil! Agenda una clase de prueba de S/30 y nuestros profesores lo evalúan en la cancha. Te decimos su nivel y el mejor camino para él 💪",
           libre: "🧔 ¡Claro que sí! La Categoría Libre no tiene límite de edad. Ideal para salud, condición física o rendimiento ❤️💪",
-          horario: "🕒 Los horarios cambian según la categoría. Escríbeme por WhatsApp y te paso los tuyos 📲",
+          horario: "🕒 Lunes a viernes de 6 a 10 a. m. (Categoría Libre) y de 4 a 8 p. m. por categorías. Sábados y domingos en la mañana 🌞 ¡Te muestro la tabla! 👇",
           baile: "🎶 ¡Un reparto para ti, crack! 💃🕺 Así celebramos en La Fábrica 😄🔥",
           donde: "📍 Santa Cruz de Flores 494, Villa María del Triunfo. ¡A una cuadra de la estación Pumacahua! 🚆"
         };
-        var goTo = { precio: "#planes", nivel: "#para-quien", libre: "#para-quien", donde: "#ubicacion" };
+        var goTo = { horario: "#horarios", precio: "#planes", nivel: "#para-quien", libre: "#para-quien", donde: "#ubicacion" };
         var said = {};
         if ("IntersectionObserver" in window) {
           var io = new IntersectionObserver(function (es) {
