@@ -94,6 +94,8 @@
     .btn-wa { background: var(--wa); color: #06260f; box-shadow: 0 10px 30px -10px rgba(37,211,102,.7); }
     .btn-wa:hover { background: var(--wa-dark); transform: translateY(-2px); }
     .btn-lg { padding: 19px 32px; font-size: 1.1rem; }
+    .btn-price { display: inline-block; white-space: nowrap; padding: 3px 9px; border-radius: 999px; background: rgba(0,0,0,.18); font-size: .85em; font-weight: 900; }
+    .final-cta .btn-price { background: var(--accent); color: #0a0a0a; }
     .btn-wa-outline { background: transparent; color: var(--wa); border: 2px solid var(--wa); }
     .btn-wa-outline:hover { background: rgba(37,211,102,.12); transform: translateY(-2px); }
     .btn-ghost { background: transparent; color: var(--text); border: 2px solid var(--line); }
@@ -419,8 +421,15 @@
     .cta-l2 em { color: var(--accent); font-style: italic; margin-left: 4px; }
     .final-cta p { max-width: 600px; margin: 0 auto 26px; font-weight: 500; font-size: 1.05rem; }
     .final-cta .btn-wa { background: #0a0a0a; color: #fff; box-shadow: 0 12px 28px -10px rgba(0,0,0,.55); border: 2px solid rgba(255,215,90,.6); }
-    .final-cta .cta-offer { margin: 0 auto 12px; font-weight: 700; font-size: .92rem; letter-spacing: .02em; }
-    .final-cta .cta-offer span { white-space: nowrap; }
+    .cta-eval { display: flex; align-items: stretch; max-width: 640px; margin: 0 auto 26px; text-align: left; background: rgba(10,10,10,.88); border: 1px solid rgba(245,185,20,.7); border-radius: 18px; overflow: hidden; box-shadow: 0 16px 36px -16px rgba(0,0,0,.7); }
+    .cta-eval-price { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 16px 22px; background: var(--gold-grad); color: #0a0a0a; text-align: center; }
+    .cta-eval-price span { font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; max-width: 120px; line-height: 1.2; }
+    .cta-eval-price strong { font-family: var(--display); font-weight: 400; font-size: 2.8rem; line-height: 1; }
+    .cta-eval-price small { font-size: .78rem; font-weight: 700; }
+    .cta-eval-text { padding: 16px 20px; color: #f1ece2; }
+    .cta-eval-text b { display: block; color: var(--accent); margin-bottom: 6px; font-size: 1rem; }
+    .final-cta .cta-eval-text p { margin: 0; max-width: none; font-size: .93rem; line-height: 1.5; color: #e6e1d6; }
+    @media (max-width: 560px) { .cta-eval { flex-direction: column; } .cta-eval-price { flex-direction: row; gap: 10px; padding: 12px 16px; } .cta-eval-price span { max-width: none; } .cta-eval-price strong { font-size: 2.2rem; } }
     .final-cta .btn-wa:hover { background: #1e1b16; }
 
     /* ---------- Mini juego ---------- */
@@ -555,7 +564,7 @@
       .header.menu-open { background: rgba(10,10,10,.98); }
       .about-grid, .location-grid, .social-box, .story-card { grid-template-columns: 1fr; }
       .about-grid { gap: 32px; }
-      .final-cta { background-image: url("img/cta-fondo-movil.jpg"); background-position: 8% bottom; padding: 56px 0 330px; }
+      .final-cta { background-image: url("img/cta-fondo-movil.jpg"); background-position: 8% bottom; padding: 56px 0 400px; }
       .about-full { grid-column: auto; }
       .pillars { grid-template-columns: repeat(2, 1fr); }
       .about-photo { aspect-ratio: 4 / 4; }
@@ -626,9 +635,9 @@
         <p class="hero-claim">Llevamos a jugadores competitivos al siguiente nivel: <span class="hl">técnica, fuerza y mentalidad</span>.</p>
         <p class="hero-coach">Entrena con el <strong>Coach Juan Kenciño</strong>, <span class="hl">el entrenador de las futuras estrellas</span>.</p>
         <div class="hero-actions">
-          <a class="btn btn-wa btn-lg" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
+          <a class="btn btn-wa btn-lg" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20y%20evaluaci%C3%B3n%20%28S%2F30%29%20en%20La%20F%C3%A1brica." target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
-            Agenda tu clase de prueba
+            Agenda tu clase de prueba <span class="btn-price">S/30</span>
           </a>
           <a class="btn btn-ghost btn-lg" href="#planes">Ver planes</a>
         </div>
@@ -686,7 +695,7 @@
             </div>
           </div>
         </div>
-        <p class="who-note">¿No sabes si tu hijo tiene el nivel? <a href="https://wa.me/51917168725?text=Hola%2C%20quiero%20saber%20si%20mi%20hijo%20tiene%20el%20nivel%20para%20entrenar%20en%20La%20F%C3%A1brica.%20Juega%20en%20el%20club%3A%20" target="_blank" rel="noopener">Cuéntanos en qué club juega →</a></p>
+        <p class="who-note">¿No sabes si tu hijo tiene el nivel? <a href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20y%20evaluaci%C3%B3n%20%28S%2F30%29%20para%20saber%20si%20mi%20hijo%20tiene%20el%20nivel%20para%20competir.%20Juega%20en%20el%20club%3A%20" target="_blank" rel="noopener">Agenda una clase de prueba y evaluación (S/30) →</a></p>
       </div>
     </section>
 
@@ -1057,10 +1066,20 @@
       <div class="container">
         <h2 class="cta-title"><span class="cta-l1">¿Listo para entrar a</span><span class="cta-l2"><span>La Fábrica<em>?</em></span></span></h2>
         <p>Si ya compites y quieres marcar la diferencia en tu club, este es tu lugar. Entrena con el <strong>Coach Juan Kenciño</strong>, el entrenador de las futuras estrellas.</p>
-        <p class="cta-offer"><span>Primera clase de prueba: <strong>S/30</strong></span> <span>· Sin compromiso</span></p>
-        <a class="btn btn-wa btn-lg" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
+        <div class="cta-eval">
+          <div class="cta-eval-price">
+            <span>Clase de prueba y evaluación</span>
+            <strong>S/30</strong>
+            <small>Sin compromiso</small>
+          </div>
+          <div class="cta-eval-text">
+            <b>¿No sabes si tu hijo tiene el nivel para competir?</b>
+            <p>En la clase de prueba, nuestros profesores lo evalúan en la cancha y te dicen si ya está listo para la competición o qué necesita trabajar para prepararse.</p>
+          </div>
+        </div>
+        <a class="btn btn-wa btn-lg" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20y%20evaluaci%C3%B3n%20%28S%2F30%29%20en%20La%20F%C3%A1brica." target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
-          Agenda su clase de prueba
+          Agenda su clase de prueba <span class="btn-price">S/30</span>
         </a>
       </div>
     </section>
