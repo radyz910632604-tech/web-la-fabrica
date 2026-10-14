@@ -496,6 +496,7 @@
     .guide-char { order: 1; width: 92px; height: 152px; padding: 0; border: 0; background: none; cursor: pointer; filter: drop-shadow(0 10px 12px rgba(0,0,0,.55)); -webkit-tap-highlight-color: transparent; }
     .guide-sprite { display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 600% 100%; background-image: url("img/iconos/funko-domi.png"); transform-origin: 50% 100%; animation: guide-in .5s cubic-bezier(.2,1.4,.4,1); }
     .guide-sprite.s-saludo { background-image: url("img/iconos/funko-saludo.png"); background-size: 400% 100%; }
+    .guide-sprite.s-baile { background-image: url("img/iconos/funko-baile.png"); background-size: 800% 100%; }
     .guide-sprite.s-celebra { background-image: url("img/iconos/funko-celebra.png"); background-size: 400% 100%; }
     @keyframes guide-in { from { transform: translateY(40px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
     .guide-bubble { order: 2; position: relative; max-width: 270px; margin-bottom: 70px; padding: 14px 16px 12px; border-radius: 18px 18px 18px 4px; background: #fffdf6; color: #141210; box-shadow: 0 14px 32px -10px rgba(0,0,0,.6); border: 2px solid var(--accent); transform-origin: 0 100%; transition: opacity .25s, transform .25s; }
@@ -1188,6 +1189,7 @@
         <button type="button" data-q="libre">🧔 ¿Y los adultos?</button>
         <button type="button" data-q="horario">🕒 ¿Horarios?</button>
         <button type="button" data-q="donde">📍 ¿Dónde quedan?</button>
+        <button type="button" data-q="baile">💃 ¡Baila, coach!</button>
         <a class="guide-wa" href="https://wa.me/51917168725?text=Hola%20Coach%20Juan%20%F0%9F%91%8B%2C%20tengo%20una%20consulta%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica." target="_blank" rel="noopener">💬 Hablar con el coach</a>
       </div>
       <button class="guide-more" id="guideMore" type="button">Tengo una pregunta 🙋</button>
@@ -1365,6 +1367,7 @@
         function over() {
           running = false;
           var esRecord = score > best;
+          if (esRecord && score > 0 && window.lfDance) setTimeout(function () { window.lfDance("⭐ ¡Nuevo récord! Eso merece un reparto 💃🕺🎶"); }, 600);
           if (esRecord) { best = score; elBest.textContent = best; try { localStorage.setItem("lfBest", best); } catch (e) {} }
           document.getElementById("gTitle").textContent = "¡Fin del juego!";
           document.getElementById("gMsg").textContent = (lostBy === "gato" ? "¡Te atrapó un gato! 😼 " : "") + "Recogiste " + score + (score === 1 ? " balón." : " balones.");
@@ -1537,7 +1540,7 @@
         var g = document.getElementById("guide"); if (!g) return;
         var spr = document.getElementById("guideSprite"), bubble = document.getElementById("guideBubble"), txt = document.getElementById("guideText");
         var menu = document.getElementById("guideMenu"), more = document.getElementById("guideMore"), mini = document.getElementById("guideMini"), ch = document.getElementById("guideChar");
-        var ANIM = { domi: 6, saludo: 4, celebra: 4 }, cur = "domi", frame = 0, timer, hideT, back;
+        var ANIM = { domi: 6, saludo: 4, celebra: 4, baile: 8 }, cur = "domi", frame = 0, timer, hideT, back;
         var hidden = false; try { hidden = sessionStorage.getItem("lfGuide") === "off"; } catch (e) {}
         function play(name, loops) {
           cur = name; frame = 0; spr.className = "guide-sprite" + (name === "domi" ? "" : " s-" + name);
@@ -1564,6 +1567,7 @@
           nivel: "🧐 ¡Fácil! Agenda una clase de prueba de S/30 y nuestros profesores lo evalúan en la cancha. Te decimos su nivel y el mejor camino para él 💪",
           libre: "🧔 ¡Claro que sí! La Categoría Libre no tiene límite de edad. Ideal para salud, condición física o rendimiento ❤️💪",
           horario: "🕒 Los horarios cambian según la categoría. Escríbeme por WhatsApp y te paso los tuyos 📲",
+          baile: "🎶 ¡Un reparto para ti, crack! 💃🕺 Así celebramos en La Fábrica 😄🔥",
           donde: "📍 Santa Cruz de Flores 494, Villa María del Triunfo. ¡A una cuadra de la estación Pumacahua! 🚆"
         };
         var goTo = { precio: "#planes", nivel: "#para-quien", libre: "#para-quien", donde: "#ubicacion" };
@@ -1582,7 +1586,7 @@
         more.addEventListener("click", openMenu);
         menu.querySelectorAll("button[data-q]").forEach(function (b) {
           b.addEventListener("click", function () {
-            var q = b.dataset.q; say(resp[q], true); play("celebra", 2);
+            var q = b.dataset.q; say(resp[q], true); if (q === "baile") { dance(); return; } play("celebra", 2);
             if (goTo[q]) { var t = document.querySelector(goTo[q]); if (t) setTimeout(function () { t.scrollIntoView({ behavior: "smooth" }); }, 700); }
           });
         });
@@ -1590,6 +1594,15 @@
         document.querySelectorAll('a[href*="wa.me"]').forEach(function (a) {
           a.addEventListener("click", function () { if (hidden) return; say("¡Bien ahí, crack! 🎉 Te espero en la cancha 💪⚽", false); play("celebra", 3); });
         });
+        // Baile de reparto (bono): doble toque, botón del menú o nuevo récord en el mini juego
+        function dance(t) {
+          if (hidden) return; if (t) say(t, false);
+          g.style.opacity = "1"; clearInterval(timer); timer = setInterval(tick, 130); play("baile"); clearTimeout(back);
+          back = setTimeout(function () { clearInterval(timer); timer = setInterval(tick, 170); play("domi"); g.style.opacity = ""; }, 4 * 8 * 130);
+        }
+        window.lfDance = dance;
+        var lastTap = 0;
+        ch.addEventListener("pointerup", function () { var n = Date.now(); if (n - lastTap < 350) { dance("🎶 ¡Reparto time! 💃🕺🔥"); lastTap = 0; } else lastTap = n; });
         function setHidden(v) {
           hidden = v; try { sessionStorage.setItem("lfGuide", v ? "off" : "on"); } catch (e) {}
           ch.hidden = v; bubble.hidden = v; mini.hidden = !v;
