@@ -489,6 +489,39 @@
     @media (max-width: 820px) { .game-grid { grid-template-columns: 1fr; gap: 28px; } }
     @media (max-width: 560px) { .g-cup { width: 56px; height: 104px; } .game-overlay { gap: 6px; padding: 12px; } .game-overlay strong { font-size: 1.8rem; } .game-overlay .g-quote { font-size: .78rem; margin-bottom: 2px; } .game-overlay p { margin-bottom: 0; font-size: .85rem; } .game-overlay .btn { padding: 11px 22px; font-size: .9rem; } .g-cta { font-size: .9rem; } }
 
+    /* ---------- Juan guía (Funko) ---------- */
+    .guide { position: fixed; left: 12px; bottom: 10px; z-index: 99; display: flex; align-items: flex-end; gap: 6px; pointer-events: none; }
+    .guide[hidden] { display: none; }
+    .guide > * { pointer-events: auto; }
+    .guide-char { order: 1; width: 92px; height: 152px; padding: 0; border: 0; background: none; cursor: pointer; filter: drop-shadow(0 10px 12px rgba(0,0,0,.55)); -webkit-tap-highlight-color: transparent; }
+    .guide-sprite { display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 600% 100%; background-image: url("img/iconos/funko-domi.png"); transform-origin: 50% 100%; animation: guide-in .5s cubic-bezier(.2,1.4,.4,1); }
+    .guide-sprite.s-saludo { background-image: url("img/iconos/funko-saludo.png"); background-size: 400% 100%; }
+    .guide-sprite.s-celebra { background-image: url("img/iconos/funko-celebra.png"); background-size: 400% 100%; }
+    @keyframes guide-in { from { transform: translateY(40px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+    .guide-bubble { order: 2; position: relative; max-width: 270px; margin-bottom: 70px; padding: 14px 16px 12px; border-radius: 18px 18px 18px 4px; background: #fffdf6; color: #141210; box-shadow: 0 14px 32px -10px rgba(0,0,0,.6); border: 2px solid var(--accent); transform-origin: 0 100%; transition: opacity .25s, transform .25s; }
+    .guide-bubble.hide { opacity: 0; transform: scale(.85) translateY(10px); pointer-events: none; }
+    .guide-bubble p { margin: 0; font-size: .92rem; font-weight: 600; line-height: 1.45; padding-right: 14px; }
+    .guide-x { position: absolute; top: 4px; right: 6px; width: 24px; height: 24px; border: 0; border-radius: 50%; background: transparent; color: #8a8273; font-size: .8rem; cursor: pointer; }
+    .guide-more { margin-top: 10px; border: 0; padding: 7px 12px; border-radius: 999px; background: #141210; color: var(--accent); font: inherit; font-size: .82rem; font-weight: 800; cursor: pointer; }
+    .guide-menu { display: grid; gap: 6px; margin-top: 10px; }
+    .guide-menu[hidden] { display: none; }
+    .guide-menu button, .guide-menu a { text-align: left; border: 1px solid #e7dcc2; background: #fff; color: #141210; font: inherit; font-size: .84rem; font-weight: 700; padding: 8px 10px; border-radius: 10px; cursor: pointer; text-decoration: none; }
+    .guide-menu button:hover { border-color: var(--accent); background: #fff7df; }
+    .guide-menu .guide-wa { background: #25d366; border-color: #25d366; color: #06260f; }
+    .guide-mini { order: 1; width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--accent); background: #141210 url("img/iconos/funko-saludo.png") 0 18% / 400% auto no-repeat; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.5); }
+    .guide-mini[hidden], .guide-char[hidden], .guide-bubble[hidden] { display: none; }
+    @media (max-width: 560px) {
+      .guide { left: 6px; bottom: 6px; }
+      .guide-char { width: 70px; height: 116px; }
+      .guide-bubble { max-width: calc(100vw - 168px); margin-bottom: 64px; padding: 10px 12px 9px; border-radius: 14px 14px 14px 4px; }
+      .guide-bubble p { font-size: .8rem; line-height: 1.4; }
+      .guide-more { margin-top: 7px; padding: 6px 10px; font-size: .76rem; }
+      .guide-menu { grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 8px; }
+      .guide-menu button, .guide-menu a { font-size: .72rem; padding: 6px 7px; border-radius: 8px; line-height: 1.25; }
+      .guide-menu .guide-wa { grid-column: 1 / -1; text-align: center; }
+    }
+    @media (prefers-reduced-motion: reduce) { .guide-sprite { animation: none; } }
+
     /* ---------- Footer ---------- */
     .footer { background: #050505; padding: 56px 0 100px; border-top: 1px solid var(--line); }
     .footer-grid { display: grid; grid-template-columns: 1.35fr .8fr 1.15fr 1.15fr; gap: 32px; }
@@ -1144,6 +1177,27 @@
     </div>
   </footer>
 
+  <!-- ===================== JUAN GUÍA (Funko) ===================== -->
+  <div class="guide" id="guide" hidden>
+    <div class="guide-bubble" id="guideBubble" role="status" aria-live="polite">
+      <button class="guide-x" id="guideClose" type="button" aria-label="Ocultar a Juan">✕</button>
+      <p id="guideText">¡Hola, crack! 👋 Soy el Coach Juan. ¿Te ayudo? ⚽</p>
+      <div class="guide-menu" id="guideMenu" hidden>
+        <button type="button" data-q="precio">💰 ¿Cuánto cuesta?</button>
+        <button type="button" data-q="nivel">🧐 ¿Tiene el nivel?</button>
+        <button type="button" data-q="libre">🧔 ¿Y los adultos?</button>
+        <button type="button" data-q="horario">🕒 ¿Horarios?</button>
+        <button type="button" data-q="donde">📍 ¿Dónde quedan?</button>
+        <a class="guide-wa" href="https://wa.me/51917168725?text=Hola%20Coach%20Juan%20%F0%9F%91%8B%2C%20tengo%20una%20consulta%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica." target="_blank" rel="noopener">💬 Hablar con el coach</a>
+      </div>
+      <button class="guide-more" id="guideMore" type="button">Tengo una pregunta 🙋</button>
+    </div>
+    <button class="guide-char" id="guideChar" type="button" aria-label="Coach Juan, toca para ver preguntas frecuentes">
+      <span class="guide-sprite" id="guideSprite"></span>
+    </button>
+    <button class="guide-mini" id="guideMini" type="button" aria-label="Mostrar a Juan" hidden><span></span></button>
+  </div>
+
   <!-- ===================== WHATSAPP FLOTANTE ===================== -->
   <a class="wa-float js-wa" id="waFloat" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">
     <span class="tip">¿Hablamos? <img src="img/iconos/saludo.png" alt="" width="20" height="20"></span>
@@ -1210,7 +1264,7 @@
 
       // ---------- Tooltip del botón flotante (una vez) ----------
       var waFloat = document.getElementById("waFloat");
-      setTimeout(function () {
+      if (!document.getElementById("guide")) setTimeout(function () {
         waFloat.classList.add("show-tip");
         setTimeout(function () { waFloat.classList.remove("show-tip"); }, 4000);
       }, 3500);
@@ -1475,6 +1529,78 @@
           turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up")); sx = e.touches[0].clientX; sy = e.touches[0].clientY;
         }, {passive: true});
         reset(); requestAnimationFrame(loop);
+      })();
+
+
+      // ---------- Juan guía: frases por sección, preguntas y animaciones ----------
+      (function () {
+        var g = document.getElementById("guide"); if (!g) return;
+        var spr = document.getElementById("guideSprite"), bubble = document.getElementById("guideBubble"), txt = document.getElementById("guideText");
+        var menu = document.getElementById("guideMenu"), more = document.getElementById("guideMore"), mini = document.getElementById("guideMini"), ch = document.getElementById("guideChar");
+        var ANIM = { domi: 6, saludo: 4, celebra: 4 }, cur = "domi", frame = 0, timer, hideT, back;
+        var hidden = false; try { hidden = sessionStorage.getItem("lfGuide") === "off"; } catch (e) {}
+        function play(name, loops) {
+          cur = name; frame = 0; spr.className = "guide-sprite" + (name === "domi" ? "" : " s-" + name);
+          clearTimeout(back); if (loops) back = setTimeout(function () { play("domi"); }, loops * ANIM[name] * 170);
+        }
+        function tick() { var n = ANIM[cur]; spr.style.backgroundPosition = (frame * 100 / (n - 1)) + "% 0"; frame = (frame + 1) % n; }
+        function say(t, keep) {
+          menu.hidden = true; more.hidden = false; txt.textContent = t; bubble.classList.remove("hide"); play("saludo", 2);
+          clearTimeout(hideT); if (!keep) hideT = setTimeout(function () { bubble.classList.add("hide"); }, 7000);
+        }
+        var frases = {
+          inicio: "¡Hola, crack! 👋 Soy el Coach Juan. ¿Te ayudo a encontrar tu plan? ⚽",
+          "para-quien": "¿No sabes si tu hijo tiene el nivel? 🧐 Lo evaluamos en una clase de prueba de S/30 😉",
+          nosotros: "Técnica, fuerza, mentalidad y espíritu. ¡Así trabajamos! 💪🔥",
+          entrenamiento: "Aquí se suda de verdad 💦 ¡Entrenamiento de alto rendimiento! 🏃‍♂️⚽",
+          planes: "Psst… 🤫 el plan de 5 días sale a S/15 por sesión. ¡El mejor precio! 💰⭐",
+          historia: "Keuv vino desde EE.UU. a entrenar con nosotros 🇺🇸✈️🇵🇪 ¡Tú lo tienes a una cuadra! 😎",
+          ubicacion: "Estamos a una cuadra de la estación Pumacahua 🚆📍 ¡Te espero!",
+          redes: "Síguenos en TikTok para ver los entrenamientos 🎥🔥",
+          juego: "¿Me ayudas a recoger los balones? ⚽⚽⚽ ¡Cuidado con los gatos! 😼"
+        };
+        var resp = {
+          precio: "💰 Clase de prueba y evaluación: S/30. Planes desde S/250 al mes (3 veces por semana) y S/300 (5 días) 🔥 Personalizado 1 a 1: S/100 la hora.",
+          nivel: "🧐 ¡Fácil! Agenda una clase de prueba de S/30 y nuestros profesores lo evalúan en la cancha. Te decimos su nivel y el mejor camino para él 💪",
+          libre: "🧔 ¡Claro que sí! La Categoría Libre no tiene límite de edad. Ideal para salud, condición física o rendimiento ❤️💪",
+          horario: "🕒 Los horarios cambian según la categoría. Escríbeme por WhatsApp y te paso los tuyos 📲",
+          donde: "📍 Santa Cruz de Flores 494, Villa María del Triunfo. ¡A una cuadra de la estación Pumacahua! 🚆"
+        };
+        var goTo = { precio: "#planes", nivel: "#para-quien", libre: "#para-quien", donde: "#ubicacion" };
+        var said = {};
+        if ("IntersectionObserver" in window) {
+          var io = new IntersectionObserver(function (es) {
+            es.forEach(function (e) {
+              if (!e.isIntersecting || hidden) return;
+              var id = e.target.id; if (said[id] || !frases[id]) return; said[id] = true; say(frases[id]);
+            });
+          }, { threshold: .45 });
+          Object.keys(frases).forEach(function (id) { var el = document.getElementById(id); if (el) io.observe(el); });
+        }
+        function openMenu() { clearTimeout(hideT); bubble.classList.remove("hide"); txt.textContent = "¿En qué te ayudo? 🤔👇"; menu.hidden = false; more.hidden = true; play("saludo", 2); }
+        ch.addEventListener("click", function () { if (!menu.hidden && !bubble.classList.contains("hide")) { bubble.classList.add("hide"); return; } openMenu(); });
+        more.addEventListener("click", openMenu);
+        menu.querySelectorAll("button[data-q]").forEach(function (b) {
+          b.addEventListener("click", function () {
+            var q = b.dataset.q; say(resp[q], true); play("celebra", 2);
+            if (goTo[q]) { var t = document.querySelector(goTo[q]); if (t) setTimeout(function () { t.scrollIntoView({ behavior: "smooth" }); }, 700); }
+          });
+        });
+        // Celebra cuando alguien toca un botón de WhatsApp
+        document.querySelectorAll('a[href*="wa.me"]').forEach(function (a) {
+          a.addEventListener("click", function () { if (hidden) return; say("¡Bien ahí, crack! 🎉 Te espero en la cancha 💪⚽", false); play("celebra", 3); });
+        });
+        function setHidden(v) {
+          hidden = v; try { sessionStorage.setItem("lfGuide", v ? "off" : "on"); } catch (e) {}
+          ch.hidden = v; bubble.hidden = v; mini.hidden = !v;
+        }
+        document.getElementById("guideClose").addEventListener("click", function () { setHidden(true); });
+        mini.addEventListener("click", function () { setHidden(false); openMenu(); });
+        timer = setInterval(tick, 170); tick();
+        g.hidden = false; setHidden(hidden);
+        // Mientras se juega el mini juego, Juan se hace a un lado
+        var juego = document.getElementById("juego");
+        if (juego && "IntersectionObserver" in window) new IntersectionObserver(function (es) { g.style.opacity = es[0].intersectionRatio > .6 ? ".25" : ""; }, { threshold: [0, .6, 1] }).observe(juego);
       })();
 
       // ---------- Año actual en el footer ----------
