@@ -252,6 +252,13 @@
     .photo-slot { position: relative; border-radius: var(--radius); overflow: hidden; background: var(--card); border: 1px solid var(--line); }
     .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
     .about-photo { aspect-ratio: 4 / 5; }
+    /* Fotos del coach que pasan solas (fundido suave) */
+    .about-photo .slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1s ease, transform 6s ease; transform: scale(1.04); }
+    .about-photo .slide.on { opacity: 1; transform: scale(1); }
+    .about-photo .slide:first-child { position: relative; }
+    .slide-dots { position: absolute; top: 14px; right: 14px; z-index: 2; display: flex; gap: 6px; }
+    .slide-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.45); transition: background .3s, width .3s; }
+    .slide-dots i.on { width: 20px; border-radius: 4px; background: var(--accent); }
     .about-photo .badge {
       position: absolute; left: 16px; bottom: 16px; right: 16px;
       background: rgba(10,10,10,.9);
@@ -950,8 +957,12 @@
     <section id="nosotros">
       <div class="container about-grid">
         <div class="photo-slot about-photo reveal">
-          <!-- FOTO COACH: img/coach.jpg -->
-          <img src="img/coach.jpg" alt="Coach Juan Kenciño" loading="lazy" style="object-position: center 15%;">
+          <!-- FOTOS DEL COACH (pasan solas): img/coach.jpg, img/coach-2.jpg e img/coach-3.jpg.
+               Para agregar otra, copia una línea <img class="slide"> y cambia el archivo. -->
+          <img class="slide on" src="img/coach.jpg" alt="Coach Juan Kenciño" loading="lazy" style="object-position: center 15%;">
+          <img class="slide" src="img/coach-2.jpg" alt="Póster del Coach Juan Kenciño con la camiseta de La Fábrica" loading="lazy" style="object-position: center 20%;">
+          <img class="slide" src="img/coach-3.jpg" alt="Coach Juan Kenciño con invitados en la cancha" loading="lazy" style="object-position: 62% 12%;">
+          <div class="slide-dots" aria-hidden="true"></div>
           <div class="badge">
             <strong>Coach Juan Kenciño</strong>
             <span>Director técnico · La Fábrica</span>
@@ -1711,6 +1722,21 @@
         else if (window.dataLayer && window.dataLayer.push) window.dataLayer.push({ event: "whatsapp_click", ubicacion: zona });
         if (typeof window.fbq === "function") window.fbq("track", "Contact", { content_name: zona });
       });
+
+      // ---------- Fotos del coach: pasan solas cada 4 segundos ----------
+      (function () {
+        var box = document.querySelector(".about-photo"); if (!box) return;
+        var fotos = box.querySelectorAll(".slide"), dots = box.querySelector(".slide-dots"), i = 0, t = null, enVista = false;
+        if (fotos.length < 2) return;
+        fotos.forEach(function () { dots.appendChild(document.createElement("i")); });
+        var marcas = dots.querySelectorAll("i"); marcas[0].className = "on";
+        function ir(n) { fotos[i].classList.remove("on"); marcas[i].className = ""; i = n % fotos.length; fotos[i].classList.add("on"); marcas[i].className = "on"; }
+        function correr() { clearInterval(t); t = null; if (enVista && !document.hidden) t = setInterval(function () { ir(i + 1); }, 4000); }
+        if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        if ("IntersectionObserver" in window) new IntersectionObserver(function (es) { enVista = es[0].isIntersecting; correr(); }).observe(box);
+        else { enVista = true; correr(); }
+        document.addEventListener("visibilitychange", correr);
+      })();
 
       // ---------- Tooltip del botón flotante (una vez) ----------
       var waFloat = document.getElementById("waFloat");
