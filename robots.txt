@@ -3,4 +3,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://radyz910632604-tech.github.io/web-la-fabrica/sitemap.xml
+Sitemap: https://lafabrica-juankencino.netlify.app/sitemap.xml

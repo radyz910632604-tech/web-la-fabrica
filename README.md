@@ -21,7 +21,7 @@ En `index.html` cada punto está marcado con un comentario `PENDIENTE` (búscalo
 ## Al publicar con un dominio propio (por ejemplo, Hostinger)
 
 1. Sube **todos** los archivos y carpetas (`index.html`, `img/`, `fonts/`, `favicon.png`, `apple-touch-icon.png`, `robots.txt`, `sitemap.xml`).
-2. Reemplaza `https://radyz910632604-tech.github.io/web-la-fabrica/` por tu dominio en:
+2. Si cambias de dominio, reemplaza `https://lafabrica-juankencino.netlify.app/` por el nuevo en:
    - `index.html` (vista previa al compartir y "Datos del negocio para Google"),
    - `robots.txt`,
    - `sitemap.xml`.
