@@ -28,14 +28,14 @@
   <meta name="theme-color" content="#0a0a0a">
 
   <!-- Vista previa al compartir el enlace en WhatsApp y redes.
-       DOMINIO: cuando la web tenga su dominio final, cambia "https://radyz910632604-tech.github.io/web-la-fabrica/"
+       DOMINIO: cuando la web tenga su dominio final, cambia "https://lafabrica-juankencino.netlify.app/"
        aquí, en los datos para Google (más abajo), en robots.txt y en sitemap.xml. -->
   <meta property="og:title" content="Centro de Alto Rendimiento La Fábrica">
   <meta property="og:description" content="Alto rendimiento para jugadores competitivos y Categoría Libre sin límite de edad. Clase de prueba y evaluación: S/30. Villa María del Triunfo, Lima Sur.">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_PE">
   <meta property="og:site_name" content="La Fábrica">
-  <meta property="og:image" content="https://radyz910632604-tech.github.io/web-la-fabrica/img/compartir.jpg">
+  <meta property="og:image" content="https://lafabrica-juankencino.netlify.app/img/compartir.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Centro de Alto Rendimiento La Fábrica. Clase de prueba y evaluación: S/30">
@@ -58,9 +58,9 @@
     "@type": "SportsActivityLocation",
     "name": "Centro de Alto Rendimiento La Fábrica",
     "description": "Entrenamiento de fútbol de alto rendimiento para jugadores competitivos y Categoría Libre sin límite de edad, con el Coach Juan Kenciño.",
-    "url": "https://radyz910632604-tech.github.io/web-la-fabrica/",
-    "image": "https://radyz910632604-tech.github.io/web-la-fabrica/img/compartir.jpg",
-    "logo": "https://radyz910632604-tech.github.io/web-la-fabrica/img/logo.png",
+    "url": "https://lafabrica-juankencino.netlify.app/",
+    "image": "https://lafabrica-juankencino.netlify.app/img/compartir.jpg",
+    "logo": "https://lafabrica-juankencino.netlify.app/img/logo.png",
     "telephone": "+51917168725",
     "priceRange": "S/30 – S/300",
     "address": {
@@ -315,7 +315,10 @@
     /* ---------- Qué entrenamos ---------- */
     .training { background: var(--bg-2); }
     .section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; margin-bottom: 40px; }
-    .cat-chip { display: inline-flex; align-items: center; gap: 10px; background: var(--hot); color: #0a0a0a; padding: 12px 20px; border-radius: 999px; font-weight: 800; }
+    .cat-chip { display: inline-flex; align-items: center; gap: 10px; background: var(--gold-grad); color: #0a0a0a; padding: 12px 22px; border-radius: 999px; font-weight: 800; box-shadow: 0 10px 26px -12px rgba(245,185,20,.7); }
+    .cat-chip svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .cat-chip { flex-wrap: wrap; justify-content: center; text-align: center; row-gap: 2px; }
+    .cat-chip span { white-space: nowrap; }
     .cat-chip small { font-weight: 500; opacity: .9; }
     .train-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
     .train-card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; transition: transform .3s ease, border-color .3s ease, box-shadow .3s ease; --mx: 50%; --my: 50%; }
@@ -996,7 +999,7 @@
             <h2>Entrenamiento <span class="hl">integral</span></h2>
             <p class="lead">Sesiones de alta exigencia, pensadas para jugadores de club que quieren rendir al nivel que pide el fútbol competitivo.</p>
           </div>
-          <div class="cat-chip">Menores 2017+ · <span>Libre: cualquier edad</span></div>
+          <div class="cat-chip"><span>Desde la categoría 2017</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span>hasta la Categoría Libre</span></div>
         </div>
 
         <div class="train-grid reveal">
