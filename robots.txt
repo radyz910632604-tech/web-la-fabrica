@@ -1,0 +1,6 @@
+# Permite que Google y otros buscadores lean toda la web.
+# DOMINIO: cuando la web tenga su dominio final, cambia la dirección de abajo (y la de sitemap.xml).
+User-agent: *
+Allow: /
+
+Sitemap: https://radyz910632604-tech.github.io/web-la-fabrica/sitemap.xml
