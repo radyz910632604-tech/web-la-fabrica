@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- DOMINIO: cuando la web tenga su dominio final, cambia la dirección de <loc>. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://radyz910632604-tech.github.io/web-la-fabrica/</loc>
+    <lastmod>2026-10-15</lastmod>
+  </url>
+</urlset>

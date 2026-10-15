@@ -51,4 +51,4 @@ Guarda cada foto en la carpeta `img/` y reemplaza el archivo actual con el mismo
 | 03 · Potencia física | `img/equipo.jpg` |
 | 04 · Agilidad | `img/campeones-3.jpg` |
 
-Esas 4 fotos solo se usan en estas tarjetas, así que reemplazarlas no cambia nada más de la página. Usa JPG de unos 1200 px de ancho para que cargue rápido en el celular.
+Esas 4 fotos solo se usan en estas tarjetas, así que reemplazarlas no cambia nada más de la página. Usa JPG horizontal 4:3 de unos 900 px de ancho (900 × 675 px) y de menos de 200 KB, para que cargue rápido en el celular.

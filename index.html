@@ -3,24 +3,98 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script>document.documentElement.classList.add("js");</script>
+  <script>
+    // Marca que JavaScript funciona y si el navegador muestra imágenes WebP (más livianas).
+    // Si una imagen .webp no carga (celulares antiguos), se usa la misma imagen en .png.
+    (function (d) {
+      d.classList.add("js");
+      var q = [], ok = false, t = new Image();
+      window.lfImg = function (cb) { if (ok) cb(); else q.push(cb); };
+      t.onload = t.onerror = function () {
+        if (t.width === 1) d.classList.add("webp");
+        ok = true; q.forEach(function (cb) { cb(); }); q = [];
+      };
+      t.src = "data:image/webp;base64,UklGRkoAAABXRUJQVlA4WAoAAAAQAAAAAAAAAAAAQUxQSAwAAAARBxAR/Q9ERP8DAABWUDggGAAAABQBAJ0BKgEAAQAAAP4AAA3AAP7mtQAAAA==";
+      window.addEventListener("error", function (e) {
+        var el = e.target;
+        if (el && el.tagName === "IMG" && /\.webp$/.test(el.src) && !el.hasAttribute("data-png")) {
+          el.setAttribute("data-png", ""); el.src = el.src.replace(/\.webp$/, ".png");
+        }
+      }, true);
+    })(document.documentElement);
+  </script>
   <title>La Fábrica | Centro de Alto Rendimiento de Fútbol en Villa María del Triunfo</title>
-  <meta name="description" content="Centro de Alto Rendimiento La Fábrica: entrenamiento de fútbol en Villa María del Triunfo, Lima Sur. Entrenamiento de alto rendimiento para jugadores competitivos que ya juegan en clubes. Técnica, fuerza y mentalidad con el Coach Juan Kenciño.">
+  <meta name="description" content="Centro de Alto Rendimiento de fútbol en Villa María del Triunfo, Lima Sur. Técnica, fuerza y mentalidad con el Coach Juan Kenciño. Clase de prueba S/30.">
   <meta name="theme-color" content="#0a0a0a">
 
-  <!-- Open Graph (vista previa al compartir en WhatsApp / redes) -->
+  <!-- Vista previa al compartir el enlace en WhatsApp y redes.
+       DOMINIO: cuando la web tenga su dominio final, cambia "https://radyz910632604-tech.github.io/web-la-fabrica/"
+       aquí, en los datos para Google (más abajo), en robots.txt y en sitemap.xml. -->
   <meta property="og:title" content="Centro de Alto Rendimiento La Fábrica">
-  <meta property="og:description" content="Alto rendimiento para jugadores competitivos de club: técnica, fuerza y mentalidad. Villa María del Triunfo, Lima Sur.">
+  <meta property="og:description" content="Alto rendimiento para jugadores competitivos y Categoría Libre sin límite de edad. Clase de prueba y evaluación: S/30. Villa María del Triunfo, Lima Sur.">
   <meta property="og:type" content="website">
-  <!-- Imagen al compartir el enlace -->
-  <meta property="og:image" content="https://radyz910632604-tech.github.io/web-la-fabrica/img/logo.png">
+  <meta property="og:locale" content="es_PE">
+  <meta property="og:site_name" content="La Fábrica">
+  <meta property="og:image" content="https://radyz910632604-tech.github.io/web-la-fabrica/img/compartir.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Centro de Alto Rendimiento La Fábrica. Clase de prueba y evaluación: S/30">
+  <meta name="twitter:card" content="summary_large_image">
 
   <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+  <!-- Fuentes en la misma web (no dependen de Google Fonts) -->
+  <link rel="preload" href="fonts/bebas-neue-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
+
+  <!-- MEDICIÓN (opcional): pega aquí el código de Google Analytics 4 y/o del Pixel de Meta.
+       Los clics en WhatsApp ya se registran solos: evento "whatsapp_click" (GA4) y "Contact" (Pixel). -->
+
+  <!-- Datos del negocio para Google -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SportsActivityLocation",
+    "name": "Centro de Alto Rendimiento La Fábrica",
+    "description": "Entrenamiento de fútbol de alto rendimiento para jugadores competitivos y Categoría Libre sin límite de edad, con el Coach Juan Kenciño.",
+    "url": "https://radyz910632604-tech.github.io/web-la-fabrica/",
+    "image": "https://radyz910632604-tech.github.io/web-la-fabrica/img/compartir.jpg",
+    "logo": "https://radyz910632604-tech.github.io/web-la-fabrica/img/logo.png",
+    "telephone": "+51917168725",
+    "priceRange": "S/30 – S/300",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "Santa Cruz de Flores 494",
+      "addressLocality": "Villa María del Triunfo",
+      "addressRegion": "Lima",
+      "addressCountry": "PE"
+    },
+    "geo": { "@type": "GeoCoordinates", "latitude": -12.182351, "longitude": -76.9474786 },
+    "openingHoursSpecification": [
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "opens": "06:00", "closes": "10:00" },
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "opens": "16:00", "closes": "20:00" },
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "07:00", "closes": "11:00" },
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": "Sunday", "opens": "07:00", "closes": "10:00" }
+    ],
+    "sameAs": [
+      "https://www.tiktok.com/@lafabrica.futbol.pe",
+      "https://www.instagram.com/coach_kencino",
+      "https://www.facebook.com/profile.php?id=100063921047837"
+    ]
+  }
+  </script>
 
   <style>
+    @font-face {
+      font-family: "Bebas Neue"; font-style: normal; font-weight: 400; font-display: swap;
+      src: url("fonts/bebas-neue-latin-400.woff2") format("woff2");
+    }
+    @font-face {
+      font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap;
+      src: url("fonts/inter-latin-wght.woff2") format("woff2-variations"), url("fonts/inter-latin-wght.woff2") format("woff2");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
     :root {
       /* Paleta del logo: negro, dorado y blanco */
       --bg: #0a0a0a;
@@ -109,11 +183,10 @@
       z-index: 50;
       transition: background .25s ease, border-color .25s ease;
       border-bottom: 1px solid transparent;
-      background: rgba(8,8,8,.85);
-      -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+      background: rgba(8,8,8,.92);
     }
     .header .nav a { text-shadow: 0 1px 6px rgba(0,0,0,.7); }
-    .header.scrolled { background: rgba(10,10,10,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-color: var(--line); }
+    .header.scrolled { background: rgba(10,10,10,.96); border-color: var(--line); }
     .header .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
     .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .logo img { width: 44px; height: 44px; object-fit: contain; }
@@ -180,7 +253,7 @@
     .about-photo { aspect-ratio: 4 / 5; }
     .about-photo .badge {
       position: absolute; left: 16px; bottom: 16px; right: 16px;
-      background: rgba(10,10,10,.88); backdrop-filter: blur(6px);
+      background: rgba(10,10,10,.9);
       border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
     }
     .badge strong { display: block; font-family: var(--display); font-size: 1.6rem; font-weight: 400; line-height: 1.05; }
@@ -266,6 +339,9 @@
     .train-card .num { font-family: var(--display); color: var(--accent); font-size: 1.1rem; letter-spacing: .1em; }
     .train-card h3 { margin: 4px 0 8px; }
     .train-card p { margin: 0; color: var(--muted); font-size: .95rem; }
+    /* Aviso "Desliza" de los carruseles (solo en celular) */
+    .swipe-hint { display: none; }
+    @keyframes nudge { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(6px); } }
 
     /* ---------- Horarios ---------- */
     .sch-legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--muted); font-size: .85rem; font-weight: 600; }
@@ -280,11 +356,20 @@
     .sch-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
     .sch-card li { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; padding: 9px 10px 9px 12px; border-radius: 10px; background: rgba(255,255,255,.04); border-left: 3px solid #fff; }
     .sch-card li.libre { border-left-color: var(--accent); background: rgba(245,185,20,.08); }
-    .sch-card li.full { border-left-color: #e25c4b; opacity: .75; }
+    .sch-card li.full { border-left-color: #e25c4b; background: rgba(226,92,75,.08); }
     .sch-card li.form { border-left-color: #8ab4ff; }
+    .sch-card[hidden], .sch-card li[hidden] { display: none; }
     .sch-t { grid-column: 1 / -1; font-size: .78rem; color: var(--muted); font-weight: 700; }
     .sch-c { font-weight: 800; }
-    .sch-full { justify-self: end; font-style: normal; font-size: .7rem; font-weight: 800; text-transform: uppercase; color: #fff; background: #e25c4b; padding: 2px 8px; border-radius: 999px; }
+    .sch-full { justify-self: end; font-style: normal; font-size: .7rem; font-weight: 800; text-transform: uppercase; color: #fff; background: #c0392b; padding: 2px 8px; border-radius: 999px; }
+    /* Filtro por categoría */
+    .sch-filter { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
+    .sch-filter button { flex-shrink: 0; padding: 10px 15px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; font-size: .88rem; font-weight: 700; cursor: pointer; transition: border-color .2s, background .2s, color .2s; -webkit-tap-highlight-color: transparent; }
+    .sch-filter button:hover { border-color: var(--accent); }
+    .sch-filter button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #0a0a0a; }
+    .sch-result { margin: 0 0 16px; color: var(--muted); font-size: .95rem; font-weight: 600; }
+    .sch-result b { color: var(--accent); }
+    html:not(.js) .sch-filter, html:not(.js) .sch-result { display: none; }
     .sch-cta { margin-top: 22px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; border-radius: var(--radius); background: rgba(245,185,20,.08); border: 1px solid rgba(245,185,20,.4); }
     .sch-cta p { margin: 0; font-weight: 600; }
     @media (max-width: 560px) { .sch-cta .btn { width: 100%; } }
@@ -434,11 +519,47 @@
     .btn-tiktok:hover { background: #e9e9e9; transform: translateY(-2px); }
     .tiktok-previews { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .tiktok-previews .photo-slot { aspect-ratio: 9 / 16; border-radius: 12px; }
+    .tiktok-previews a.photo-slot { display: block; color: #fff; text-decoration: none; transition: transform .25s, border-color .25s; }
+    .tiktok-previews a.photo-slot:hover { transform: translateY(-4px); border-color: var(--accent); }
+    .tt-play { position: absolute; left: 50%; top: 42%; z-index: 1; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; display: grid; place-items: center; background: rgba(0,0,0,.55); border: 2px solid rgba(255,255,255,.9); transition: background .25s; }
+    .tt-play svg { width: 20px; height: 20px; margin-left: 3px; }
+    .tiktok-previews a.photo-slot:hover .tt-play { background: #fe2c55; }
+    .tt-cap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 30px 8px 10px; background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,.88)); font-size: .76rem; font-weight: 800; line-height: 1.25; text-align: center; }
+
+    /* ---------- Preguntas frecuentes ---------- */
+    .faq-list { max-width: 860px; display: grid; gap: 10px; }
+    .faq-item { background: var(--card); border: 1px solid var(--line); border-radius: 14px; transition: border-color .2s; }
+    .faq-item[open] { border-color: rgba(245,185,20,.6); }
+    .faq-item summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 18px; font-weight: 700; font-size: 1.02rem; -webkit-tap-highlight-color: transparent; }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after { content: "+"; flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(245,185,20,.12); color: var(--accent); font-size: 1.3rem; font-weight: 800; line-height: 1; transition: transform .2s; }
+    .faq-item[open] summary::after { transform: rotate(45deg); }
+    .faq-item summary:hover { color: var(--accent); }
+    .faq-a { padding: 0 18px 16px; color: #e6e1d6; }
+    .faq-a p { margin: 0 0 8px; }
+    .faq-a a { color: var(--accent); font-weight: 700; }
+    .faq-more { max-width: 860px; margin-top: 22px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; border-radius: var(--radius); background: rgba(245,185,20,.08); border: 1px solid rgba(245,185,20,.4); }
+    .faq-more p { margin: 0; font-weight: 600; }
+    @media (max-width: 560px) { .faq-more .btn { width: 100%; } }
+
+    /* ---------- Plantillas pendientes (credenciales del coach y testimonios) ---------- */
+    .coach-creds { list-style: none; padding: 0; margin: 0 0 22px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .coach-creds li { padding: 8px 14px; border-radius: 999px; border: 1px solid rgba(245,185,20,.45); background: rgba(245,185,20,.08); font-weight: 700; font-size: .9rem; }
+    .testi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .testi { margin: 0; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 14px; padding: 20px; }
+    .testi blockquote { margin: 0 0 12px; font-style: italic; color: #e6e1d6; }
+    .testi figcaption { color: var(--muted); font-size: .9rem; }
+    .testi figcaption b { color: var(--text); }
+    @media (max-width: 820px) { .testi-grid { grid-template-columns: 1fr; } }
 
     /* ---------- CTA final ---------- */
-    /* Fondo: img/cta-fondo.jpg (computadora) e img/cta-fondo-movil.jpg (celular) */
+    /* Fondo: img/cta-fondo.jpg (computadora) e img/cta-fondo-movil.jpg (celular), más sus versiones .webp (más livianas).
+       Si cambias el fondo, reemplaza también el .webp (o bórralo y quita las reglas ".webp .final-cta").
+       La imagen se descarga recién cuando la sección se acerca (clase bg-on). */
     .final-cta { position: relative; overflow: hidden; text-align: center; padding: 90px 0 100px; color: #0a0a0a;
-      background: #f5b914 url("img/cta-fondo.jpg") center/cover no-repeat; }
+      background: #f5b914 center/cover no-repeat; }
+    .final-cta.bg-on, html:not(.js) .final-cta { background-image: url("img/cta-fondo.jpg"); }
+    .webp .final-cta.bg-on { background-image: url("img/cta-fondo.webp"); }
     .final-cta .container { position: relative; z-index: 2; }
     .cta-title { margin: 0 0 22px; color: #0a0a0a; line-height: .95; }
     .cta-l1 { display: block; font-size: clamp(2.2rem, 6.5vw, 4.4rem); letter-spacing: .01em; }
@@ -474,7 +595,8 @@
     .game-overlay[hidden] { display: none; }
     .game-overlay .g-hero { width: auto; height: 120px; image-rendering: pixelated; filter: drop-shadow(0 8px 10px rgba(0,0,0,.6)); animation: hero-idle 1.6s ease-in-out infinite; }
     @keyframes hero-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-    .g-cup { flex-shrink: 0; width: 64px; height: 118px; background: url("img/iconos/juan-copa.png") 0 0 / 800% 100% no-repeat; image-rendering: pixelated; filter: drop-shadow(0 8px 12px rgba(0,0,0,.6)); }
+    /* La imagen (img/iconos/juan-copa) se asigna desde el script, cuando el juego está cerca */
+    .g-cup { flex-shrink: 0; width: 64px; height: 118px; background: 0 0 / 800% 100% no-repeat; image-rendering: pixelated; filter: drop-shadow(0 8px 12px rgba(0,0,0,.6)); }
     .g-cup[hidden], .g-hero[hidden] { display: none; }
     .game-bar { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
     .g-ctrl { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--accent); background: var(--card); color: var(--accent); font: inherit; font-weight: 800; cursor: pointer; transition: background .2s, color .2s; }
@@ -515,11 +637,11 @@
     .guide { position: fixed; left: 12px; bottom: 10px; z-index: 99; display: flex; align-items: flex-end; gap: 6px; pointer-events: none; }
     .guide[hidden] { display: none; }
     .guide > * { pointer-events: auto; }
-    .guide-char { order: 1; width: 92px; height: 152px; padding: 0; border: 0; background: none; cursor: pointer; filter: drop-shadow(0 10px 12px rgba(0,0,0,.55)); -webkit-tap-highlight-color: transparent; }
-    .guide-sprite { display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 600% 100%; background-image: url("img/iconos/funko-domi.png"); transform-origin: 50% 100%; animation: guide-in .5s cubic-bezier(.2,1.4,.4,1); }
-    .guide-sprite.s-saludo { background-image: url("img/iconos/funko-saludo.png"); background-size: 400% 100%; }
-    .guide-sprite.s-baile { background-image: url("img/iconos/funko-baile.png"); background-size: 800% 100%; }
-    .guide-sprite.s-celebra { background-image: url("img/iconos/funko-celebra.png"); background-size: 400% 100%; }
+    .guide-char { order: 1; width: 92px; height: 152px; padding: 0; border: 0; background: none; cursor: pointer; filter: drop-shadow(0 10px 12px rgba(0,0,0,.55)); -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    /* Las hojas de animación (img/iconos/funko-*.webp o .png) se asignan desde el script */
+    .guide-sprite { display: block; width: 100%; height: 100%; background-repeat: no-repeat; background-size: 600% 100%; transform-origin: 50% 100%; animation: guide-in .5s cubic-bezier(.2,1.4,.4,1); }
+    .guide-sprite.s-saludo, .guide-sprite.s-celebra { background-size: 400% 100%; }
+    .guide-sprite.s-baile { background-size: 800% 100%; }
     @keyframes guide-in { from { transform: translateY(40px) scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
     .guide-bubble { order: 2; position: relative; max-width: 270px; margin-bottom: 70px; padding: 14px 16px 12px; border-radius: 18px 18px 18px 4px; background: #fffdf6; color: #141210; box-shadow: 0 14px 32px -10px rgba(0,0,0,.6); border: 2px solid var(--accent); transform-origin: 0 100%; transition: opacity .25s, transform .25s; }
     .guide-bubble.hide { opacity: 0; transform: scale(.85) translateY(10px); pointer-events: none; }
@@ -531,7 +653,7 @@
     .guide-menu button, .guide-menu a { text-align: left; border: 1px solid #e7dcc2; background: #fff; color: #141210; font: inherit; font-size: .84rem; font-weight: 700; padding: 8px 10px; border-radius: 10px; cursor: pointer; text-decoration: none; }
     .guide-menu button:hover { border-color: var(--accent); background: #fff7df; }
     .guide-menu .guide-wa { background: #25d366; border-color: #25d366; color: #06260f; }
-    .guide-mini { order: 1; width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--accent); background: #141210 url("img/iconos/funko-saludo.png") 0 18% / 400% auto no-repeat; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.5); }
+    .guide-mini { order: 1; width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--accent); background: #141210 0 18% / 400% auto no-repeat; cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,.5); touch-action: manipulation; }
     .guide-mini[hidden], .guide-char[hidden], .guide-bubble[hidden] { display: none; }
     @media (max-width: 560px) {
       .guide { left: 6px; bottom: 6px; }
@@ -554,12 +676,12 @@
     .footer .fi { width: 18px; height: 18px; flex-shrink: 0; color: var(--accent); margin-top: 2px; }
     .f-explore .fi { width: 14px; height: 14px; margin-top: 4px; }
     .f-strong { color: var(--text); font-weight: 700; }
-    .footer h4 { font-family: var(--display); font-weight: 400; font-size: 1.4rem; letter-spacing: .05em; margin: 0 0 12px; }
+    .footer h3 { font-family: var(--display); font-weight: 400; font-size: 1.4rem; letter-spacing: .05em; margin: 0 0 12px; }
     .footer p, .footer li { color: var(--muted); font-size: .93rem; margin: 0 0 8px; }
     .footer ul { list-style: none; padding: 0; margin: 0; }
     .footer a { text-decoration: none; }
     .footer a:hover { color: var(--accent); }
-    .copy { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: #7a7366; font-size: .82rem; text-align: center; }
+    .copy { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: #9a917f; font-size: .82rem; text-align: center; }
 
     /* ---------- WhatsApp flotante ---------- */
     .wa-float {
@@ -624,7 +746,9 @@
       .header.menu-open { background: rgba(10,10,10,.98); }
       .about-grid, .location-grid, .social-box, .story-card { grid-template-columns: 1fr; }
       .about-grid { gap: 32px; }
-      .final-cta { background-image: url("img/cta-fondo-movil.jpg"); background-position: 8% bottom; padding: 56px 0 400px; }
+      .final-cta { background-position: 8% bottom; padding: 56px 0 400px; }
+      .final-cta.bg-on, html:not(.js) .final-cta { background-image: url("img/cta-fondo-movil.jpg"); }
+      .webp .final-cta.bg-on { background-image: url("img/cta-fondo-movil.webp"); }
       .about-full { grid-column: auto; }
       .pillars { grid-template-columns: repeat(2, 1fr); }
       .about-photo { aspect-ratio: 4 / 4; }
@@ -634,7 +758,8 @@
       .social-box { padding: 32px 22px; }
       .footer-grid { grid-template-columns: 1fr; gap: 28px; }
       .f-brand { order: 1; } .f-contact { order: 2; } .f-address { order: 3; } .f-explore { order: 4; }
-      .footer li a { padding: 8px 0; }
+      .footer li { margin-bottom: 2px; }
+      .footer li a { padding: 10px 0; min-height: 44px; }
       .map, .map iframe { min-height: 320px; }
     }
     @media (max-width: 560px) {
@@ -652,6 +777,42 @@
       .pillar .ico { width: 88px; height: 88px; }
       .section-head { margin-bottom: 28px; }
       .wa-float { width: 58px; height: 58px; right: 14px; bottom: 14px; }
+      section { padding: 56px 0; }
+
+      /* Carruseles deslizables: entrenamiento y horarios */
+      .train-grid, .sch-grid { display: flex; gap: 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scroll-padding: 0 16px; margin: 0 -16px; padding: 4px 16px 14px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+      .train-grid::-webkit-scrollbar, .sch-grid::-webkit-scrollbar { display: none; }
+      .train-card, .sch-card { flex: 0 0 84%; scroll-snap-align: start; }
+      .train-card:hover { transform: none; }
+      .train-card .body { padding: 16px 18px 18px; }
+      .swipe-hint { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 0; color: var(--muted); font-size: .82rem; font-weight: 700; }
+      .swipe-hint::after { content: "→"; color: var(--accent); font-size: 1rem; animation: nudge 1.4s ease-in-out infinite; }
+      .swipe-hint[hidden] { display: none; }
+      .sch-filter { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px 12px; padding: 0 16px 4px; scrollbar-width: none; }
+      .sch-filter::-webkit-scrollbar { display: none; }
+      .sch-legend { gap: 6px 12px; font-size: .78rem; }
+
+      /* Planes más compactos: ícono al lado del nombre */
+      .plans-grid { row-gap: 22px; }
+      .plan { display: grid; grid-template-columns: 72px 1fr; column-gap: 14px; padding: 24px 18px 18px; }
+      .plan > * { grid-column: 1 / -1; }
+      .plan .plan-ico { grid-column: 1; grid-row: 1 / span 2; width: 72px; height: 72px; margin: 0; align-self: center; }
+      .plan h3 { grid-column: 2; grid-row: 1; align-self: end; font-size: 1.55rem; }
+      .plan .freq { grid-column: 2; grid-row: 2; margin-top: 2px; line-height: 1.35; }
+      .plan .price { margin: 14px 0 12px; }
+      .plan .price:has(+ .per-session) { margin-bottom: 4px; }
+      .plan .per-session { margin-bottom: 12px; }
+      .price .amount { font-size: 3.4rem; }
+      .plan ul { margin-bottom: 16px; }
+      .plan li { margin-bottom: 7px; font-size: .92rem; }
+
+      /* ¿Para quién es? más compacto */
+      .who-clubs { padding: 16px; }
+      .who-clubs li { padding: 6px 12px; font-size: .86rem; }
+      .who-card, .who-free { padding: 20px 18px; }
+      .who-card h3, .who-free h3 { font-size: 1.6rem; margin-bottom: 10px; }
+      .who-card li { margin-bottom: 9px; font-size: .95rem; }
+      .who-free li { font-size: .82rem; padding: 5px 10px; }
     }
   </style>
 </head>
@@ -661,8 +822,8 @@
   <header class="header" id="header">
     <div class="container">
       <a href="#inicio" class="logo" aria-label="La Fábrica, ir al inicio">
-        <!-- LOGO: img/logo.png -->
-        <img src="img/logo.png" alt="">
+        <!-- LOGO: img/logo-96.webp y img/logo-96.png (escudo pequeño, 96 px). El original grande es img/logo.png -->
+        <img src="img/logo-96.webp" alt="" width="44" height="44">
         <span class="logo-text">LA FÁBRICA</span>
       </a>
       <nav class="nav" id="nav">
@@ -685,7 +846,7 @@
     <section class="hero" id="inicio">
       <div class="hero-bg">
         <!-- FOTO HERO: img/hero.jpg -->
-        <img src="img/hero.jpg" alt="Jugadores y familias de La Fábrica en la cancha">
+        <img src="img/hero.jpg" alt="Jugadores y familias de La Fábrica en la cancha" width="1600" height="1200" fetchpriority="high">
       </div>
       <div class="container">
         <span class="hero-tag"><span class="dot"></span> Alto rendimiento · Villa María del Triunfo · Lima Sur</span>
@@ -748,7 +909,8 @@
             <span class="who-tag">¿Tienes dudas?</span>
             <h3>¿No sabes si es tu momento?</h3>
             <p>Escríbenos. En una <b>clase de prueba y evaluación (S/30)</b> nuestros profesores ven a tu hijo en la cancha y te orientan sobre el mejor camino para él.</p>
-            <p class="ask-small">Si todavía está dando sus primeros pasos, te recomendaremos cómo prepararse (por ejemplo, en una academia formativa) para llegar listo a la competición.</p>
+            <!-- PENDIENTE: confirmar si "Niños formativos" (sábados y domingos) es un horario de La Fábrica para los que recién empiezan -->
+            <p class="ask-small">Si todavía está dando sus primeros pasos, te orientamos: puede empezar en el horario de <b>Niños formativos</b> (sábados y domingos) o en una academia formativa, para llegar listo a la competición.</p>
             <a class="btn btn-wa-outline" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20y%20evaluaci%C3%B3n%20%28S%2F30%29%20para%20saber%20si%20mi%20hijo%20tiene%20el%20nivel%20para%20competir.%20Juega%20en%20el%20club%3A%20" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>Quiero una evaluación</a>
           </div>
         </div>
@@ -784,6 +946,13 @@
           <p class="lead">En el Centro de Alto Rendimiento La Fábrica entrena el <strong>Coach Juan “Quema” Kenciño</strong>, conocido como:</p>
           <p class="quote">“El entrenador de las futuras estrellas”</p>
           <p class="lead">Su trabajo ya cruzó fronteras: <strong>jugadores profesionales del extranjero</strong> lo han buscado para entrenar con él aquí, en Lima Sur.</p>
+          <!-- PENDIENTE · CREDENCIALES DEL COACH: cuando tengas los datos reales, escríbelos y borra la primera línea y la última de este bloque.
+          <ul class="coach-creds">
+            <li>🎓 Licencia: …</li>
+            <li>🏆 … años formando jugadores</li>
+            <li>⚽ Trayectoria: …</li>
+          </ul>
+          -->
           <blockquote class="coach-quote">
             <p>“Cada niño que entra a esta cancha trae un sueño. Mi trabajo es que salga preparado para cumplirlo, con disciplina, con fe y con hambre de ganar.”</p>
             <cite>— Coach Juan Kenciño</cite>
@@ -792,14 +961,14 @@
             <span class="cv-play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span>
             <span><b>Mira la historia del Coach Juan</b><small>Video en TikTok</small></span>
           </a>
-          <p class="lead">No basta con tener buena técnica. Aquí potenciamos a <strong>jugadores que ya compiten</strong> para que se vuelvan completos y marquen la diferencia en su club, trabajando cuatro pilares de forma integral:</p>
+          <p class="lead">No basta con tener buena técnica. Aquí potenciamos a <strong>jugadores competitivos que quieren dar el siguiente paso</strong>, para que se vuelvan completos y marquen la diferencia en la cancha, trabajando cuatro pilares de forma integral:</p>
         </div>
         <div class="about-full">
           <div class="pillars reveal">
-            <div class="pillar"><div class="ico ico-ball"><img src="img/iconos/pilar-tecnica.png" alt="Balón de fútbol" width="240" height="240" loading="lazy"></div><strong>Técnica</strong><p>Dominio del balón, precisión y lectura de juego. La base de todo gran jugador.</p></div>
-            <div class="pillar"><div class="ico ico-arm"><img src="img/iconos/pilar-fuerza.png" alt="Brazo musculoso" width="240" height="240" loading="lazy"></div><strong>Fuerza</strong><p>Potencia física y agilidad para ganar cada duelo y llegar primero a cada pelota.</p></div>
-            <div class="pillar"><div class="ico ico-brain"><img src="img/iconos/pilar-mentalidad.png" alt="Cerebro" width="240" height="240" loading="lazy"></div><strong>Mentalidad</strong><p>Disciplina, confianza y fe. Porque los partidos también se ganan en la cabeza.</p></div>
-            <div class="pillar"><div class="ico ico-cross"><img src="img/iconos/pilar-espiritu.png" alt="Cruz dorada" width="240" height="240" loading="lazy"></div><strong>Entrenamos el espíritu</strong><p>Fe, humildad y valores para crecer como deportista y como persona.</p></div>
+            <div class="pillar"><div class="ico ico-ball"><img src="img/iconos/pilar-tecnica.webp" alt="Balón de fútbol" width="192" height="192" loading="lazy"></div><strong>Técnica</strong><p>Dominio del balón, precisión y lectura de juego. La base de todo gran jugador.</p></div>
+            <div class="pillar"><div class="ico ico-arm"><img src="img/iconos/pilar-fuerza.webp" alt="Brazo musculoso" width="192" height="192" loading="lazy"></div><strong>Fuerza</strong><p>Potencia física y agilidad para ganar cada duelo y llegar primero a cada pelota.</p></div>
+            <div class="pillar"><div class="ico ico-brain"><img src="img/iconos/pilar-mentalidad.webp" alt="Cerebro" width="192" height="192" loading="lazy"></div><strong>Mentalidad</strong><p>Disciplina, confianza y fe. Porque los partidos también se ganan en la cabeza.</p></div>
+            <div class="pillar"><div class="ico ico-cross"><img src="img/iconos/pilar-espiritu.webp" alt="Cruz dorada" width="192" height="192" loading="lazy"></div><strong>Entrenamos el espíritu</strong><p>Fe, humildad y valores para crecer como deportista y como persona.</p></div>
           </div>
           <div class="about-close reveal">
             <p class="about-slogan">Las estrellas no nacen. <span class="hl">Se fabrican.</span></p>
@@ -808,9 +977,9 @@
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
                 Ver entrenamientos en TikTok
               </a>
-              <a class="btn btn-wa js-wa" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
+              <a class="btn btn-wa" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20y%20evaluaci%C3%B3n%20%28S%2F30%29%20en%20La%20F%C3%A1brica." target="_blank" rel="noopener">
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
-                Agenda tu clase de prueba
+                Agenda tu clase de prueba <span class="btn-price">S/30</span>
               </a>
             </div>
           </div>
@@ -830,8 +999,8 @@
           <div class="cat-chip">Menores 2017+ · <span>Libre: cualquier edad</span></div>
         </div>
 
-        <div class="train-grid">
-          <article class="train-card reveal">
+        <div class="train-grid reveal">
+          <article class="train-card">
             <div class="photo-slot">
               <!-- FOTO: img/equipo-adultos.jpg -->
               <img src="img/equipo-adultos.jpg" alt="Equipo de adultos de La Fábrica con la copa" loading="lazy">
@@ -842,7 +1011,7 @@
               <p>Conducción entre conos y remate al arco con marca. Técnica bajo esfuerzo, como en un partido real.</p>
             </div>
           </article>
-          <article class="train-card reveal">
+          <article class="train-card">
             <div class="photo-slot">
               <!-- FOTO: img/campeones-1.jpg -->
               <img src="img/campeones-1.jpg" alt="Niños de La Fábrica con el coach y la copa" loading="lazy">
@@ -853,7 +1022,7 @@
               <p>Reacción a señales y conos de colores: cabeza levantada, lectura rápida y decisión. Pensar rápido para jugar mejor.</p>
             </div>
           </article>
-          <article class="train-card reveal">
+          <article class="train-card">
             <div class="photo-slot">
               <!-- FOTO: img/equipo.jpg -->
               <img src="img/equipo.jpg" alt="Jugadores y equipo técnico de La Fábrica" loading="lazy">
@@ -864,7 +1033,7 @@
               <p>Saltos con vallas, sprints de salida y trabajo con liga y trineo para ganar explosividad y velocidad.</p>
             </div>
           </article>
-          <article class="train-card reveal">
+          <article class="train-card">
             <div class="photo-slot">
               <!-- FOTO: img/campeones-3.jpg -->
               <img src="img/campeones-3.jpg" alt="Niños campeones de La Fábrica" loading="lazy">
@@ -876,6 +1045,7 @@
             </div>
           </article>
         </div>
+        <p class="swipe-hint" aria-hidden="true">Desliza para ver los 4 entrenamientos</p>
       </div>
     </section>
 
@@ -886,30 +1056,30 @@
           <div>
             <span class="eyebrow">Planes y precios</span>
             <h2>Elige tu <span class="hl">plan</span></h2>
-            <p class="lead">Planes para jugadores que ya compiten en clubes. Mientras más entrenas, más avanzas y menos pagas por sesión. Precios en soles. Reserva tu cupo directo por WhatsApp.</p>
+            <p class="lead">Mientras más entrenas, más avanzas y menos pagas por sesión. Precios en soles. Reserva tu cupo directo por WhatsApp.</p>
           </div>
         </div>
 
         <!-- Cada botón abre WhatsApp con su propio mensaje (no llevan la clase js-wa) -->
         <div class="plans-grid">
           <article class="plan reveal">
-            <div class="plan-ico pi-suelta"><img src="img/iconos/plan-suelta.png" alt="Cono y balón" width="240" height="240" loading="lazy"></div>
+            <div class="plan-ico pi-suelta"><img src="img/iconos/plan-suelta.webp" alt="Cono y balón" width="240" height="240" loading="lazy"></div>
             <h3>Clase suelta</h3>
-            <div class="freq">Conoce nuestro nivel de exigencia</div>
+            <div class="freq">Tu primera clase incluye evaluación</div>
             <div class="price"><span class="cur">S/</span><span class="amount">30</span><span class="per">por clase</span></div>
             <ul>
               <li>1 sesión de alto rendimiento</li>
-              <li>Evaluamos tu nivel competitivo</li>
+              <li>La primera es tu clase de prueba con evaluación</li>
               <li>Sin compromiso</li>
             </ul>
-            <a class="btn btn-wa-outline btn-block" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20reservar%20una%20clase%20suelta" target="_blank" rel="noopener">
+            <a class="btn btn-wa-outline btn-block" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20reservar%20una%20clase%20suelta%20%28S%2F30%29%20en%20La%20F%C3%A1brica." target="_blank" rel="noopener">
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
               Reservar clase
             </a>
           </article>
 
           <article class="plan reveal">
-            <div class="plan-ico pi-3dias"><img src="img/iconos/plan-3dias.png" alt="Calendario con 3 días marcados" width="240" height="240" loading="lazy"></div>
+            <div class="plan-ico pi-3dias"><img src="img/iconos/plan-3dias.webp" alt="Calendario con 3 días marcados" width="240" height="240" loading="lazy"></div>
             <h3>3 veces por semana</h3>
             <div class="freq">Constancia que se nota</div>
             <div class="price"><span class="cur">S/</span><span class="amount">250</span><span class="per">al mes</span></div>
@@ -927,7 +1097,7 @@
 
           <article class="plan featured reveal">
             <span class="ribbon">Mejor precio por sesión</span>
-            <div class="plan-ico pi-5dias"><img src="img/iconos/plan-5dias.png" alt="Trofeo dorado" width="240" height="240" loading="lazy"></div>
+            <div class="plan-ico pi-5dias"><img src="img/iconos/plan-5dias.webp" alt="Trofeo dorado" width="240" height="240" loading="lazy"></div>
             <h3>5 días a la semana</h3>
             <div class="freq">Máximo rendimiento</div>
             <div class="price"><span class="cur">S/</span><span class="amount">300</span><span class="per">al mes</span></div>
@@ -944,7 +1114,7 @@
           </article>
 
           <article class="plan reveal">
-            <div class="plan-ico pi-1a1"><img src="img/iconos/plan-1a1.png" alt="Coach entrenando a un niño" width="240" height="240" loading="lazy"></div>
+            <div class="plan-ico pi-1a1"><img src="img/iconos/plan-1a1.webp" alt="Coach entrenando a un niño" width="240" height="240" loading="lazy"></div>
             <h3>Personalizado 1 a 1</h3>
             <div class="freq">Trabajo a tu medida</div>
             <div class="price"><span class="cur">S/</span><span class="amount">100</span><span class="per">por hora</span></div>
@@ -959,7 +1129,9 @@
             </a>
           </article>
         </div>
-        <p class="plans-note"><a href="https://wa.me/51917168725?text=Hola%2C%20quiero%20que%20me%20asesoren%20sobre%20los%20planes" target="_blank" rel="noopener">¿Dudas sobre horarios o qué plan te conviene a ti o a tu hijo? <span>Escríbenos y te asesoramos →</span></a></p>
+        <!-- PENDIENTE: precio de la Categoría Libre y plan para las categorías que entrenan 2 días por semana (2017 y Sub-14 a 20 años).
+             Cuando los tengas, agrégalos aquí o como una tarjeta más. -->
+        <p class="plans-note"><a href="https://wa.me/51917168725?text=Hola%2C%20quiero%20que%20me%20asesoren%20sobre%20los%20planes.%20Mi%20categor%C3%ADa%20es%3A%20" target="_blank" rel="noopener">¿Eres de la Categoría Libre, tu categoría entrena 2 días por semana o no sabes qué plan te conviene? <span>Escríbenos y te asesoramos →</span></a></p>
       </div>
     </section>
 
@@ -974,52 +1146,67 @@
           </div>
           <div class="sch-legend"><span><i class="lg-libre"></i>Categoría Libre</span><span><i class="lg-cat"></i>Menores por año</span><span><i class="lg-form"></i>Niños formativos</span><span><i class="lg-full"></i>Sin cupos</span></div>
         </div>
-        <div class="sch-grid">
-          <article class="sch-card reveal">
+        <!-- HORARIOS: cada fila lleva en data-cat las categorías de ese horario (para el filtro):
+             2017, 2015, 2014, 2013, sub14, libre o form (Niños formativos). Cada tarjeta lleva en data-days sus días
+             (lu ma mi ju vi sa do). Si agregas o cambias una fila, actualiza también esos datos. -->
+        <div class="sch-filter" id="schFilter" role="group" aria-label="Ver horarios de una categoría">
+          <button type="button" data-f="todas" aria-pressed="true">Todas</button>
+          <button type="button" data-f="2017" aria-pressed="false">2017</button>
+          <button type="button" data-f="2015" aria-pressed="false">2015</button>
+          <button type="button" data-f="2014" aria-pressed="false">2014</button>
+          <button type="button" data-f="2013" aria-pressed="false">2013</button>
+          <button type="button" data-f="sub14" aria-pressed="false">Sub-14 a 20 años</button>
+          <button type="button" data-f="libre" aria-pressed="false">Categoría Libre</button>
+          <button type="button" data-f="form" aria-pressed="false">Niños formativos</button>
+        </div>
+        <p class="sch-result" id="schResult" aria-live="polite">Toca tu categoría para ver solo tus horarios.</p>
+        <div class="sch-grid reveal" id="schGrid">
+          <article class="sch-card" data-days="lu ma mi ju vi">
             <h3>Lunes a viernes</h3><span class="sch-when">Mañanas</span>
             <ul>
-              <li class="libre"><span class="sch-t">6:00 – 7:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
-              <li class="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
-              <li class="libre"><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
-              <li class="libre"><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li class="libre" data-cat="libre"><span class="sch-t">6:00 – 7:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li class="libre" data-cat="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li class="libre" data-cat="libre"><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li class="libre" data-cat="libre"><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
             </ul>
           </article>
-          <article class="sch-card reveal">
+          <article class="sch-card" data-days="lu mi vi">
             <h3>Lunes, miércoles y viernes</h3><span class="sch-when">Tardes</span>
             <ul>
-              <li class=""><span class="sch-t">4:00 – 5:00 p. m.</span><span class="sch-c">2014 – 2015</span></li>
-              <li class=""><span class="sch-t">5:00 – 6:00 p. m.</span><span class="sch-c">2013 – 2014</span></li>
-              <li class="full"><span class="sch-t">6:00 – 7:00 p. m.</span><span class="sch-c">2017</span><em class="sch-full">Sin cupos</em></li>
-              <li class="libre"><span class="sch-t">7:00 – 8:00 p. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li data-cat="2014 2015"><span class="sch-t">4:00 – 5:00 p. m.</span><span class="sch-c">2014 – 2015</span></li>
+              <li data-cat="2013 2014"><span class="sch-t">5:00 – 6:00 p. m.</span><span class="sch-c">2013 – 2014</span></li>
+              <li class="full" data-cat="2017"><span class="sch-t">6:00 – 7:00 p. m.</span><span class="sch-c">2017</span><em class="sch-full">Sin cupos</em></li>
+              <li class="libre" data-cat="libre"><span class="sch-t">7:00 – 8:00 p. m.</span><span class="sch-c">Categoría Libre</span></li>
             </ul>
           </article>
-          <article class="sch-card reveal">
+          <article class="sch-card" data-days="ma ju">
             <h3>Martes y jueves</h3><span class="sch-when">Tardes</span>
             <ul>
-              <li class=""><span class="sch-t">4:00 – 5:00 p. m.</span><span class="sch-c">Sub-14 a 20 años</span></li>
-              <li class=""><span class="sch-t">5:00 – 6:00 p. m.</span><span class="sch-c">2017</span></li>
-              <li class=""><span class="sch-t">6:00 – 7:00 p. m.</span><span class="sch-c">2013 – 2014 – 2015</span></li>
-              <li class=""><span class="sch-t">7:00 – 8:00 p. m.</span><span class="sch-c">2014 – 2015</span></li>
+              <li data-cat="sub14"><span class="sch-t">4:00 – 5:00 p. m.</span><span class="sch-c">Sub-14 a 20 años</span></li>
+              <li data-cat="2017"><span class="sch-t">5:00 – 6:00 p. m.</span><span class="sch-c">2017</span></li>
+              <li data-cat="2013 2014 2015"><span class="sch-t">6:00 – 7:00 p. m.</span><span class="sch-c">2013 – 2014 – 2015</span></li>
+              <li data-cat="2014 2015"><span class="sch-t">7:00 – 8:00 p. m.</span><span class="sch-c">2014 – 2015</span></li>
             </ul>
           </article>
-          <article class="sch-card reveal">
+          <article class="sch-card" data-days="sa">
             <h3>Sábado</h3><span class="sch-when">Mañana</span>
             <ul>
-              <li class="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
-              <li class=""><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">2014 – 2015</span></li>
-              <li class=""><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">2013</span></li>
-              <li class="form"><span class="sch-t">10:00 – 11:00 a. m.</span><span class="sch-c">Niños formativos</span></li>
+              <li class="libre" data-cat="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li data-cat="2014 2015"><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">2014 – 2015</span></li>
+              <li data-cat="2013"><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">2013</span></li>
+              <li class="form" data-cat="form"><span class="sch-t">10:00 – 11:00 a. m.</span><span class="sch-c">Niños formativos</span></li>
             </ul>
           </article>
-          <article class="sch-card reveal">
+          <article class="sch-card" data-days="do">
             <h3>Domingo</h3><span class="sch-when">Mañana</span>
             <ul>
-              <li class="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
-              <li class=""><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">2013 – 2014 – 2015</span></li>
-              <li class="form"><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">Niños formativos</span></li>
+              <li class="libre" data-cat="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li data-cat="2013 2014 2015"><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">2013 – 2014 – 2015</span></li>
+              <li class="form" data-cat="form"><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">Niños formativos</span></li>
             </ul>
           </article>
         </div>
+        <p class="swipe-hint" id="schHint" aria-hidden="true">Desliza para ver más días</p>
         <div class="sch-cta reveal">
           <p>¿No sabes cuál es tu categoría? Escríbenos y te ubicamos en el horario ideal.</p>
           <a class="btn btn-wa" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20reservar%20un%20horario%20en%20La%20F%C3%A1brica.%20Mi%20categor%C3%ADa%20es%3A%20" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>Reservar mi horario</a>
@@ -1037,7 +1224,7 @@
           </div>
           <div class="story-body">
             <span class="eyebrow">Historia destacada</span>
-            <div class="flags"><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff"><rect y="1.54" width="30" height="1.54"/><rect y="4.62" width="30" height="1.54"/><rect y="7.69" width="30" height="1.54"/><rect y="10.77" width="30" height="1.54"/><rect y="13.85" width="30" height="1.54"/><rect y="16.92" width="30" height="1.54"/></g><rect width="12" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2" cy="2" r=".6"/><circle cx="6" cy="2" r=".6"/><circle cx="10" cy="2" r=".6"/><circle cx="4" cy="4.2" r=".6"/><circle cx="8" cy="4.2" r=".6"/><circle cx="2" cy="6.4" r=".6"/><circle cx="6" cy="6.4" r=".6"/><circle cx="10" cy="6.4" r=".6"/><circle cx="4" cy="8.6" r=".6"/><circle cx="8" cy="8.6" r=".6"/></g></svg><span>EE.UU.</span><img class="plane" src="img/iconos/avion.png" alt="" width="128" height="128" loading="lazy"><span>Perú</span><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#d91023"/><rect x="10" width="10" height="20" fill="#fff"/></svg></div>
+            <div class="flags"><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff"><rect y="1.54" width="30" height="1.54"/><rect y="4.62" width="30" height="1.54"/><rect y="7.69" width="30" height="1.54"/><rect y="10.77" width="30" height="1.54"/><rect y="13.85" width="30" height="1.54"/><rect y="16.92" width="30" height="1.54"/></g><rect width="12" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2" cy="2" r=".6"/><circle cx="6" cy="2" r=".6"/><circle cx="10" cy="2" r=".6"/><circle cx="4" cy="4.2" r=".6"/><circle cx="8" cy="4.2" r=".6"/><circle cx="2" cy="6.4" r=".6"/><circle cx="6" cy="6.4" r=".6"/><circle cx="10" cy="6.4" r=".6"/><circle cx="4" cy="8.6" r=".6"/><circle cx="8" cy="8.6" r=".6"/></g></svg><span>EE.UU.</span><img class="plane" src="img/iconos/avion.webp" alt="" width="96" height="96" loading="lazy"><span>Perú</span><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#d91023"/><rect x="10" width="10" height="20" fill="#fff"/></svg></div>
             <h2>De Estados Unidos a <span class="hl">La Fábrica</span></h2>
             <p><strong>Wynslow “Q” Reeves</strong> juega en la <strong>segunda división de Estados Unidos</strong>. Vino al Perú de vacaciones, pero un jugador de verdad no se toma vacaciones del fútbol.</p>
             <p>Buscó en redes dónde entrenar en serio y encontró al <strong>Coach Juan Kenciño</strong>. Cruzó Lima hasta Villa María del Triunfo, entrenó con nosotros y quedó tan conforme con el trabajo que <strong>ya confirmó que volverá en su próxima visita</strong>.</p>
@@ -1063,6 +1250,25 @@
       </div>
     </section>
 
+    <!-- ===================== TESTIMONIOS (PENDIENTE) =====================
+         Cuando tengas 2 o 3 testimonios reales de padres o jugadores (con su permiso), escribe los textos y borra estas dos primeras líneas y la última de este bloque.
+    <section id="testimonios">
+      <div class="container">
+        <div class="section-head reveal">
+          <div>
+            <span class="eyebrow">Testimonios</span>
+            <h2>Lo que dicen las <span class="hl">familias</span></h2>
+          </div>
+        </div>
+        <div class="testi-grid">
+          <figure class="testi reveal"><blockquote>“Texto real de una mamá o un papá…”</blockquote><figcaption><b>Nombre</b> · mamá de un jugador 2014</figcaption></figure>
+          <figure class="testi reveal"><blockquote>“Texto real de una mamá o un papá…”</blockquote><figcaption><b>Nombre</b> · papá de un jugador 2013</figcaption></figure>
+          <figure class="testi reveal"><blockquote>“Texto real de un jugador de la Categoría Libre…”</blockquote><figcaption><b>Nombre</b> · Categoría Libre</figcaption></figure>
+        </div>
+      </div>
+    </section>
+    -->
+
     <!-- ===================== 6. UBICACIÓN ===================== -->
     <section id="ubicacion">
       <div class="container">
@@ -1075,21 +1281,21 @@
         <div class="location-grid">
           <div class="loc-info reveal">
             <div class="loc-item">
-              <div class="ico ico-pin"><img src="img/iconos/loc-pin.png" alt="" width="240" height="240" loading="lazy"></div>
+              <div class="ico ico-pin"><img src="img/iconos/loc-pin.webp" alt="" width="168" height="168" loading="lazy"></div>
               <div>
                 <strong>Santa Cruz de Flores 494</strong>
                 <span>Villa María del Triunfo, Lima Sur</span>
               </div>
             </div>
             <div class="loc-item">
-              <div class="ico ico-train"><span class="speed"></span><img src="img/iconos/loc-tren.png" alt="" width="320" height="241" loading="lazy"></div>
+              <div class="ico ico-train"><span class="speed"></span><img src="img/iconos/loc-tren.webp" alt="" width="160" height="121" loading="lazy"></div>
               <div>
                 <strong>A una cuadra de la estación Pumacahua</strong>
                 <span>Línea 1 del Metro de Lima. Llegas fácil desde cualquier punto de la ciudad.</span>
               </div>
             </div>
             <div class="loc-item">
-              <div class="ico ico-msg"><div class="msg"><img src="img/iconos/loc-mensaje.png" alt="" width="240" height="240" loading="lazy"><img class="dot" src="img/iconos/loc-punto.png" alt="" width="48" height="48"><img class="dot" src="img/iconos/loc-punto.png" alt="" width="48" height="48"><img class="dot" src="img/iconos/loc-punto.png" alt="" width="48" height="48"></div></div>
+              <div class="ico ico-msg"><div class="msg"><img src="img/iconos/loc-mensaje.webp" alt="" width="156" height="156" loading="lazy"><img class="dot" src="img/iconos/loc-punto.webp" alt="" width="48" height="48" loading="lazy"><img class="dot" src="img/iconos/loc-punto.webp" alt="" width="48" height="48" loading="lazy"><img class="dot" src="img/iconos/loc-punto.webp" alt="" width="48" height="48" loading="lazy"></div></div>
               <div>
                 <strong>¿Necesitas indicaciones?</strong>
                 <span>Escríbenos y te enviamos la ubicación exacta por WhatsApp.</span>
@@ -1100,7 +1306,7 @@
           <div class="map reveal">
             <!-- MAPA: Santa Cruz de Flores 494, Villa María del Triunfo (coordenadas -12.182351, -76.9474786) -->
             <a class="map-fallback" href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener">
-              <img src="img/iconos/loc-pin.png" alt="" width="240" height="240" loading="lazy">
+              <img src="img/iconos/loc-pin.webp" alt="" width="168" height="168" loading="lazy">
               <strong>Santa Cruz de Flores 494</strong>
               <span>Villa María del Triunfo · a una cuadra de la estación Pumacahua</span>
               <em>Toca para abrir el mapa</em>
@@ -1134,10 +1340,17 @@
             </div>
           </div>
           <div class="tiktok-previews">
-            <!-- FOTOS TIKTOK: puedes cambiarlas por capturas de tus videos -->
-            <div class="photo-slot"><img src="img/campeones-2.jpg" alt="Niños de La Fábrica con la copa" loading="lazy"></div>
-            <div class="photo-slot"><img src="img/hero.jpg" alt="Familia La Fábrica" loading="lazy"></div>
-            <div class="photo-slot"><img src="img/coach.jpg" alt="Coach Juan Kenciño" loading="lazy"></div>
+            <!-- VIDEOS DE TIKTOK: cada miniatura abre su video. Para cambiarlas usa una captura vertical
+                 (270 x 480 px, JPG) con el mismo nombre: img/tiktok-juan.jpg, img/tiktok-q.jpg e img/tiktok-perfil.jpg -->
+            <a class="photo-slot" href="https://vt.tiktok.com/ZSbotVnc5/" target="_blank" rel="noopener" aria-label="Ver en TikTok: la historia del Coach Juan">
+              <img src="img/tiktok-juan.jpg" alt="" width="270" height="480" loading="lazy"><span class="tt-play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span><span class="tt-cap">La historia del Coach Juan</span>
+            </a>
+            <a class="photo-slot" href="https://vt.tiktok.com/ZSbogDB4c/" target="_blank" rel="noopener" aria-label="Ver en TikTok: Q Reeves entrena en La Fábrica">
+              <img src="img/tiktok-q.jpg" alt="" width="270" height="480" loading="lazy"><span class="tt-play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span><span class="tt-cap">Q Reeves entrena aquí</span>
+            </a>
+            <a class="photo-slot" href="https://www.tiktok.com/@lafabrica.futbol.pe" target="_blank" rel="noopener" aria-label="Ver más videos de La Fábrica en TikTok">
+              <img src="img/tiktok-perfil.jpg" alt="" width="270" height="480" loading="lazy"><span class="tt-play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span><span class="tt-cap">Más entrenamientos</span>
+            </a>
           </div>
         </div>
       </div>
@@ -1161,16 +1374,17 @@
         </div>
         <div class="game-box reveal">
           <div class="game-stage">
-            <img id="gBall" src="img/iconos/pilar-tecnica.png" alt="" style="display:none">
-            <img id="gCat" src="img/iconos/gato.png" alt="" style="display:none">
-            <img id="gChoco" src="img/iconos/chocolate.png" alt="" style="display:none">
-            <img id="gPower" src="img/iconos/juan-poder.png" alt="" style="display:none">
-            <img id="gJuan" src="img/iconos/juan-corre.png" alt="" style="display:none">
+            <!-- Imágenes del juego: se descargan recién cuando el juego está cerca (en .webp si el navegador lo permite) -->
+            <img id="gBall" data-src="img/iconos/pilar-tecnica.png" alt="" style="display:none">
+            <img id="gCat" data-src="img/iconos/gato.png" alt="" style="display:none">
+            <img id="gChoco" data-src="img/iconos/chocolate.png" alt="" style="display:none">
+            <img id="gPower" data-src="img/iconos/juan-poder.png" alt="" style="display:none">
+            <img id="gJuan" data-src="img/iconos/juan-corre.png" alt="" style="display:none">
             <canvas id="gCanvas" width="720" height="720" aria-label="Juego: Juan recoge balones"></canvas>
             <div class="g-toast" id="gToast" aria-live="polite"></div>
             <div class="g-paused" id="gPaused" hidden><strong>Pausa</strong><span>Toca “Continuar” o presiona P</span></div>
             <div class="game-overlay" id="gOverlay">
-              <img class="g-hero" id="gHero" src="img/iconos/juan-pixel.png" alt="" width="156" height="260">
+              <img class="g-hero" id="gHero" src="img/iconos/juan-pixel.webp" alt="" width="156" height="260" loading="lazy">
               <div class="g-cup" id="gCup" role="img" aria-label="Juan salta celebrando con la copa" hidden></div>
               <strong id="gTitle">¿Listo, coach?</strong>
               <p id="gMsg">Recoge todos los balones que puedas.</p>
@@ -1180,7 +1394,7 @@
               <p class="g-nojs">⚠️ Este visor no permite jugar. Abre la página en <b>Safari</b> o <b>Chrome</b> para jugar.</p>
             </div>
           </div>
-          <a class="g-cta" id="gCta" href="https://wa.me/51917168725?text=Hola%2C%20jugu%C3%A9%20el%20mini%20juego%20y%20quiero%20agendar%20una%20clase%20de%20prueba%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" hidden>¿Quieres ser jugador profesional? Empieza a entrenar de verdad →</a>
+          <a class="g-cta" id="gCta" href="https://wa.me/51917168725?text=Hola%2C%20jugu%C3%A9%20el%20mini%20juego%20y%20quiero%20agendar%20una%20clase%20de%20prueba%20y%20evaluaci%C3%B3n%20%28S%2F30%29%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" hidden>¿Quieres ser jugador profesional? Empieza a entrenar de verdad →</a>
           <div class="game-bar">
             <button class="g-ctrl" id="gPlay" type="button"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5v14l12-7z"/></svg><span>Iniciar</span></button>
             <button class="g-ctrl" id="gPause" type="button" disabled><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg><span>Pausa</span></button>
@@ -1188,6 +1402,78 @@
           <div class="game-pad" aria-label="Controles">
             <button class="pad-btn pad-up" data-dir="up" aria-label="Arriba"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 6l-7 8h14z"/></svg></button><button class="pad-btn pad-left" data-dir="left" aria-label="Izquierda"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 12l8 7V5z"/></svg></button><button class="pad-btn pad-down" data-dir="down" aria-label="Abajo"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 18l7-8H5z"/></svg></button><button class="pad-btn pad-right" data-dir="right" aria-label="Derecha"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 12l-8-7v14z"/></svg></button>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PREGUNTAS FRECUENTES ===================== -->
+    <section id="preguntas">
+      <div class="container">
+        <div class="section-head reveal">
+          <div>
+            <span class="eyebrow">Preguntas frecuentes</span>
+            <h2>Resolvemos tus <span class="hl">dudas</span></h2>
+          </div>
+        </div>
+        <div class="faq-list reveal">
+          <details class="faq-item">
+            <summary>¿Cuánto cuesta entrenar en La Fábrica?</summary>
+            <div class="faq-a">
+              <p>La clase de prueba con evaluación (o clase suelta) cuesta <b>S/30</b>. El plan de 3 veces por semana cuesta <b>S/250 al mes</b> y el de 5 días a la semana, <b>S/300 al mes</b>. El entrenamiento personalizado 1 a 1 cuesta <b>S/100 la hora</b>.</p>
+              <p><a href="#planes">Ver planes y precios →</a></p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>¿Cómo sé si mi hijo tiene el nivel?</summary>
+            <div class="faq-a">
+              <p>Agenda una <b>clase de prueba y evaluación (S/30)</b>. Nuestros profesores lo ven entrenar en la cancha y te dicen si ya está listo para el trabajo de alto rendimiento o qué necesita reforzar.</p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>¿Qué categorías entrenan?</summary>
+            <div class="faq-a">
+              <p>Menores por año de nacimiento (2017, 2015, 2014 y 2013), el grupo Sub-14 a 20 años, Niños formativos los fines de semana y la <b>Categoría Libre</b> para adultos de cualquier edad.</p>
+              <p><a href="#horarios">Busca los horarios de tu categoría →</a></p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>¿Qué días y a qué hora entrenan?</summary>
+            <div class="faq-a">
+              <p>De lunes a viernes, de 6:00 a 10:00 a. m. (Categoría Libre) y de 4:00 a 8:00 p. m. por categorías. Los sábados de 7:00 a 11:00 a. m. y los domingos de 7:00 a 10:00 a. m.</p>
+              <p><a href="#horarios">Ver la tabla de horarios →</a></p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>¿Dónde quedan?</summary>
+            <div class="faq-a">
+              <p>En <b>Santa Cruz de Flores 494, Villa María del Triunfo</b>, a una cuadra de la estación Pumacahua de la Línea 1 del Metro de Lima.</p>
+              <p><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener">Abrir en Google Maps →</a></p>
+            </div>
+          </details>
+          <!-- PENDIENTE: confirmar qué deben llevar los jugadores a la clase -->
+          <details class="faq-item">
+            <summary>¿Qué debe llevar a la clase?</summary>
+            <div class="faq-a">
+              <p>Ropa deportiva, zapatillas o chimpunes, canilleras y su botella de agua.</p>
+            </div>
+          </details>
+          <!-- PENDIENTE: escribir las formas de pago (por ejemplo: Yape, Plin, transferencia o efectivo) -->
+          <details class="faq-item">
+            <summary>¿Cómo se paga?</summary>
+            <div class="faq-a">
+              <p>Cuando reservas tu cupo por WhatsApp te indicamos las formas de pago.</p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>¿Pueden entrenar adultos?</summary>
+            <div class="faq-a">
+              <p>Sí. La <b>Categoría Libre</b> no tiene límite de edad y no necesitas experiencia previa: entrenan adultos que buscan salud, condición física, ritmo de juego o rendimiento.</p>
+            </div>
+          </details>
+        </div>
+        <div class="faq-more reveal">
+          <p>¿Tienes otra pregunta? Te respondemos por WhatsApp.</p>
+          <a class="btn btn-wa" href="https://wa.me/51917168725?text=Hola%2C%20tengo%20una%20consulta%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica%3A%20" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>Hacer una pregunta</a>
         </div>
       </div>
     </section>
@@ -1210,19 +1496,19 @@
         </div>
         <a class="btn btn-wa btn-lg" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20y%20evaluaci%C3%B3n%20%28S%2F30%29%20en%20La%20F%C3%A1brica." target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
-          Agenda su clase de prueba <span class="btn-price">S/30</span>
+          Agenda tu clase de prueba <span class="btn-price">S/30</span>
         </a>
       </div>
     </section>
   </main>
 
   <!-- ===================== 8. FOOTER ===================== -->
-  <footer class="footer">
+  <footer class="footer" id="contacto">
     <div class="container">
       <div class="footer-grid">
         <div class="f-brand">
           <a href="#inicio" class="logo" style="margin-bottom: 14px;">
-            <img src="img/logo.png" alt="">
+            <img src="img/logo-96.webp" alt="" width="44" height="44" loading="lazy">
             <span class="logo-text">LA FÁBRICA</span>
           </a>
           <p>Centro de Alto Rendimiento de fútbol para jugadores competitivos: técnica, fuerza y mentalidad.</p>
@@ -1230,7 +1516,7 @@
           <p>Menores desde 2017 y Categoría Libre para adultos de cualquier edad.</p>
         </div>
         <nav class="f-explore" aria-label="Secciones">
-          <h4>Explora</h4>
+          <h3>Explora</h3>
           <ul>
             <li><a href="#para-quien"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>¿Para quién es?</a></li>
             <li><a href="#nosotros"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Nosotros</a></li>
@@ -1239,10 +1525,11 @@
             <li><a href="#horarios"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Horarios</a></li>
             <li><a href="#historia"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Historia destacada</a></li>
             <li><a href="#juego"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Mini juego</a></li>
+            <li><a href="#preguntas"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>Preguntas frecuentes</a></li>
           </ul>
         </nav>
         <div class="f-contact">
-          <h4>Contacto</h4>
+          <h3>Contacto</h3>
           <ul>
             <li><a class="js-wa" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 20.5l1.3-4A8.5 8.5 0 1 1 8 19.6z"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.6-2-1-1 1c-1.2-.5-2.4-1.7-2.9-2.9l1-1-1-2z"/></svg><span>WhatsApp: <b>+51 917 168 725</b></span></a></li>
             <li><a href="https://www.tiktok.com/@lafabrica.futbol.pe" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v11.5a3.5 3.5 0 1 1-3.5-3.5"/><path d="M14 3c.4 2.6 2.4 4.6 5 5"/></svg><span>TikTok: <b>@lafabrica.futbol.pe</b></span></a></li>
@@ -1252,7 +1539,7 @@
           </ul>
         </div>
         <div class="f-address">
-          <h4>Dirección y horarios</h4>
+          <h3>Dirección y horarios</h3>
           <ul>
             <li><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg><span><b>Santa Cruz de Flores 494</b><br>Villa María del Triunfo, Lima Sur</span></a></li>
             <li><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l1.5-4M15 21l-1.5-4"/><circle cx="9" cy="14" r=".6" fill="currentColor"/><circle cx="15" cy="14" r=".6" fill="currentColor"/></svg><span>A una cuadra de la estación Pumacahua</span></a></li>
@@ -1268,7 +1555,7 @@
 
   <!-- ===================== JUAN GUÍA (Funko) ===================== -->
   <div class="guide" id="guide" hidden>
-    <div class="guide-bubble" id="guideBubble" role="status" aria-live="polite">
+    <div class="guide-bubble hide" id="guideBubble" role="status" aria-live="polite">
       <button class="guide-x" id="guideClose" type="button" aria-label="Ocultar a Juan">✕</button>
       <p id="guideText">¡Hola, crack! 👋 Soy el Coach Juan. ¿Te ayudo? ⚽</p>
       <div class="guide-menu" id="guideMenu" hidden>
@@ -1290,7 +1577,7 @@
 
   <!-- ===================== WHATSAPP FLOTANTE ===================== -->
   <a class="wa-float js-wa" id="waFloat" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20entrenamientos%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">
-    <span class="tip">¿Hablamos? <img src="img/iconos/saludo.png" alt="" width="20" height="20"></span>
+    <span class="tip">¿Hablamos? <img src="img/iconos/saludo.webp" alt="" width="20" height="20" loading="lazy"></span>
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
   </a>
 
@@ -1315,7 +1602,7 @@
       var header = document.getElementById("header");
       function onScroll() { header.classList.toggle("scrolled", window.scrollY > 30); }
       window.addEventListener("scroll", onScroll, { passive: true });
-      onScroll();
+      requestAnimationFrame(onScroll);
 
       // ---------- Menú móvil ----------
       var menuBtn = document.getElementById("menuBtn");
@@ -1351,6 +1638,59 @@
       } else {
         items.forEach(function (el) { el.classList.add("visible"); });
       }
+
+      // ---------- Fondo del CTA final: se descarga recién cuando la sección se acerca ----------
+      var finalCta = document.querySelector(".final-cta");
+      if (finalCta) window.lfImg(function () {
+        if (!("IntersectionObserver" in window)) { finalCta.classList.add("bg-on"); return; }
+        new IntersectionObserver(function (es, o) {
+          if (es[0].isIntersecting) { finalCta.classList.add("bg-on"); o.disconnect(); }
+        }, { rootMargin: "600px 0px" }).observe(finalCta);
+      });
+
+      // ---------- Horarios: filtro por categoría ----------
+      (function () {
+        var box = document.getElementById("schFilter"), grid = document.getElementById("schGrid"); if (!box || !grid) return;
+        var out = document.getElementById("schResult"), hint = document.getElementById("schHint");
+        var cards = grid.querySelectorAll(".sch-card");
+        var ORDEN = ["lu", "ma", "mi", "ju", "vi", "sa", "do"];
+        var NOMBRE = { lu: "lunes", ma: "martes", mi: "miércoles", ju: "jueves", vi: "viernes", sa: "sábado", do: "domingo" };
+        function dias(set) {
+          var n = ORDEN.filter(function (d) { return set[d]; }).map(function (d) { return NOMBRE[d]; });
+          if (n.length === 7) return "de lunes a domingo";
+          return n.length > 1 ? n.slice(0, -1).join(", ") + " y " + n[n.length - 1] : (n[0] || "");
+        }
+        box.addEventListener("click", function (e) {
+          var b = e.target.closest ? e.target.closest("button") : null; if (!b) return;
+          var f = b.getAttribute("data-f"), con = {}, sin = {}, total = 0;
+          box.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+          cards.forEach(function (c) {
+            var n = 0, d = c.getAttribute("data-days").split(" ");
+            c.querySelectorAll("li").forEach(function (li) {
+              var es = f === "todas" || (" " + li.getAttribute("data-cat") + " ").indexOf(" " + f + " ") >= 0;
+              li.hidden = !es; if (!es) return; n++;
+              d.forEach(function (k) { (li.classList.contains("full") ? sin : con)[k] = 1; });
+            });
+            c.hidden = !n; if (n) total++;
+          });
+          ORDEN.forEach(function (k) { if (con[k]) delete sin[k]; });
+          if (hint) hint.hidden = total < 2;
+          grid.scrollLeft = 0;
+          if (f === "todas") { out.textContent = "Toca tu categoría para ver solo tus horarios."; return; }
+          var txt = "<b>" + b.textContent + "</b>: " + (dias(con) ? "entrena " + dias(con) : "por ahora no hay cupos; escríbenos para la lista de espera");
+          if (dias(sin) && dias(con)) txt += " (" + dias(sin) + ": sin cupos por ahora)";
+          out.innerHTML = txt + ".";
+        });
+      })();
+
+      // ---------- Medición: cuenta los clics en WhatsApp (si instalas Google Analytics 4 o el Pixel de Meta) ----------
+      document.addEventListener("click", function (e) {
+        var a = e.target.closest ? e.target.closest('a[href*="wa.me"]') : null; if (!a) return;
+        var zona = a.closest("[id]"); zona = zona ? zona.id : "pagina";
+        if (typeof window.gtag === "function") window.gtag("event", "whatsapp_click", { ubicacion: zona });
+        else if (window.dataLayer && window.dataLayer.push) window.dataLayer.push({ event: "whatsapp_click", ubicacion: zona });
+        if (typeof window.fbq === "function") window.fbq("track", "Contact", { content_name: zona });
+      });
 
       // ---------- Tooltip del botón flotante (una vez) ----------
       var waFloat = document.getElementById("waFloat");
@@ -1487,7 +1827,7 @@
           pauseLabel.textContent = v ? "Continuar" : "Pausa";
           bPause.querySelector("svg").innerHTML = v ? icoPlay : icoPause;
         }
-        function togglePause() { if (!running) return; setPaused(!paused); last = 0; }
+        function togglePause() { if (!running) return; setPaused(!paused); if (!paused) kick(); }
         function drawField() {
           for (var i = 0; i < N; i++) { ctx.fillStyle = i % 2 ? "#1f5a2a" : "#236330"; ctx.fillRect(0, i * C, cv.width, C); }
           ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = 2;
@@ -1587,23 +1927,45 @@
             ctx.fillStyle = "#ffd84a"; ctx.fillText(pp.txt, px, py); ctx.restore();
           }
         }
+        // La cancha solo se dibuja mientras se ve en pantalla (ahorra batería y procesador)
+        var visible = !("IntersectionObserver" in window), raf = 0;
+        function kick() { if (!raf) { last = 0; raf = requestAnimationFrame(loop); } }
         function loop(ts) {
+          raf = 0;
           if (!last) last = ts; var dt = Math.min(ts - last, 100); last = ts;
           if (running && !paused) { gameTime += dt; updateHazards(); runT += dt / 1000; acc += dt; while (acc >= step && running) { acc -= step; tick(); } }
           if (!paused) draw(running ? Math.min(acc / step, 1) : 1);
-          requestAnimationFrame(loop);
+          if (visible && !paused) raf = requestAnimationFrame(loop);
+        }
+        // Las imágenes del juego se descargan recién cuando el juego está cerca
+        var spritesOn = false;
+        function loadSprites() {
+          if (spritesOn) return; spritesOn = true;
+          var ext = document.documentElement.classList.contains("webp") ? ".webp" : ".png";
+          document.querySelectorAll(".game-stage img[data-src]").forEach(function (im) { im.src = im.getAttribute("data-src").replace(/\.png$/, ext); });
+          cup.style.backgroundImage = 'url("img/iconos/juan-copa' + ext + '")';
         }
         function start() {
           if (window.innerWidth < 820) { var gb = document.querySelector(".game-box"); if (gb && gb.scrollIntoView) gb.scrollIntoView({block: "end", behavior: "smooth"}); }
-          reset(); pops = []; cta.hidden = true; ov.hidden = true; running = true; last = 0; clearInterval(cupT); cup.hidden = true; heroImg.hidden = false; setPaused(false); bPause.disabled = false; playLabel.textContent = "Reiniciar"; }
+          loadSprites();
+          reset(); pops = []; cta.hidden = true; ov.hidden = true; running = true; last = 0; clearInterval(cupT); cup.hidden = true; heroImg.hidden = false; setPaused(false); bPause.disabled = false; playLabel.textContent = "Reiniciar"; kick(); }
         bStart.addEventListener("click", start);
         bPlay.addEventListener("click", start);
         bPause.addEventListener("click", togglePause);
         // Pausa automática si el niño cambia de app/pestaña o deja de ver la cancha
         document.addEventListener("visibilitychange", function () { if (document.hidden && running && !paused) setPaused(true); });
         if ("IntersectionObserver" in window) {
-          new IntersectionObserver(function (es) { es.forEach(function (e) { if (!e.isIntersecting && running && !paused) setPaused(true); }); }, {threshold: .35}).observe(cv);
-        }
+          new IntersectionObserver(function (es) {
+            es.forEach(function (e) {
+              visible = e.isIntersecting;
+              if (e.intersectionRatio < .35 && running && !paused) setPaused(true);
+              if (visible) kick();
+            });
+          }, {threshold: [0, .35]}).observe(cv);
+          new IntersectionObserver(function (es, o) {
+            if (es[0].isIntersecting) { window.lfImg(loadSprites); o.disconnect(); }
+          }, {rootMargin: "1000px 0px"}).observe(document.getElementById("juego"));
+        } else window.lfImg(loadSprites);
         document.addEventListener("keydown", function (e) {
           var k = {ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right", w: "up", s: "down", a: "left", d: "right", W: "up", S: "down", A: "left", D: "right"}[e.key];
           if ((e.key === "p" || e.key === "P" || e.key === "Escape") && running) { e.preventDefault(); togglePause(); return; }
@@ -1619,7 +1981,7 @@
           if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
           turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up")); sx = e.touches[0].clientX; sy = e.touches[0].clientY;
         }, {passive: true});
-        reset(); requestAnimationFrame(loop);
+        reset(); if (visible) kick();
       })();
 
 
@@ -1628,47 +1990,65 @@
         var g = document.getElementById("guide"); if (!g) return;
         var spr = document.getElementById("guideSprite"), bubble = document.getElementById("guideBubble"), txt = document.getElementById("guideText");
         var menu = document.getElementById("guideMenu"), more = document.getElementById("guideMore"), mini = document.getElementById("guideMini"), ch = document.getElementById("guideChar");
-        var ANIM = { domi: 6, saludo: 4, celebra: 4, baile: 8 }, cur = "domi", frame = 0, timer, hideT, back;
+        var ANIM = { domi: 6, saludo: 4, celebra: 4, baile: 8 }, cur = "domi", frame = 0, timer, hideT, back, listo = false;
+        // Si la persona pidió "reducir movimiento" en su celular, Juan no se anima ni baila solo
+        var quieto = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
         var hidden = false; try { hidden = sessionStorage.getItem("lfGuide") === "off"; } catch (e) {}
+        // Hojas de animación: img/iconos/funko-<nombre>.webp (o .png en navegadores antiguos)
+        function hoja(name) { return "img/iconos/funko-" + name + (document.documentElement.classList.contains("webp") ? ".webp" : ".png"); }
         function play(name, loops) {
           cur = name; frame = 0; spr.className = "guide-sprite" + (name === "domi" ? "" : " s-" + name);
+          spr.style.backgroundImage = 'url("' + hoja(name) + '")'; tick();
           clearTimeout(back); if (loops) back = setTimeout(function () { play("domi"); }, loops * ANIM[name] * 170);
         }
         function tick() { var n = ANIM[cur]; spr.style.backgroundPosition = (frame * 100 / (n - 1)) + "% 0"; frame = (frame + 1) % n; }
+        function anim(ms) { clearInterval(timer); timer = null; if (!quieto && !hidden) timer = setInterval(tick, ms || 170); }
         function say(t, keep) {
           menu.hidden = true; more.hidden = false; txt.textContent = t; bubble.classList.remove("hide"); play("saludo", 2);
           clearTimeout(hideT); if (!keep) hideT = setTimeout(function () { bubble.classList.add("hide"); }, 7000);
         }
         var frases = {
-          inicio: "¡Hola, crack! 👋 Soy el Coach Juan. ¿Te ayudo a encontrar tu plan? ⚽",
           "para-quien": "¿No sabes si tu hijo tiene el nivel? 🧐 Lo evaluamos en una clase de prueba de S/30 😉",
           nosotros: "Técnica, fuerza, mentalidad y espíritu. ¡Así trabajamos! 💪🔥",
           entrenamiento: "Aquí se suda de verdad 💦 ¡Entrenamiento de alto rendimiento! 🏃‍♂️⚽",
-          horarios: "🕒 Busca tu categoría y elige tu horario. ¡Los cupos vuelan! 🏃‍♂️💨",
+          horarios: "🕒 Toca tu categoría y mira solo tus horarios. ¡Los cupos vuelan! 🏃‍♂️💨",
           planes: "Psst… 🤫 el plan de 5 días sale a S/15 por sesión. ¡El mejor precio! 💰⭐",
           historia: "Wynslow “Q” Reeves vino desde EE.UU. a entrenar con nosotros 🇺🇸✈️🇵🇪 ¡Tú lo tienes a una cuadra! 😎",
           ubicacion: "Estamos a una cuadra de la estación Pumacahua 🚆📍 ¡Te espero!",
           redes: "Síguenos en TikTok para ver los entrenamientos 🎥🔥",
-          juego: "¿Me ayudas a recoger los balones? ⚽⚽⚽ ¡Cuidado con los gatos! 😼"
+          juego: "¿Me ayudas a recoger los balones? ⚽⚽⚽ ¡Cuidado con los gatos! 😼",
+          preguntas: "¿Tienes dudas? 🤔 Aquí respondo las preguntas más comunes 👇"
         };
         var resp = {
-          precio: "💰 Clase de prueba y evaluación: S/30. Planes desde S/250 al mes (3 veces por semana) y S/300 (5 días) 🔥 Personalizado 1 a 1: S/100 la hora.",
+          precio: "💰 Clase suelta o de prueba con evaluación: S/30. Planes: S/250 al mes (3 veces por semana) y S/300 (5 días) 🔥 Personalizado 1 a 1: S/100 la hora.",
           nivel: "🧐 ¡Fácil! Agenda una clase de prueba de S/30 y nuestros profesores lo evalúan en la cancha. Te decimos su nivel y el mejor camino para él 💪",
           libre: "🧔 ¡Claro que sí! La Categoría Libre no tiene límite de edad. Ideal para salud, condición física o rendimiento ❤️💪",
-          horario: "🕒 Lunes a viernes de 6 a 10 a. m. (Categoría Libre) y de 4 a 8 p. m. por categorías. Sábados y domingos en la mañana 🌞 ¡Te muestro la tabla! 👇",
+          horario: "🕒 Lunes a viernes de 6 a 10 a. m. (Categoría Libre) y de 4 a 8 p. m. por categorías. Sábados y domingos en la mañana 🌞 ¡Toca tu categoría en la tabla! 👇",
           baile: "🎶 ¡Un reparto para ti, crack! 💃🕺 Así celebramos en La Fábrica 😄🔥",
           donde: "📍 Santa Cruz de Flores 494, Villa María del Triunfo. ¡A una cuadra de la estación Pumacahua! 🚆"
         };
         var goTo = { horario: "#horarios", precio: "#planes", nivel: "#para-quien", libre: "#para-quien", donde: "#ubicacion" };
-        var said = {};
+        // Juan habla cuando una sección pasa por el centro de la pantalla, pero nunca mientras
+        // se ve el botón principal de la portada (para no taparlo). Se presenta en su primera frase.
+        // En celular habla solo en las secciones clave, para no tapar tanto la página.
+        var said = {}, saludado = false, enPortada = true, seccion = null;
+        var clave = { "para-quien": 1, planes: 1, horarios: 1, juego: 1 };
+        function hablar() {
+          if (!listo || hidden || enPortada || !seccion || said[seccion]) return;
+          if (window.innerWidth <= 560 && !clave[seccion]) return;
+          if (!bubble.classList.contains("hide") && !menu.hidden) return; // no interrumpe si el menú está abierto
+          said[seccion] = true;
+          say((saludado ? "" : "¡Hola, crack! 👋 Soy el Coach Juan. ") + frases[seccion]); saludado = true;
+        }
         if ("IntersectionObserver" in window) {
           var io = new IntersectionObserver(function (es) {
-            es.forEach(function (e) {
-              if (!e.isIntersecting || hidden) return;
-              var id = e.target.id; if (said[id] || !frases[id]) return; said[id] = true; say(frases[id]);
-            });
-          }, { threshold: .45 });
+            es.forEach(function (e) { if (e.isIntersecting) seccion = e.target.id; else if (seccion === e.target.id) seccion = null; });
+            hablar();
+          }, { rootMargin: "-45% 0px -45% 0px" });
           Object.keys(frases).forEach(function (id) { var el = document.getElementById(id); if (el) io.observe(el); });
+          var portada = document.querySelector(".hero-actions");
+          if (portada) new IntersectionObserver(function (es) { enPortada = es[0].isIntersecting; hablar(); }).observe(portada);
+          else enPortada = false;
         }
         function openMenu() { clearTimeout(hideT); bubble.classList.remove("hide"); txt.textContent = "¿En qué te ayudo? 🤔👇"; menu.hidden = false; more.hidden = true; play("saludo", 2); }
         ch.addEventListener("click", function () { if (!menu.hidden && !bubble.classList.contains("hide")) { bubble.classList.add("hide"); return; } openMenu(); });
@@ -1681,34 +2061,46 @@
         });
         // Celebra cuando alguien toca un botón de WhatsApp
         document.querySelectorAll('a[href*="wa.me"]').forEach(function (a) {
-          a.addEventListener("click", function () { if (hidden) return; say("¡Bien ahí, crack! 🎉 Te espero en la cancha 💪⚽", false); play("celebra", 3); });
+          a.addEventListener("click", function () { if (!listo || hidden) return; say("¡Bien ahí, crack! 🎉 Te espero en la cancha 💪⚽", false); play("celebra", 3); });
         });
         // Baile de reparto (bono): doble toque, botón del menú o nuevo récord en el mini juego
         function dance(t) {
-          if (hidden) return; if (t) say(t, false);
-          g.style.opacity = "1"; clearInterval(timer); timer = setInterval(tick, 130); play("baile"); clearTimeout(back);
-          back = setTimeout(function () { clearInterval(timer); timer = setInterval(tick, 170); play("domi"); g.style.opacity = ""; }, 4 * 8 * 130);
+          if (!listo || hidden) return; if (t) say(t, false);
+          g.style.opacity = "1"; play("baile"); clearTimeout(back); anim(130);
+          back = setTimeout(function () { anim(170); play("domi"); g.style.opacity = ""; }, 4 * 8 * 130);
         }
         window.lfDance = dance;
-        // Baila solo de vez en cuando (cada 20 a 35 s), sin interrumpir si está hablando o con el menú abierto
-        var frasesBaile = ["🎶 ¡Pa’ que bailen los cracks! 💃🕺", "🔥 ¡Reparto time! 💃🕺", "😄 ¡A mover el esqueleto, campeón! 🎶", "", "", ""];
-        (function autoDance() {
+        // Baila solo de vez en cuando (máximo 3 veces por visita): nunca mientras habla, con el menú
+        // abierto ni mientras se miran los planes o los horarios
+        var frasesBaile = ["🎶 ¡Pa’ que bailen los cracks! 💃🕺", "🔥 ¡Reparto time! 💃🕺", "😄 ¡A mover el esqueleto, campeón! 🎶", "", "", ""], bailes = 0;
+        function autoDance() {
+          if (quieto) return;
           setTimeout(function () {
-            var busy = !menu.hidden || !bubble.classList.contains("hide") || cur !== "domi" || document.hidden;
-            if (!hidden && !busy) { var f = frasesBaile[Math.floor(Math.random() * frasesBaile.length)]; dance(f || null); }
-            autoDance();
+            var busy = !bubble.classList.contains("hide") || cur !== "domi" || document.hidden || seccion === "planes" || seccion === "horarios";
+            if (!hidden && !busy) { var f = frasesBaile[Math.floor(Math.random() * frasesBaile.length)]; dance(f || null); bailes++; }
+            if (bailes < 3) autoDance();
           }, 20000 + Math.random() * 15000);
-        })();
+        }
         var lastTap = 0;
         ch.addEventListener("pointerup", function () { var n = Date.now(); if (n - lastTap < 350) { dance("🎶 ¡Reparto time! 💃🕺🔥"); lastTap = 0; } else lastTap = n; });
         function setHidden(v) {
           hidden = v; try { sessionStorage.setItem("lfGuide", v ? "off" : "on"); } catch (e) {}
           ch.hidden = v; bubble.hidden = v; mini.hidden = !v;
+          if (v && !mini.style.backgroundImage) mini.style.backgroundImage = 'url("' + hoja("saludo") + '")';
+          anim(170);
         }
         document.getElementById("guideClose").addEventListener("click", function () { setHidden(true); });
         mini.addEventListener("click", function () { setHidden(false); openMenu(); });
-        timer = setInterval(tick, 170); tick();
-        g.hidden = false; setHidden(hidden);
+        // Juan aparece cuando la página ya cargó (no compite con la portada)
+        function iniciar() {
+          listo = true; play("domi"); g.hidden = false; setHidden(hidden); autoDance(); hablar();
+          // Precarga las otras animaciones para que no parpadeen al cambiar
+          setTimeout(function () { ["saludo", "celebra", "baile"].forEach(function (n) { new Image().src = hoja(n); }); }, 3000);
+        }
+        window.lfImg(function () {
+          if (document.readyState === "complete") setTimeout(iniciar, 600);
+          else window.addEventListener("load", function () { setTimeout(iniciar, 600); });
+        });
         // Mientras se juega el mini juego, Juan se hace a un lado
         var juego = document.getElementById("juego");
         if (juego && "IntersectionObserver" in window) new IntersectionObserver(function (es) { g.style.opacity = es[0].intersectionRatio > .6 ? ".25" : ""; }, { threshold: [0, .6, 1] }).observe(juego);
