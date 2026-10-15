@@ -9,7 +9,6 @@ En `index.html` cada punto está marcado con un comentario `PENDIENTE` (búscalo
 
 - [ ] **Precio de la Categoría Libre** (sección Planes).
 - [ ] **Plan para las categorías que entrenan 2 días por semana** (2017 y Sub-14 a 20 años): hoy la web les dice que escriban por WhatsApp.
-- [ ] **Confirmar "Niños formativos"** (sábados y domingos): la web lo ofrece como opción para los que recién empiezan.
 - [ ] **Credenciales del coach** (licencia, años de experiencia, trayectoria): plantilla lista en la sección Nosotros.
 - [ ] **Testimonios de padres o jugadores** (2 o 3, con su permiso): plantilla lista antes de la sección Ubicación.
 - [ ] **Formas de pago** (Yape, Plin, transferencia, efectivo…): pregunta frecuente "¿Cómo se paga?".
