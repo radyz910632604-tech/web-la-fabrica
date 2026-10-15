@@ -73,7 +73,8 @@
     "geo": { "@type": "GeoCoordinates", "latitude": -12.182351, "longitude": -76.9474786 },
     "openingHoursSpecification": [
       { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "opens": "06:00", "closes": "10:00" },
-      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "opens": "16:00", "closes": "20:00" },
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday", "Tuesday", "Thursday", "Friday"], "opens": "16:00", "closes": "20:00" },
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": "Wednesday", "opens": "16:00", "closes": "21:00" },
       { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "07:00", "closes": "11:00" },
       { "@type": "OpeningHoursSpecification", "dayOfWeek": "Sunday", "opens": "07:00", "closes": "10:00" }
     ],
@@ -364,6 +365,7 @@
     .sch-card[hidden], .sch-card li[hidden] { display: none; }
     .sch-t { grid-column: 1 / -1; font-size: .78rem; color: var(--muted); font-weight: 700; }
     .sch-c { font-weight: 800; }
+    .sch-prof { grid-column: 1 / -1; font-size: .74rem; color: #8ab4ff; font-weight: 700; }
     .sch-full { justify-self: end; font-style: normal; font-size: .7rem; font-weight: 800; text-transform: uppercase; color: #fff; background: #c0392b; padding: 2px 8px; border-radius: 999px; }
     /* Filtro por categoría */
     .sch-filter { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 14px; }
@@ -912,8 +914,7 @@
             <span class="who-tag">¿Tienes dudas?</span>
             <h3>¿No sabes si es tu momento?</h3>
             <p>Escríbenos. En una <b>clase de prueba y evaluación (S/30)</b> nuestros profesores ven a tu hijo en la cancha y te orientan sobre el mejor camino para él.</p>
-            <!-- PENDIENTE: confirmar si "Niños formativos" (sábados y domingos) es un horario de La Fábrica para los que recién empiezan -->
-            <p class="ask-small">Si todavía está dando sus primeros pasos, te orientamos: puede empezar en el horario de <b>Niños formativos</b> (sábados y domingos) o en una academia formativa, para llegar listo a la competición.</p>
+            <p class="ask-small">Si todavía está dando sus primeros pasos, puede empezar en nuestras clases de <b>Niños formativos</b>: sábados y domingos con los profesores Colo y Peluche, para llegar listo a la competición.</p>
             <a class="btn btn-wa-outline" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20y%20evaluaci%C3%B3n%20%28S%2F30%29%20para%20saber%20si%20mi%20hijo%20tiene%20el%20nivel%20para%20competir.%20Juega%20en%20el%20club%3A%20" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>Quiero una evaluación</a>
           </div>
         </div>
@@ -1151,7 +1152,7 @@
         </div>
         <!-- HORARIOS: cada fila lleva en data-cat las categorías de ese horario (para el filtro):
              2017, 2015, 2014, 2013, sub14, libre o form (Niños formativos). Cada tarjeta lleva en data-days sus días
-             (lu ma mi ju vi sa do). Si agregas o cambias una fila, actualiza también esos datos. -->
+             (lu ma mi ju vi sa do); una fila que solo es un día lleva su propio data-days. Si agregas o cambias una fila, actualiza también esos datos. -->
         <div class="sch-filter" id="schFilter" role="group" aria-label="Ver horarios de una categoría">
           <button type="button" data-f="todas" aria-pressed="true">Todas</button>
           <button type="button" data-f="2017" aria-pressed="false">2017</button>
@@ -1180,6 +1181,7 @@
               <li data-cat="2013 2014"><span class="sch-t">5:00 – 6:00 p. m.</span><span class="sch-c">2013 – 2014</span></li>
               <li class="full" data-cat="2017"><span class="sch-t">6:00 – 7:00 p. m.</span><span class="sch-c">2017</span><em class="sch-full">Sin cupos</em></li>
               <li class="libre" data-cat="libre"><span class="sch-t">7:00 – 8:00 p. m.</span><span class="sch-c">Categoría Libre</span></li>
+              <li data-cat="2013" data-days="mi"><span class="sch-t">8:00 – 9:00 p. m. · solo miércoles</span><span class="sch-c">2013</span></li>
             </ul>
           </article>
           <article class="sch-card" data-days="ma ju">
@@ -1197,7 +1199,7 @@
               <li class="libre" data-cat="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
               <li data-cat="2014 2015"><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">2014 – 2015</span></li>
               <li data-cat="2013"><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">2013</span></li>
-              <li class="form" data-cat="form"><span class="sch-t">10:00 – 11:00 a. m.</span><span class="sch-c">Niños formativos</span></li>
+              <li class="form" data-cat="form"><span class="sch-t">10:00 – 11:00 a. m.</span><span class="sch-c">Niños formativos</span><span class="sch-prof">Profes Colo y Peluche</span></li>
             </ul>
           </article>
           <article class="sch-card" data-days="do">
@@ -1205,7 +1207,7 @@
             <ul>
               <li class="libre" data-cat="libre"><span class="sch-t">7:00 – 8:00 a. m.</span><span class="sch-c">Categoría Libre</span></li>
               <li data-cat="2013 2014 2015"><span class="sch-t">8:00 – 9:00 a. m.</span><span class="sch-c">2013 – 2014 – 2015</span></li>
-              <li class="form" data-cat="form"><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">Niños formativos</span></li>
+              <li class="form" data-cat="form"><span class="sch-t">9:00 – 10:00 a. m.</span><span class="sch-c">Niños formativos</span><span class="sch-prof">Profes Colo y Peluche</span></li>
             </ul>
           </article>
         </div>
@@ -1435,14 +1437,14 @@
           <details class="faq-item">
             <summary>¿Qué categorías entrenan?</summary>
             <div class="faq-a">
-              <p>Menores por año de nacimiento (2017, 2015, 2014 y 2013), el grupo Sub-14 a 20 años, Niños formativos los fines de semana y la <b>Categoría Libre</b> para adultos de cualquier edad.</p>
+              <p>Menores por año de nacimiento (2017, 2015, 2014 y 2013), el grupo Sub-14 a 20 años, Niños formativos los sábados y domingos (con los profesores Colo y Peluche) y la <b>Categoría Libre</b> para adultos de cualquier edad.</p>
               <p><a href="#horarios">Busca los horarios de tu categoría →</a></p>
             </div>
           </details>
           <details class="faq-item">
             <summary>¿Qué días y a qué hora entrenan?</summary>
             <div class="faq-a">
-              <p>De lunes a viernes, de 6:00 a 10:00 a. m. (Categoría Libre) y de 4:00 a 8:00 p. m. por categorías. Los sábados de 7:00 a 11:00 a. m. y los domingos de 7:00 a 10:00 a. m.</p>
+              <p>De lunes a viernes, de 6:00 a 10:00 a. m. (Categoría Libre) y de 4:00 a 8:00 p. m. por categorías (los miércoles, la 2013 también de 8:00 a 9:00 p. m.). Los sábados de 7:00 a 11:00 a. m. y los domingos de 7:00 a 10:00 a. m.</p>
               <p><a href="#horarios">Ver la tabla de horarios →</a></p>
             </div>
           </details>
@@ -1548,7 +1550,7 @@
             <li><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="14" rx="3"/><path d="M5 11h14M9 21l1.5-4M15 21l-1.5-4"/><circle cx="9" cy="14" r=".6" fill="currentColor"/><circle cx="15" cy="14" r=".6" fill="currentColor"/></svg><span>A una cuadra de la estación Pumacahua</span></a></li>
             <li><a href="https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786" target="_blank" rel="noopener"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span><b>Ver en Google Maps →</b></span></a></li>
             <!-- HORARIOS: cuando los tengas, reemplaza este enlace por el texto, por ejemplo: Lun a vie 4:00 – 8:00 p. m. -->
-            <li><a href="#horarios"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Horarios: <b>L–V 6–10 a. m. y 4–8 p. m. · Sáb. y dom. mañanas</b></span></a></li>
+            <li><a href="#horarios"><svg class="fi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Horarios: <b>L–V 6–10 a. m. y 4–8 p. m. (mié. hasta 9 p. m.) · Sáb. y dom. mañanas</b></span></a></li>
           </ul>
         </div>
       </div>
@@ -1668,11 +1670,11 @@
           var f = b.getAttribute("data-f"), con = {}, sin = {}, total = 0;
           box.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
           cards.forEach(function (c) {
-            var n = 0, d = c.getAttribute("data-days").split(" ");
+            var n = 0;
             c.querySelectorAll("li").forEach(function (li) {
               var es = f === "todas" || (" " + li.getAttribute("data-cat") + " ").indexOf(" " + f + " ") >= 0;
               li.hidden = !es; if (!es) return; n++;
-              d.forEach(function (k) { (li.classList.contains("full") ? sin : con)[k] = 1; });
+              (li.getAttribute("data-days") || c.getAttribute("data-days")).split(" ").forEach(function (k) { (li.classList.contains("full") ? sin : con)[k] = 1; });
             });
             c.hidden = !n; if (n) total++;
           });
@@ -2026,7 +2028,7 @@
           precio: "💰 Clase suelta o de prueba con evaluación: S/30. Planes: S/250 al mes (3 veces por semana) y S/300 (5 días) 🔥 Personalizado 1 a 1: S/100 la hora.",
           nivel: "🧐 ¡Fácil! Agenda una clase de prueba de S/30 y nuestros profesores lo evalúan en la cancha. Te decimos su nivel y el mejor camino para él 💪",
           libre: "🧔 ¡Claro que sí! La Categoría Libre no tiene límite de edad. Ideal para salud, condición física o rendimiento ❤️💪",
-          horario: "🕒 Lunes a viernes de 6 a 10 a. m. (Categoría Libre) y de 4 a 8 p. m. por categorías. Sábados y domingos en la mañana 🌞 ¡Toca tu categoría en la tabla! 👇",
+          horario: "🕒 Lunes a viernes de 6 a 10 a. m. (Categoría Libre) y de 4 a 8 p. m. por categorías (miércoles hasta las 9 p. m.). Sábados y domingos en la mañana 🌞 ¡Toca tu categoría en la tabla! 👇",
           baile: "🎶 ¡Un reparto para ti, crack! 💃🕺 Así celebramos en La Fábrica 😄🔥",
           donde: "📍 Santa Cruz de Flores 494, Villa María del Triunfo. ¡A una cuadra de la estación Pumacahua! 🚆"
         };
