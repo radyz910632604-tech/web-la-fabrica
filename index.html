@@ -146,7 +146,7 @@
     h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: .02em; line-height: 1; margin: 0; }
     h2 { font-size: clamp(2.4rem, 7vw, 3.8rem); margin-bottom: 18px; }
     h3 { font-size: 1.8rem; }
-    .lead { color: #d8d1c2; font-size: 1.1rem; max-width: 60ch; }
+    .lead { color: var(--body-text); font-size: 1.1rem; max-width: 60ch; }
     .hl { color: var(--accent); }
 
     /* ---------- Botones ---------- */
@@ -229,14 +229,14 @@
     }
     .hero-tag .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1.6s infinite; }
     .hero h1 { font-size: clamp(3.2rem, 13vw, 7.5rem); }
-    .hero h1 small { display: block; font-size: .36em; color: #e8e2d6; letter-spacing: .12em; margin-bottom: 6px; }
+    .hero h1 small { display: block; font-size: .36em; color: var(--body-text); letter-spacing: .12em; margin-bottom: 6px; }
     .hero h1, .hero-claim, .hero-coach, .hero-stats { }
-    .hero-coach { font-size: clamp(1rem, 3.4vw, 1.2rem); margin: -14px 0 28px; max-width: 680px; text-wrap: balance; color: #f1ece2; }
+    .hero-coach { font-size: clamp(1rem, 3.4vw, 1.2rem); margin: -14px 0 28px; max-width: 680px; text-wrap: balance; color: var(--body-text); }
     .hero-coach strong { color: var(--text); }
     .hero-claim { font-size: clamp(1.15rem, 4vw, 1.5rem); font-weight: 600; margin: 20px 0 30px; max-width: 680px; text-wrap: balance; }
     .hero-actions { display: flex; flex-wrap: wrap; gap: 14px; }
     .hero-stats { display: flex; flex-wrap: wrap; gap: 28px; margin-top: 44px; padding-top: 26px; }
-    .hero-stats div { font-size: .85rem; color: #d9d2c4; }
+    .hero-stats div { font-size: .85rem; color: var(--body-text); }
     .hero-stats strong { display: block; font-family: var(--display); font-size: 2.2rem; color: var(--text); line-height: 1; font-weight: 400; }
 
     /* ---------- Marquee ---------- */
@@ -276,7 +276,7 @@
     .cv-play::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent); animation: ring 2s infinite; }
     .coach-video b { display: block; font-size: .98rem; }
     .coach-video small { color: var(--muted); font-size: .82rem; }
-    .coach-quote p { margin: 0 0 10px; font-size: 1.05rem; font-style: italic; color: #e6e1d6; }
+    .coach-quote p { margin: 0 0 10px; font-size: 1.05rem; font-style: italic; color: var(--body-text); }
     .coach-quote cite { font-style: normal; font-weight: 700; color: var(--accent); font-size: .92rem; }
     .about-close { text-align: center; margin-top: 40px; }
     .about-slogan { font-family: var(--display); font-size: clamp(2.2rem, 7vw, 3.4rem); line-height: 1; margin: 0 0 24px; }
@@ -396,17 +396,17 @@
     .who-card h3 { font-size: 1.8rem; margin-bottom: 14px; }
     .who-card.yes h3 { color: var(--accent); }
     .who-card ul { list-style: none; padding: 0; margin: 0; }
-    .who-card li { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; color: #e6e1d6; }
+    .who-card li { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; color: var(--body-text); }
     .who-card li svg { width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px; }
     .who-card.yes li svg { color: var(--accent); }
-    .who-card.ask p { color: #e6e1d6; margin: 0 0 12px; }
+    .who-card.ask p { color: var(--body-text); margin: 0 0 12px; }
     .who-card.ask .ask-small { color: var(--muted); font-size: .9rem; }
     .who-card.ask b { color: var(--text); }
     .who-card.ask .btn { margin-top: 4px; }
     .who-tag { display: block; margin-bottom: 6px; color: var(--accent); font-size: .95rem; font-weight: 700; }
     .who-free { margin-top: 18px; display: flex; gap: 24px; align-items: center; justify-content: space-between; padding: 28px 26px; border-radius: var(--radius); background: #221c0b; }
     .who-free h3 { font-size: 1.9rem; margin-bottom: 8px; }
-    .who-free p { margin: 0 0 12px; color: #e6e1d6; max-width: 640px; }
+    .who-free p { margin: 0 0 12px; color: var(--body-text); max-width: 640px; }
     .who-free ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px; }
     .who-free li { padding: 6px 12px; border-radius: 999px; background: rgba(10,10,10,.5); font-size: .88rem; font-weight: 700; }
     .who-free .btn { flex-shrink: 0; }
@@ -454,7 +454,7 @@
     .price .amount { font-family: var(--display); font-size: 4rem; line-height: .9; }
     .price .per { color: var(--muted); font-size: .9rem; }
     .plan ul { list-style: none; padding: 0; margin: 0 0 24px; flex-grow: 1; }
-    .plan li { position: relative; padding-left: 26px; margin-bottom: 10px; font-size: .95rem; color: #e6e1d6; }
+    .plan li { position: relative; padding-left: 26px; margin-bottom: 10px; font-size: .95rem; color: var(--body-text); }
     .plan li::before { content: ""; position: absolute; left: 0; top: 6px; width: 16px; height: 16px; border-radius: 50%; background: var(--accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230a0a0a' stroke-width='4'%3E%3Cpath d='M5 12l5 5L20 7'/%3E%3C/svg%3E") center/11px no-repeat; }
     .plan .btn { padding: 14px 18px; font-size: .95rem; }
     .plans-note { text-align: center; color: var(--muted); font-size: .95rem; margin-top: 26px; }
@@ -475,7 +475,7 @@
     .story-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
     .story-actions .btn { padding: 14px 20px; font-size: .95rem; }
     .story-body h2 { font-size: clamp(2.2rem, 6vw, 3.2rem); }
-    .story-body p { color: #e6e1d6; margin: 0 0 14px; }
+    .story-body p { color: var(--body-text); margin: 0 0 14px; }
 
     /* ---------- Ubicación ---------- */
     .location-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 32px; align-items: stretch; }
@@ -551,7 +551,7 @@
     .faq-item summary::after { content: "+"; flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: rgba(245,185,20,.12); color: var(--accent); font-size: 1.3rem; font-weight: 800; line-height: 1; transition: transform .2s; }
     .faq-item[open] summary::after { transform: rotate(45deg); }
     .faq-item summary:hover { color: var(--accent); }
-    .faq-a { padding: 0 18px 16px; color: #e6e1d6; }
+    .faq-a { padding: 0 18px 16px; color: var(--body-text); }
     .faq-a p { margin: 0 0 8px; }
     .faq-a a { color: var(--accent); font-weight: 700; }
     .faq-more { max-width: 860px; margin-top: 22px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; padding: 18px 20px; border-radius: var(--radius); background: rgba(245,185,20,.08); }
@@ -563,7 +563,7 @@
     .coach-creds li { padding: 8px 14px; border-radius: 999px; background: rgba(245,185,20,.08); font-weight: 700; font-size: .9rem; }
     .testi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
     .testi { margin: 0; background: var(--card); border-left: 4px solid var(--accent); border-radius: 14px; padding: 20px; }
-    .testi blockquote { margin: 0 0 12px; font-style: italic; color: #e6e1d6; }
+    .testi blockquote { margin: 0 0 12px; font-style: italic; color: var(--body-text); }
     .testi figcaption { color: var(--muted); font-size: .9rem; }
     .testi figcaption b { color: var(--text); }
     @media (max-width: 820px) { .testi-grid { grid-template-columns: 1fr; } }
@@ -589,9 +589,9 @@
     .cta-eval-price span { font-size: .85rem; font-weight: 800; max-width: 120px; line-height: 1.2; }
     .cta-eval-price strong { font-family: var(--display); font-weight: 400; font-size: 2.8rem; line-height: 1; }
     .cta-eval-price small { font-size: .85rem; font-weight: 700; }
-    .cta-eval-text { padding: 16px 20px; color: #f1ece2; }
+    .cta-eval-text { padding: 16px 20px; color: var(--body-text); }
     .cta-eval-text b { display: block; color: var(--accent); margin-bottom: 6px; font-size: 1rem; }
-    .final-cta .cta-eval-text p { margin: 0; max-width: none; font-size: .93rem; line-height: 1.5; color: #e6e1d6; }
+    .final-cta .cta-eval-text p { margin: 0; max-width: none; font-size: .93rem; line-height: 1.5; color: var(--body-text); }
     @media (max-width: 560px) { .cta-eval { flex-direction: column; } .cta-eval-price { flex-direction: row; gap: 10px; padding: 12px 16px; } .cta-eval-price span { max-width: none; } .cta-eval-price strong { font-size: 2.2rem; } }
     .final-cta .btn-wa:hover { background: #1e1b16; }
 
@@ -625,9 +625,9 @@
     .js .game-overlay .g-nojs { display: none; }
     html:not(.js) #gStart, html:not(.js) .game-bar, html:not(.js) .game-pad { display: none; }
     .g-paused strong { font-family: var(--display); font-weight: 400; font-size: 2.6rem; color: var(--accent); letter-spacing: .08em; }
-    .g-paused span { color: #e6e1d6; font-size: .9rem; }
+    .g-paused span { color: var(--body-text); font-size: .9rem; }
     .game-overlay strong { font-family: var(--display); font-weight: 400; font-size: 2.2rem; line-height: 1; }
-    .game-overlay p { margin: 0 0 6px; color: #e6e1d6; }
+    .game-overlay p { margin: 0 0 6px; color: var(--body-text); }
     .g-cta { display: block; text-align: center; margin: 14px auto 0; padding: 12px 18px; border-radius: 14px; background: rgba(245,185,20,.12); color: var(--accent); font-weight: 800; text-decoration: none; }
     .g-cta[hidden] { display: none; }
     .g-cta:hover { background: var(--accent); color: #0a0a0a; }
@@ -837,6 +837,213 @@
       .who-card li { margin-bottom: 9px; font-size: .95rem; }
       .who-free li { font-size: .82rem; padding: 5px 10px; }
     }
+
+    /* =====================================================================
+       ESTILO APPLE: la foto es la protagonista, mucho aire, un solo acento (dorado)
+       ===================================================================== */
+    :root {
+      --negro: #000000; --casi-negro: #1d1d1f; --claro: #f5f5f7; --gris: #6e6e73; --gris-oscuro: #86868b; --dorado: #f5b914;
+      --bg: #000; --bg-2: #000; --card: #1d1d1f; --text: #f5f5f7; --muted: #86868b; --body-text: #d2d2d7;
+      --accent: var(--dorado); --gold-grad: var(--dorado); --line: transparent;
+      --apple: cubic-bezier(.28, .11, .32, 1);
+      --logo-font: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
+      --display: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --radius: 18px;
+    }
+    body { background: #fff; font-size: 17px; letter-spacing: -.01em; }
+    main > section, main > .marquee-wrap { margin-bottom: 12px; }
+    main > section { background: var(--negro); color: var(--text); padding: 96px 0; }
+    main > section.light { background: var(--claro); --text: var(--casi-negro); --muted: var(--gris); --card: #fff; --body-text: #1d1d1f; color: var(--text); }
+    .who, .training, .story, .game { background: var(--negro); }
+    .who.light, .game.light { background: var(--claro); }
+
+    /* Tipografía */
+    h1, h2, h3 { font-family: var(--display); font-weight: 600; letter-spacing: -.02em; line-height: 1.05; }
+    h2 { font-size: clamp(36px, 5vw, 56px); margin-bottom: 14px; }
+    h3 { font-size: 24px; line-height: 1.15; }
+    .section-head { flex-direction: column; align-items: center; text-align: center; margin: 0 auto 48px; max-width: 860px; }
+    .section-head > div { display: flex; flex-direction: column; align-items: center; }
+    .lead { font-size: clamp(19px, 2.2vw, 28px); font-weight: 400; line-height: 1.3; color: var(--text); max-width: 760px; margin: 0 auto; }
+    .lead strong { font-weight: 600; }
+    .hl { color: var(--dorado); }
+    .light .hl { color: #b8860b; }
+
+    /* Botones: principal dorado en pastilla, secundario solo texto con flecha */
+    .btn { font-size: 17px; font-weight: 500; padding: 11px 22px; border-radius: 980px; gap: 8px; letter-spacing: -.01em; transition: transform 160ms var(--apple), background-color 300ms var(--apple), color 300ms var(--apple); }
+    .btn-lg { font-size: 17px; padding: 12px 24px; }
+    .btn svg { width: 18px; height: 18px; }
+    .btn-wa, .final-cta .btn-wa { background: var(--dorado); color: #000; border: 0; }
+    .btn-wa:hover, .final-cta .btn-wa:hover { background: #ffc832; color: #000; }
+    .btn-price { background: rgba(0,0,0,.12); color: #000; }
+    .final-cta .btn-price { background: rgba(0,0,0,.12); color: #000; }
+    .btn-wa-outline, .btn-ghost, .btn-tiktok { background: none; border: 0; color: var(--dorado); padding: 11px 6px; }
+    .light .btn-wa-outline, .light .btn-ghost, .light .btn-tiktok { color: #8a6500; }
+    .btn-wa-outline::after, .btn-ghost::after, .btn-tiktok::after { content: "›"; font-size: 1.25em; line-height: 1; margin-left: 2px; transition: transform 300ms var(--apple); }
+    .btn-wa-outline:hover, .btn-ghost:hover, .btn-tiktok:hover { background: none; color: var(--dorado); text-decoration: underline; text-underline-offset: 4px; }
+    .light .btn-wa-outline:hover, .light .btn-ghost:hover, .light .btn-tiktok:hover { color: #8a6500; }
+    .btn-wa-outline:hover::after, .btn-ghost:hover::after, .btn-tiktok:hover::after { transform: translateX(3px); }
+    .btn-wa-outline svg, .btn-ghost svg, .btn-tiktok svg { width: 18px; height: 18px; }
+    .btn-block { width: auto; }
+    .plan .btn { align-self: center; }
+
+    /* Menú: 44 px, translúcido */
+    .header, .header.scrolled { background: rgba(22,22,23,.8); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); }
+    .header .container { height: 44px; }
+    .logo img { width: 26px; height: 26px; }
+    .logo-text { font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: -.01em; }
+    .nav { gap: 28px; }
+    .nav a { font-size: 12px; font-weight: 400; color: rgba(245,245,247,.8); letter-spacing: 0; }
+    .nav a:hover { color: #fff; }
+    .nav-cta { font-size: 12px; font-weight: 500; color: #000; background: var(--dorado); padding: 4px 12px; border-radius: 980px; text-decoration: none; white-space: nowrap; transition: background-color 300ms var(--apple); }
+    .nav-cta:hover { background: #ffc832; }
+    section { scroll-margin-top: 44px; }
+
+    /* Hero: texto centrado arriba, foto grande debajo */
+    .hero { min-height: 0; display: block; padding: 88px 0 0; overflow: hidden; text-align: center; }
+    .hero::before { display: none; }
+    .hero-copy { display: flex; flex-direction: column; align-items: center; }
+    .hero h1 { font-family: var(--logo-font); font-weight: 400; letter-spacing: .01em; line-height: .95; font-size: clamp(64px, 11vw, 132px); }
+    .hero h1 small { font-family: var(--display); font-weight: 600; font-size: clamp(17px, 1.8vw, 21px); letter-spacing: -.01em; color: var(--muted); margin-bottom: 8px; }
+    .hero-claim { font-size: clamp(21px, 2.4vw, 28px); font-weight: 400; margin: 18px 0 8px; max-width: 760px; }
+    .hero-coach { font-size: 19px; color: var(--muted); margin: 0 0 26px; max-width: 640px; }
+    .hero-coach strong { color: var(--text); font-weight: 500; }
+    .hero-actions { justify-content: center; align-items: center; gap: 18px; }
+    .hero-bg { position: relative; inset: auto; z-index: 0; margin: 48px auto 0; width: min(1440px, 100%); aspect-ratio: 16 / 8; overflow: hidden; animation: hero-in 1.2s var(--apple) both; }
+    .hero-bg img { width: 100%; height: 115%; object-fit: cover; object-position: center 72%; filter: none; }
+    @keyframes hero-in { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+    .hero-copy > * { animation: rise-in 1s var(--apple) both; }
+    .hero-copy > *:nth-child(2) { animation-delay: .15s; } .hero-copy > *:nth-child(3) { animation-delay: .23s; } .hero-copy > *:nth-child(4) { animation-delay: .31s; }
+    .hero-copy h1 { animation-delay: .15s; }
+    @keyframes rise-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+    .hero-stats { justify-content: center; gap: 56px; margin: 0; padding: 40px 0 56px; text-align: center; }
+    .hero-stats div { color: var(--muted); font-size: 14px; max-width: 220px; }
+    .hero-stats strong { font-family: var(--logo-font); font-size: 44px; color: var(--text); margin-bottom: 4px; }
+    .marquee-wrap { margin-top: 0; }
+    picture { display: contents; }
+
+    /* Escena cinemática */
+    .cine-text h2 { font-size: clamp(40px, 6vw, 80px); }
+
+    /* Tarjetas: sin bordes ni sombras, esquinas de 18 px */
+    .who-card, .who-clubs, .pillar, .plan, .sch-card, .train-card, .loc-item, .faq-item, .game-scores div, .social-box, .coach-quote, .who-free, .sch-cta, .faq-more { border: 0; border-radius: 18px; box-shadow: none; background: var(--card); }
+    .light .who-free { background: #fff7df; } .light .who-form { background: #eaf0fb; }
+    .light .who-form .hl-blue { color: #2f62c9; }
+    .who-free p, .who-card li, .plan li, .faq-a, .story-end p, .pillar p, .train-card p { color: var(--body-text); }
+    .light .who-clubs li, .light .who-free li, .light .coach-creds li { background: var(--claro); color: var(--text); }
+    .light .plan.featured { background: #fff; outline: 2px solid var(--dorado); }
+    .plan.featured .ribbon { color: #000; }
+    .light .sch-filter button { background: #fff; color: var(--text); }
+    .light .sch-filter button[aria-pressed="true"] { background: var(--dorado); color: #000; }
+
+    /* Cuadrículas de 2 columnas (1 en celular) */
+    .plans-grid, .pillars, .sch-grid, .train-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .plans-grid, .pillars, .sch-grid { max-width: 980px; margin-left: auto; margin-right: auto; }
+    .pillars { margin-top: 32px; }
+    .pillar { padding: 36px 24px 32px; }
+    .pillar .ico { width: 132px; height: 132px; }
+    .pillar strong { font-family: var(--display); font-weight: 600; font-size: 24px; letter-spacing: -.02em; }
+    .pillar p { font-size: 17px; }
+    .plan { padding: 36px 30px 30px; text-align: center; align-items: center; }
+    .plan-ico { width: 150px; height: 150px; }
+    .plan ul { text-align: left; }
+    .price { justify-content: center; }
+    .price .amount { font-family: var(--logo-font); }
+    .per-session { color: #8a6500; }
+    .sch-card { padding: 28px 26px; }
+    .sch-card h3 { font-family: var(--display); font-weight: 600; color: var(--text); font-size: 24px; }
+    .sch-card li { background: rgba(255,255,255,.06); }
+    .train-card .photo-slot { aspect-ratio: 16 / 10; }
+    .train-card .body { padding: 26px 28px 30px; }
+    .train-card h3 { font-family: var(--display); }
+    .train-card:hover { transform: none; }
+    .train-card:hover h3 { color: var(--text); }
+    .photo-slot { border: 0; }
+    .photo-slot img { transition: scale 400ms var(--apple); }
+    .train-card:hover .photo-slot img, .tiktok-previews a.photo-slot:hover img { transform: none; scale: 1.03; }
+    .tiktok-previews a.photo-slot:hover { transform: none; }
+    .cat-chip { background: var(--card); color: var(--text); font-weight: 500; margin-top: 18px; }
+
+    /* Nosotros, ubicación, preguntas, juego centrados como bloque */
+    .about-slogan { font-family: var(--display); font-weight: 600; letter-spacing: -.02em; }
+    .quote { font-family: var(--display); font-weight: 600; letter-spacing: -.02em; border-left-color: var(--dorado); }
+    .coach-quote { border-left: 0; }
+    .coach-quote cite, .who-tag { color: #8a6500; }
+    #nosotros .coach-quote cite { color: #8a6500; }
+    .faq-list, .faq-more { margin-left: auto; margin-right: auto; }
+    .tiktok-handle { font-family: var(--display); font-weight: 600; letter-spacing: -.02em; }
+    .game-scores strong { font-family: var(--logo-font); }
+    .game-help b, .game-challenge b { color: var(--text); }
+    .game-overlay, .g-paused, .cta-eval { --body-text: #e8e8ed; --text: #f5f5f7; color: #f5f5f7; }
+    .map { border: 0; border-radius: 18px; }
+
+    /* Historia: foto fija y frases grandes que pasan por encima */
+    .story { padding: 96px 0 0; }
+    .story-head { text-align: center; display: flex; flex-direction: column; align-items: center; margin-bottom: 40px; }
+    .story-stage { position: relative; }
+    .story-photo { position: sticky; top: 44px; height: calc(100vh - 44px); height: calc(100svh - 44px); overflow: hidden; }
+    .story-photo img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+    .story-photo::after { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.5); }
+    .story-steps { position: relative; z-index: 1; margin-top: calc(-100vh + 44px); margin-top: calc(-100svh + 44px); }
+    .story-step { min-height: 85vh; min-height: 85svh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0 24px; text-align: center; }
+    .story-step span { max-width: 900px; font-size: clamp(30px, 4.4vw, 56px); font-weight: 600; letter-spacing: -.02em; line-height: 1.12; color: #f5f5f7; transition: opacity 600ms var(--apple), transform 600ms var(--apple); }
+    .js .story-step span { opacity: .4; transform: translateY(16px); }
+    .js .story-step.on span { opacity: 1; transform: none; }
+    .story-step strong { color: var(--dorado); font-weight: 600; }
+    .story-end { max-width: 760px; text-align: center; padding: 72px 20px 96px; }
+    .story-end p { font-size: 19px; }
+    .story-punch { font-size: clamp(21px, 2.4vw, 28px) !important; font-weight: 500; }
+    .story-actions { justify-content: center; align-items: center; }
+
+    /* Movimiento: aparición en cascada (solo transform y opacity) */
+    .js .reveal { transform: translateY(24px); transition: opacity 900ms var(--apple), transform 900ms var(--apple); }
+    @media (max-width: 820px) {
+      .nav { top: 44px; }
+      .nav a { font-size: 17px; color: #f5f5f7; }
+      .nav-cta { margin-left: auto; margin-right: 6px; }
+      .hero { padding-top: 76px; }
+      .hero-bg { aspect-ratio: 4 / 5; margin-top: 36px; }
+      .hero-stats { gap: 16px; padding: 28px 0 40px; }
+      .hero-stats strong { font-size: 30px; }
+      .plans-grid, .pillars, .sch-grid { grid-template-columns: 1fr; }
+      main > section { padding: 72px 0; }
+      .story { padding-top: 72px; }
+    }
+    @media (max-width: 560px) {
+      .sch-grid { display: grid; overflow: visible; }
+      .sch-card { flex: none; }
+      #schHint { display: none !important; }
+      .train-grid { grid-template-columns: none; }
+      .plan { display: flex; padding: 32px 22px 26px; }
+      .plan-ico { width: 120px; height: 120px; margin: 0 auto 8px; }
+      .hero-actions .btn { width: auto; }
+      .hero-stats { display: grid; grid-template-columns: repeat(3, 1fr); }
+      .hero-stats div { font-size: 12.5px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-bg, .hero-copy > * { animation: none; }
+      .js .story-step span { opacity: 1; transform: none; }
+    }
+      @media (max-width: 560px) { .plan h3, .plan .freq { align-self: center; grid-column: auto; grid-row: auto; } }
+      .light .plan-ico img { mix-blend-mode: normal; }
+    .about-photo .badge { --text: #f5f5f7; color: #f5f5f7; }
+    .light .sch-card li { background: var(--claro); }
+    .light .sch-legend { color: var(--gris); }
+    .per-session { color: var(--dorado); }
+    .light .pillar { background: var(--casi-negro); --text: #f5f5f7; --body-text: #d2d2d7; color: #f5f5f7; }
+    .sch-filter button { border: 0; }
+    .sch-filter { justify-content: center; }
+    .sch-result { text-align: center; }
+    .sch-legend { width: 100%; justify-content: center; margin-top: 8px; }
+    .light .hl, .light .who-card.yes h3, .light .who-card h3 .hl { color: #9a7000; }
+    .light .who-card.yes h3 { color: #9a7000; }
+    .light .who-free { background: #fff; }
+    .story-step span { font-size: clamp(28px, 3.6vw, 46px); max-width: 1000px; }
+    #nosotros .lead { font-size: clamp(18px, 1.6vw, 21px); }
+    @media (max-width: 560px) { .cine-text h2 { font-size: 34px; } .hero-stats div { font-size: 13px; } }
+    .light .quote { color: #9a7000; border-left-color: #9a7000; }
+    .js .story-step:not(.on) strong { color: inherit; }
+    .section-head > .sch-legend, .section-head > .cat-chip { flex-direction: row; }
+    .section-head > .cat-chip { display: inline-flex; }
   </style>
 </head>
 <body>
@@ -858,6 +1065,7 @@
         <a href="#historia">Historia</a>
         <a href="#ubicacion">Ubicación</a>
       </nav>
+      <a class="nav-cta" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20y%20evaluaci%C3%B3n%20%28S%2F30%29%20en%20La%20F%C3%A1brica." target="_blank" rel="noopener">Clase de prueba</a>
       <button class="menu-btn" id="menuBtn" aria-label="Abrir menú" aria-expanded="false" aria-controls="nav">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
@@ -867,17 +1075,13 @@
   <main>
     <!-- ===================== 1. HERO ===================== -->
     <section class="hero" id="inicio">
-      <div class="hero-bg">
-        <!-- FOTO HERO: img/hero.jpg -->
-        <img src="img/hero.jpg" alt="Jugadores y familias de La Fábrica en la cancha" width="1600" height="1200" fetchpriority="high">
-      </div>
-      <div class="container">
+      <div class="container hero-copy">
         <h1>
           <small>Centro de Alto Rendimiento</small>
           LA <span class="hl">FÁBRICA</span>
         </h1>
         <p class="hero-claim">Llevamos a jugadores competitivos al siguiente nivel: <span class="hl">técnica, fuerza y mentalidad</span>.</p>
-        <p class="hero-coach">Entrena con el <strong>Coach Juan Kenciño</strong>, <span class="hl">el entrenador de las futuras estrellas</span>, en Villa María del Triunfo.</p>
+        <p class="hero-coach">Entrena con el <strong>Coach Juan Kenciño</strong>, el entrenador de las futuras estrellas, en Villa María del Triunfo.</p>
         <div class="hero-actions">
           <a class="btn btn-wa btn-lg" href="https://wa.me/51917168725?text=Hola%2C%20quiero%20agendar%20una%20clase%20de%20prueba%20y%20evaluaci%C3%B3n%20%28S%2F30%29%20en%20La%20F%C3%A1brica." target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
@@ -885,10 +1089,16 @@
           </a>
           <a class="btn btn-ghost btn-lg" href="#planes">Ver planes</a>
         </div>
+      </div>
+      <div class="hero-bg">
+        <!-- FOTO HERO: img/hero.jpg (+ hero.webp y hero-800.webp; si cambias la foto, cámbialas también o bórralas) -->
+        <picture><source type="image/webp" srcset="img/hero-800.webp 800w, img/hero.webp 1600w" sizes="100vw"><img src="img/hero.jpg" alt="Jugadores y familias de La Fábrica en la cancha" width="1600" height="1200" fetchpriority="high"></picture>
+      </div>
+      <div class="container">
         <div class="hero-stats">
-          <div><strong>2017 → Libre</strong>Menores, formativos (fines de semana) y Libre sin límite de edad</div>
+          <div><strong><span data-count="2017">2017</span> → Libre</strong>Menores, formativos (fines de semana) y Libre sin límite de edad</div>
           <div><strong>EE.UU.</strong>Jugadores del extranjero entrenan aquí</div>
-          <div><strong>1 cuadra</strong>de la estación Pumacahua</div>
+          <div><strong><span data-count="1">1</span> cuadra</strong>de la estación Pumacahua</div>
         </div>
       </div>
     </section>
@@ -901,7 +1111,7 @@
     </div></div>
 
     <!-- ===================== PARA QUIÉN ES ===================== -->
-    <section class="who" id="para-quien">
+    <section class="who light" id="para-quien">
       <div class="container">
         <div class="section-head reveal">
           <div>
@@ -962,14 +1172,14 @@
     <!-- ===================== ESCENA CINEMÁTICA (la foto se expande al bajar) =====================
          FOTO: img/cine.jpg (horizontal, 1600 x 1200 px). El efecto usa GSAP + ScrollTrigger (carpeta js/). -->
     <section class="cine" id="cine" aria-label="Aquí se fabrican las futuras estrellas">
-      <div class="cine-frame"><img src="img/cine.jpg" alt="Jugadores y equipo técnico de La Fábrica en la cancha" width="1600" height="1200" loading="lazy"></div>
+      <div class="cine-frame"><picture><source type="image/webp" srcset="img/cine-800.webp 800w, img/cine.webp 1600w" sizes="100vw"><img src="img/cine.jpg" alt="Jugadores y equipo técnico de La Fábrica en la cancha" width="1600" height="1200" loading="lazy"></picture></div>
       <div class="cine-text">
         <h2>Aquí se fabrican <span class="hl">las futuras estrellas</span></h2>
       </div>
     </section>
 
     <!-- ===================== 2. NOSOTROS ===================== -->
-    <section id="nosotros">
+    <section class="light" id="nosotros">
       <div class="container about-grid">
         <div class="photo-slot about-photo reveal">
           <!-- FOTOS DEL COACH (pasan solas): img/coach.jpg, img/coach-2.jpg e img/coach-3.jpg.
@@ -1045,7 +1255,7 @@
           <article class="train-card">
             <div class="photo-slot">
               <!-- FOTO: img/equipo-adultos.jpg -->
-              <img src="img/equipo-adultos.jpg" alt="Equipo de adultos de La Fábrica con la copa" loading="lazy">
+              <picture><source type="image/webp" srcset="img/equipo-adultos-800.webp 800w, img/equipo-adultos.webp 900w" sizes="(min-width: 821px) 50vw, 100vw"><img src="img/equipo-adultos.jpg" alt="Equipo de adultos de La Fábrica con la copa" width="900" height="675" loading="lazy"></picture>
             </div>
             <div class="body">
               <h3>Físico-técnico</h3>
@@ -1055,7 +1265,7 @@
           <article class="train-card">
             <div class="photo-slot">
               <!-- FOTO: img/campeones-1.jpg -->
-              <img src="img/campeones-1.jpg" alt="Niños de La Fábrica con el coach y la copa" loading="lazy">
+              <picture><source type="image/webp" srcset="img/campeones-1-800.webp 800w, img/campeones-1.webp 900w" sizes="(min-width: 821px) 50vw, 100vw"><img src="img/campeones-1.jpg" alt="Niños de La Fábrica con el coach y la copa" width="900" height="675" loading="lazy"></picture>
             </div>
             <div class="body">
               <h3>Cognitivo</h3>
@@ -1065,7 +1275,7 @@
           <article class="train-card">
             <div class="photo-slot">
               <!-- FOTO: img/equipo.jpg -->
-              <img src="img/equipo.jpg" alt="Jugadores y equipo técnico de La Fábrica" loading="lazy">
+              <picture><source type="image/webp" srcset="img/equipo-800.webp 800w, img/equipo.webp 1000w" sizes="(min-width: 821px) 50vw, 100vw"><img src="img/equipo.jpg" alt="Jugadores y equipo técnico de La Fábrica" width="1000" height="750" loading="lazy"></picture>
             </div>
             <div class="body">
               <h3>Potencia física</h3>
@@ -1075,7 +1285,7 @@
           <article class="train-card">
             <div class="photo-slot">
               <!-- FOTO: img/campeones-3.jpg -->
-              <img src="img/campeones-3.jpg" alt="Niños campeones de La Fábrica" loading="lazy">
+              <picture><source type="image/webp" srcset="img/campeones-3-800.webp 800w, img/campeones-3.webp 900w" sizes="(min-width: 821px) 50vw, 100vw"><img src="img/campeones-3.jpg" alt="Niños campeones de La Fábrica" width="900" height="675" loading="lazy"></picture>
             </div>
             <div class="body">
               <h3>Agilidad</h3>
@@ -1173,7 +1383,7 @@
     </section>
 
     <!-- ===================== HORARIOS ===================== -->
-    <section id="horarios">
+    <section class="light" id="horarios">
       <div class="container">
         <div class="section-head reveal">
           <div>
@@ -1253,35 +1463,39 @@
 
     <!-- ===================== 5. HISTORIA DESTACADA ===================== -->
     <section class="story" id="historia">
-      <div class="container">
-        <div class="story-card reveal">
-          <div class="photo-slot">
-            <!-- FOTO HISTORIA: img/historia.jpg -->
-            <img src="img/historia.jpg" alt="Wynslow “Q” Reeves, jugador de la segunda división de Estados Unidos, junto al Coach Juan Kenciño en La Fábrica" loading="lazy" style="object-position: center 35%;">
-          </div>
-          <div class="story-body">
-            <div class="flags"><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff"><rect y="1.54" width="30" height="1.54"/><rect y="4.62" width="30" height="1.54"/><rect y="7.69" width="30" height="1.54"/><rect y="10.77" width="30" height="1.54"/><rect y="13.85" width="30" height="1.54"/><rect y="16.92" width="30" height="1.54"/></g><rect width="12" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2" cy="2" r=".6"/><circle cx="6" cy="2" r=".6"/><circle cx="10" cy="2" r=".6"/><circle cx="4" cy="4.2" r=".6"/><circle cx="8" cy="4.2" r=".6"/><circle cx="2" cy="6.4" r=".6"/><circle cx="6" cy="6.4" r=".6"/><circle cx="10" cy="6.4" r=".6"/><circle cx="4" cy="8.6" r=".6"/><circle cx="8" cy="8.6" r=".6"/></g></svg><span>EE.UU.</span><img class="plane" src="img/iconos/avion.webp" alt="" width="96" height="96" loading="lazy"><span>Perú</span><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#d91023"/><rect x="10" width="10" height="20" fill="#fff"/></svg></div>
-            <h2>De Estados Unidos a <span class="hl">La Fábrica</span></h2>
-            <p><strong>Wynslow “Q” Reeves</strong> juega en la <strong>segunda división de Estados Unidos</strong>. Vino al Perú de vacaciones, pero un jugador de verdad no se toma vacaciones del fútbol.</p>
-            <p>Buscó en redes dónde entrenar en serio y encontró al <strong>Coach Juan Kenciño</strong>. Cruzó Lima hasta Villa María del Triunfo, entrenó con nosotros y quedó tan conforme con el trabajo que <strong>ya confirmó que volverá en su próxima visita</strong>.</p>
-            <!-- FRASE DE WYNSLOW "Q" REEVES: cuando la tengas, reemplaza el texto y borra las marcas de comentario de este bloque
-            <blockquote class="coach-quote">
-              <p>“Frase real de Q sobre su experiencia entrenando con Juan”</p>
-              <cite>— Wynslow “Q” Reeves, jugador de la segunda división de EE.UU.</cite>
-            </blockquote>
-            -->
-            <p class="story-punch">Un profesional viajó miles de kilómetros para entrenar aquí. Tu hijo lo tiene <span class="hl">a una cuadra de la estación Pumacahua</span>.</p>
-            <div class="story-actions">
-              <a class="btn btn-tiktok" href="https://vt.tiktok.com/ZSbogDB4c/" target="_blank" rel="noopener">
-                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
-                Ver el entrenamiento en TikTok
-              </a>
-              <a class="btn btn-wa" href="https://wa.me/51917168725?text=Hola%2C%20vi%20la%20historia%20de%20Wynslow%20Reeves%20y%20quiero%20que%20mi%20hijo%20entrene%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
+      <div class="container story-head reveal">
+        <div class="flags"><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><g fill="#fff"><rect y="1.54" width="30" height="1.54"/><rect y="4.62" width="30" height="1.54"/><rect y="7.69" width="30" height="1.54"/><rect y="10.77" width="30" height="1.54"/><rect y="13.85" width="30" height="1.54"/><rect y="16.92" width="30" height="1.54"/></g><rect width="12" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2" cy="2" r=".6"/><circle cx="6" cy="2" r=".6"/><circle cx="10" cy="2" r=".6"/><circle cx="4" cy="4.2" r=".6"/><circle cx="8" cy="4.2" r=".6"/><circle cx="2" cy="6.4" r=".6"/><circle cx="6" cy="6.4" r=".6"/><circle cx="10" cy="6.4" r=".6"/><circle cx="4" cy="8.6" r=".6"/><circle cx="8" cy="8.6" r=".6"/></g></svg><span>EE.UU.</span><img class="plane" src="img/iconos/avion.webp" alt="" width="96" height="96" loading="lazy"><span>Perú</span><svg class="flag" viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#d91023"/><rect x="10" width="10" height="20" fill="#fff"/></svg></div>
+        <h2>De Estados Unidos a <span class="hl">La Fábrica</span></h2>
+      </div>
+      <div class="story-stage">
+        <div class="story-photo">
+          <!-- FOTO HISTORIA: img/historia.jpg (+ historia.webp e historia-800.webp) -->
+          <picture><source type="image/webp" srcset="img/historia-800.webp 800w, img/historia.webp 900w" sizes="100vw"><img src="img/historia.jpg" alt="Wynslow “Q” Reeves, jugador de la segunda división de Estados Unidos, junto al Coach Juan Kenciño en La Fábrica" width="900" height="1200" loading="lazy"></picture>
+        </div>
+        <div class="story-steps">
+          <p class="story-step"><span><strong>Wynslow “Q” Reeves</strong> juega en la <strong>segunda división de Estados Unidos</strong>.</span></p>
+          <p class="story-step"><span>Vino al Perú de vacaciones, pero un jugador de verdad no se toma vacaciones del fútbol.</span></p>
+          <p class="story-step"><span>Buscó en redes dónde entrenar en serio y encontró al <strong>Coach Juan Kenciño</strong>.</span></p>
+        </div>
+      </div>
+      <div class="container story-end reveal">
+        <p>Cruzó Lima hasta Villa María del Triunfo, entrenó con nosotros y quedó tan conforme con el trabajo que <strong>ya confirmó que volverá en su próxima visita</strong>.</p>
+        <!-- FRASE DE WYNSLOW "Q" REEVES: cuando la tengas, reemplaza el texto y borra las marcas de comentario de este bloque
+        <blockquote class="coach-quote">
+          <p>“Frase real de Q sobre su experiencia entrenando con Juan”</p>
+          <cite>— Wynslow “Q” Reeves, jugador de la segunda división de EE.UU.</cite>
+        </blockquote>
+        -->
+        <p class="story-punch">Un profesional viajó miles de kilómetros para entrenar aquí. Tu hijo lo tiene <span class="hl">a una cuadra de la estación Pumacahua</span>.</p>
+        <div class="story-actions">
+          <a class="btn btn-wa" href="https://wa.me/51917168725?text=Hola%2C%20vi%20la%20historia%20de%20Wynslow%20Reeves%20y%20quiero%20que%20mi%20hijo%20entrene%20en%20La%20F%C3%A1brica" target="_blank" rel="noopener">
                 <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#ico-wa"/></svg>
                 Quiero que mi hijo entrene aquí
               </a>
-            </div>
-          </div>
+          <a class="btn btn-tiktok" href="https://vt.tiktok.com/ZSbogDB4c/" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48z"/></svg>
+                Ver el entrenamiento en TikTok
+              </a>
         </div>
       </div>
     </section>
@@ -1305,7 +1519,7 @@
     -->
 
     <!-- ===================== 6. UBICACIÓN ===================== -->
-    <section id="ubicacion">
+    <section class="light" id="ubicacion">
       <div class="container">
         <div class="section-head reveal">
           <div>
@@ -1390,7 +1604,7 @@
     </section>
 
     <!-- ===================== MINI JUEGO ===================== -->
-    <section class="game" id="juego">
+    <section class="game light" id="juego">
       <div class="container game-grid">
         <div class="game-copy reveal">
           <h2>Ayuda a Juan a <span class="hl">recoger los balones</span></h2>
@@ -1631,20 +1845,19 @@
       var mm = gsap.matchMedia();
       mm.add({ movil: "(max-width: 820px) and (prefers-reduced-motion: no-preference)", pc: "(min-width: 821px) and (prefers-reduced-motion: no-preference)" }, function (ctx) {
         var movil = ctx.conditions.movil;
-        // Portada: la foto baja más lento que el texto (parallax)
-        gsap.to(".hero-bg img", { yPercent: 16, scale: 1.08, ease: "none", scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true } });
-        gsap.to(".hero .container", { y: -70, opacity: .15, ease: "none", scrollTrigger: { trigger: ".hero", start: "top top", end: "bottom top", scrub: true } });
+        // Fotos grandes: parallax leve (se mueven al ~85 % de la velocidad del scroll), solo en escritorio
+        if (!movil) {
+          gsap.fromTo(".hero-bg img", { yPercent: -6 }, { yPercent: 6, ease: "none", scrollTrigger: { trigger: ".hero-bg", start: "top bottom", end: "bottom top", scrub: true } });
+          gsap.utils.toArray(".train-card .photo-slot img").forEach(function (img) {
+            gsap.set(img, { height: "115%" });
+            gsap.fromTo(img, { yPercent: -7 }, { yPercent: 0, ease: "none", scrollTrigger: { trigger: img.parentNode.parentNode, start: "top bottom", end: "bottom top", scrub: true } });
+          });
+        }
         // Escena cinemática: la foto se queda fija y se expande hasta llenar la pantalla
         var tl = gsap.timeline({ scrollTrigger: { trigger: ".cine", start: "top top", end: "+=120%", scrub: 1, pin: true, anticipatePin: 1 } });
-        tl.fromTo(".cine-frame", { clipPath: movil ? "inset(20% 7% 20% 7% round 24px)" : "inset(16% 22% 16% 22% round 28px)" }, { clipPath: "inset(0% 0% 0% 0% round 0px)", ease: "none", duration: 1 }, 0)
-          .fromTo(".cine-frame img", { scale: 1.35 }, { scale: 1, ease: "none", duration: 1 }, 0)
-          .fromTo(".cine-text", { opacity: 0, y: 70 }, { opacity: 1, y: 0, ease: "power2.out", duration: .45 }, .55);
-        // Fotos de entrenamiento e historia: se abren y se acercan suavemente al aparecer
-        gsap.utils.toArray(".train-card .photo-slot, .story-card .photo-slot").forEach(function (el) {
-          gsap.fromTo(el, { clipPath: "inset(14% 10% 14% 10% round 18px)" }, { clipPath: "inset(0% 0% 0% 0% round 0px)", ease: "none", scrollTrigger: { trigger: el, start: "top 98%", end: "top 50%", scrub: true } });
-          var img = el.querySelector("img");
-          if (img) gsap.fromTo(img, { scale: 1.25 }, { scale: 1, ease: "none", scrollTrigger: { trigger: el, start: "top bottom", end: "center 40%", scrub: true } });
-        });
+        tl.fromTo(".cine-frame", { clipPath: movil ? "inset(20% 7% 20% 7% round 18px)" : "inset(16% 22% 16% 22% round 18px)" }, { clipPath: "inset(0% 0% 0% 0% round 0px)", ease: "none", duration: 1 }, 0)
+          .fromTo(".cine-frame img", { scale: 1.3 }, { scale: 1, ease: "none", duration: 1 }, 0)
+          .fromTo(".cine-text", { opacity: 0, y: 40 }, { opacity: 1, y: 0, ease: "power2.out", duration: .45 }, .55);
       });
       window.addEventListener("load", function () { ScrollTrigger.refresh(); });
     });
@@ -1688,6 +1901,12 @@
 
       // ---------- Animación al aparecer ----------
       var items = document.querySelectorAll(".reveal");
+      // Cascada: cada bloque de una misma sección aparece 80 ms después del anterior (máx. 400 ms)
+      var orden = new Map();
+      items.forEach(function (el) {
+        var sec = el.closest("section") || document.body, n = orden.get(sec) || 0;
+        el.style.transitionDelay = Math.min(n, 5) * 80 + "ms"; orden.set(sec, n + 1);
+      });
       setTimeout(function () { items.forEach(function (el) { el.classList.add("visible"); }); }, 3000);
       if ("IntersectionObserver" in window) {
         var io = new IntersectionObserver(function (entries) {
@@ -1752,6 +1971,32 @@
         else if (window.dataLayer && window.dataLayer.push) window.dataLayer.push({ event: "whatsapp_click", ubicacion: zona });
         if (typeof window.fbq === "function") window.fbq("track", "Contact", { content_name: zona });
       });
+
+      // ---------- Historia: la frase del centro de la pantalla se enciende ----------
+      (function () {
+        var steps = document.querySelectorAll(".story-step"); if (!steps.length) return;
+        if (!("IntersectionObserver" in window)) { steps.forEach(function (s) { s.classList.add("on"); }); return; }
+        var io = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target.classList.toggle("on", e.isIntersecting); }); }, { rootMargin: "-40% 0px -40% 0px" });
+        steps.forEach(function (s) { io.observe(s); });
+      })();
+
+      // ---------- Cifras de la portada: se cuentan hacia arriba al aparecer ----------
+      (function () {
+        var nums = document.querySelectorAll("[data-count]");
+        if (!nums.length || !("IntersectionObserver" in window) || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+        var io = new IntersectionObserver(function (es) {
+          es.forEach(function (e) {
+            if (!e.isIntersecting) return; io.unobserve(e.target);
+            var el = e.target, fin = +el.getAttribute("data-count"), ini = fin > 100 ? fin - 30 : 0, t0 = null;
+            function paso(t) {
+              if (!t0) t0 = t; var k = Math.min((t - t0) / 1200, 1), ease = 1 - Math.pow(1 - k, 3);
+              el.textContent = Math.round(ini + (fin - ini) * ease); if (k < 1) requestAnimationFrame(paso);
+            }
+            requestAnimationFrame(paso);
+          });
+        }, { threshold: .6 });
+        nums.forEach(function (n) { io.observe(n); });
+      })();
 
       // ---------- Fotos del coach: pasan solas cada 4 segundos ----------
       (function () {
