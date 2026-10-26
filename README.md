@@ -19,7 +19,7 @@ En `index.html` cada punto está marcado con un comentario `PENDIENTE` (búscalo
 
 ## Al publicar con un dominio propio (por ejemplo, Hostinger)
 
-1. Sube **todos** los archivos y carpetas (`index.html`, `img/`, `fonts/`, `favicon.png`, `apple-touch-icon.png`, `robots.txt`, `sitemap.xml`).
+1. Sube **todos** los archivos y carpetas (`index.html`, `img/`, `fonts/`, `js/`, `favicon.png`, `apple-touch-icon.png`, `robots.txt`, `sitemap.xml`).
 2. Si cambias de dominio, reemplaza `https://lafabrica-juankencino.netlify.app/` por el nuevo en:
    - `index.html` (vista previa al compartir y "Datos del negocio para Google"),
    - `robots.txt`,
@@ -73,3 +73,4 @@ Si cambias un horario, actualiza también esos datos (hay un comentario `HORARIO
 
 - Íconos 3D de [Microsoft Fluent Emoji](https://github.com/microsoft/fluentui-emoji) (licencia MIT).
 - Fuentes [Bebas Neue](https://github.com/dharmatype/Bebas-Neue) e [Inter](https://rsms.me/inter/) (licencia SIL Open Font License 1.1, ver `fonts/`).
+- Animaciones de scroll con [GSAP y ScrollTrigger](https://gsap.com) (licencia estándar gratuita de GSAP), en la carpeta `js/`.
