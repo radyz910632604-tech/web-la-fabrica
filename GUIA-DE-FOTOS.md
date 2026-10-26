@@ -1,3 +1,41 @@
+# Sesión de fotos y video profesional (lo que más sube el nivel de la web)
+
+Con fotos de celular la web llega a "muy buena". Para que se vea como una web de miles de dólares
+hace falta **una sesión de medio día** con fotógrafo o con un celular de gama alta a máxima resolución.
+
+## Antes de la sesión
+- **Permiso firmado de los padres** de cada niño que salga.
+- **Mismo uniforme** para todos (negro con dorado) y cancha ordenada: sin bolsas, botellas ni gente de fondo.
+- **Hora:** al atardecer (luz dorada) o de noche con reflectores encendidos. Evitar el mediodía y el cielo gris.
+- **Formato:** horizontal, a máxima resolución (idealmente 4000 px o más de ancho), sin filtros ni zoom digital.
+
+## Lista de tomas (en este orden)
+| # | Toma | Para qué sección |
+|---|---|---|
+| 1 | Plano general de la cancha con todos entrenando (desde alto o con dron) | Portada |
+| 2 | Retrato del Coach Juan con balón, fondo limpio, mirada a cámara | Nosotros |
+| 3 | El coach corrigiendo a un jugador (mano en el hombro, explicando) | Nosotros / Historia |
+| 4 | Conducción entre conos, a la altura del balón | Entrenamiento: físico-técnico |
+| 5 | Reacción a una señal o a conos de colores | Entrenamiento: cognitivo |
+| 6 | Saltos con vallas o sprint de salida, de costado | Entrenamiento: potencia |
+| 7 | Escalera de coordinación vista desde arriba | Entrenamiento: agilidad |
+| 8 | Grupo de la Categoría Libre (adultos) entrenando | ¿Para quién es? |
+| 9 | Niños formativos con los profes Colo y Peluche | ¿Para quién es? |
+| 10 | Celebración real de un gol o de un ejercicio logrado | Cierre / redes |
+| 11 | Detalles: chimpunes, balón y conos sobre el césped | Fondos y separadores |
+| 12 | Entrada del local y la calle, con la estación Pumacahua si se ve | Ubicación |
+
+## Video (5 a 10 segundos por toma, horizontal, 4K si se puede)
+- Sprint o remate en cámara lenta, para el fondo de la portada.
+- Vista de la cancha moviéndose despacio (de lado a lado).
+- El coach dando una indicación.
+
+## Después
+- Elegir las mejores 15 a 20 fotos y editarlas todas igual (contraste, tono cálido y dorado).
+- Pasármelas y las cambio en la web en sus tamaños correctos.
+
+---
+
 # Guía de fotos – Sección "Entrenamiento integral"
 
 ## Formato general
