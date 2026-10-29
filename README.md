@@ -21,7 +21,7 @@ En `index.html` cada punto está marcado con un comentario `PENDIENTE` (búscalo
 
 1. Sube **todos** los archivos y carpetas (`index.html`, `img/`, `fonts/`, `js/`, `favicon.png`, `apple-touch-icon.png`, `robots.txt`, `sitemap.xml`).
 2. Si cambias de dominio, reemplaza `https://lafabrica-juankencino.netlify.app/` por el nuevo en:
-   - `index.html` (vista previa al compartir y "Datos del negocio para Google"),
+   - `index.html` (dirección oficial `canonical`, vista previa al compartir y "Datos del negocio para Google"),
    - `robots.txt`,
    - `sitemap.xml`.
 3. Crea tu **Perfil de Empresa en Google** (Google Maps) con la misma dirección y el mismo teléfono.
@@ -63,6 +63,13 @@ Muchas imágenes tienen dos versiones: `.png` o `.jpg` y `.webp` (más liviana, 
 
 El número y el mensaje general están al inicio del `<script>` (`WA_NUMBER` y `WA_MESSAGE`).
 Cada botón tiene su propio mensaje en su enlace `https://wa.me/51917168725?text=...`.
+
+## Precios
+
+Si cambias un precio en la sección Planes, cámbialo también en los "Datos del negocio para Google"
+(al inicio de `index.html`, en `hasOfferCatalog`) y en la pregunta frecuente "¿Cuánto cuesta entrenar en La Fábrica?".
+
+Las preguntas frecuentes se envían solas a Google: si agregas o cambias una, no hay que tocar nada más.
 
 ## Horarios
 

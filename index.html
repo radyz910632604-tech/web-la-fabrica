@@ -24,12 +24,16 @@
     })(document.documentElement);
   </script>
   <title>La Fábrica | Centro de Alto Rendimiento de Fútbol en Villa María del Triunfo</title>
-  <meta name="description" content="Centro de Alto Rendimiento de fútbol en Villa María del Triunfo, Lima Sur. Técnica, fuerza y mentalidad con el Coach Juan Kenciño. Clase de prueba S/30.">
+  <meta name="description" content="Centro de alto rendimiento de fútbol para niños, jóvenes y adultos en Villa María del Triunfo, a una cuadra de la estación Pumacahua. Clase de prueba S/30.">
   <meta name="theme-color" content="#0a0a0a">
 
-  <!-- Vista previa al compartir el enlace en WhatsApp y redes.
+  <!-- Dirección oficial de la web (evita que Google la cuente dos veces con otra dirección).
        DOMINIO: cuando la web tenga su dominio final, cambia "https://lafabrica-juankencino.netlify.app/"
-       aquí, en los datos para Google (más abajo), en robots.txt y en sitemap.xml. -->
+       aquí, en la vista previa al compartir, en los datos para Google (más abajo), en robots.txt y en sitemap.xml. -->
+  <link rel="canonical" href="https://lafabrica-juankencino.netlify.app/">
+
+  <!-- Vista previa al compartir el enlace en WhatsApp y redes -->
+  <meta property="og:url" content="https://lafabrica-juankencino.netlify.app/">
   <meta property="og:title" content="Centro de Alto Rendimiento La Fábrica">
   <meta property="og:description" content="Alto rendimiento para jugadores competitivos y Categoría Libre sin límite de edad. Clase de prueba y evaluación: S/30. Villa María del Triunfo, Lima Sur.">
   <meta property="og:type" content="website">
@@ -51,18 +55,39 @@
   <!-- MEDICIÓN (opcional): pega aquí el código de Google Analytics 4 y/o del Pixel de Meta.
        Los clics en WhatsApp ya se registran solos: evento "whatsapp_click" (GA4) y "Contact" (Pixel). -->
 
-  <!-- Datos del negocio para Google -->
+  <!-- Datos del negocio para Google.
+       PRECIOS: si cambias un precio en la sección Planes, cámbialo también en "hasOfferCatalog" (más abajo). -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SportsActivityLocation",
+    "@id": "https://lafabrica-juankencino.netlify.app/#negocio",
     "name": "Centro de Alto Rendimiento La Fábrica",
+    "alternateName": "La Fábrica",
     "description": "Entrenamiento de fútbol de alto rendimiento para jugadores competitivos y Categoría Libre sin límite de edad, con el Coach Juan Kenciño.",
     "url": "https://lafabrica-juankencino.netlify.app/",
     "image": "https://lafabrica-juankencino.netlify.app/img/compartir.jpg",
     "logo": "https://lafabrica-juankencino.netlify.app/img/logo.png",
     "telephone": "+51917168725",
     "priceRange": "S/30 – S/300",
+    "currenciesAccepted": "PEN",
+    "hasMap": "https://www.google.com/maps/search/?api=1&query=-12.182351,-76.9474786",
+    "areaServed": [
+      { "@type": "City", "name": "Villa María del Triunfo" },
+      { "@type": "City", "name": "San Juan de Miraflores" },
+      { "@type": "City", "name": "Villa El Salvador" },
+      { "@type": "City", "name": "Lima" }
+    ],
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Planes de entrenamiento de fútbol",
+      "itemListElement": [
+        { "@type": "Offer", "name": "Clase de prueba y evaluación (clase suelta)", "price": "30", "priceCurrency": "PEN" },
+        { "@type": "Offer", "name": "Plan 3 veces por semana (mensual)", "price": "250", "priceCurrency": "PEN" },
+        { "@type": "Offer", "name": "Plan 5 días a la semana (mensual)", "price": "300", "priceCurrency": "PEN" },
+        { "@type": "Offer", "name": "Entrenamiento personalizado 1 a 1 (por hora)", "price": "100", "priceCurrency": "PEN" }
+      ]
+    },
     "address": {
       "@type": "PostalAddress",
       "streetAddress": "Santa Cruz de Flores 494",
@@ -876,7 +901,7 @@
       <div class="container">
         <span class="hero-tag"><span class="dot"></span> Alto rendimiento · Villa María del Triunfo · Lima Sur</span>
         <h1>
-          <small>Centro de Alto Rendimiento</small>
+          <small>Centro de Alto Rendimiento de Fútbol</small>
           LA <span class="hl">FÁBRICA</span>
         </h1>
         <p class="hero-claim">Llevamos a jugadores competitivos al siguiente nivel: <span class="hl">técnica, fuerza y mentalidad</span>.</p>
@@ -1341,7 +1366,7 @@
               <div class="ico ico-train"><span class="speed"></span><img src="img/iconos/loc-tren.webp" alt="" width="160" height="121" loading="lazy"></div>
               <div>
                 <strong>A una cuadra de la estación Pumacahua</strong>
-                <span>Línea 1 del Metro de Lima. Llegas fácil desde cualquier punto de la ciudad.</span>
+                <span>Línea 1 del Metro de Lima. Llegas fácil desde San Juan de Miraflores, Villa El Salvador y cualquier punto de la ciudad.</span>
               </div>
             </div>
             <div class="loc-item">
@@ -1477,6 +1502,13 @@
             <summary>¿Cómo sé si mi hijo tiene el nivel?</summary>
             <div class="faq-a">
               <p>Agenda una <b>clase de prueba y evaluación (S/30)</b>. Nuestros profesores lo ven entrenar en la cancha y te dicen si ya está listo para el trabajo de alto rendimiento o qué necesita reforzar. Si recién empieza, puede entrar a las clases de Niños formativos (sábados y domingos).</p>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>¿Es una academia o escuela de fútbol?</summary>
+            <div class="faq-a">
+              <p>Somos un <b>centro de alto rendimiento</b>: entrenamos a chicos que ya juegan en clubes y academias para que rindan más, y a adultos de cualquier edad en la Categoría Libre. Si tu hijo recién empieza, tenemos clases de <b>Niños formativos</b> los sábados y domingos, como en una escuela de fútbol, para que aprenda las bases.</p>
+              <p><a href="#para-quien">Mira para quién es La Fábrica →</a></p>
             </div>
           </details>
           <details class="faq-item">
@@ -1771,6 +1803,19 @@
         else if (window.dataLayer && window.dataLayer.push) window.dataLayer.push({ event: "whatsapp_click", ubicacion: zona });
         if (typeof window.fbq === "function") window.fbq("track", "Contact", { content_name: zona });
       });
+
+      // ---------- Preguntas frecuentes para Google: se arman solas desde la sección "Preguntas frecuentes" ----------
+      // Si agregas o cambias una pregunta en la página, no tienes que tocar nada aquí.
+      (function () {
+        var faqs = document.querySelectorAll("#preguntas .faq-item"); if (!faqs.length) return;
+        var data = { "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [] };
+        faqs.forEach(function (f) {
+          var q = f.querySelector("summary"), a = f.querySelector(".faq-a p");
+          if (q && a) data.mainEntity.push({ "@type": "Question", "name": q.textContent.trim(), "acceptedAnswer": { "@type": "Answer", "text": a.textContent.trim() } });
+        });
+        var s = document.createElement("script"); s.type = "application/ld+json"; s.textContent = JSON.stringify(data);
+        document.head.appendChild(s);
+      })();
 
       // ---------- Fotos del coach: pasan solas cada 4 segundos ----------
       (function () {
