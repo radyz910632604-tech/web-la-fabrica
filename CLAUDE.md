@@ -15,3 +15,7 @@ Después de cada cambio visual:
 2. Toma capturas en móvil (390 px de ancho) y en escritorio (1440 px).
 3. Revisa las capturas y corrige lo que se vea mal: desbordes, textos cortados, espaciados irregulares, imágenes deformadas.
 4. Si el navegador no está instalado, usa la herramienta `browser_install` de Playwright.
+
+## Reels y vídeos para redes
+
+- Para editar reels/TikToks usa la skill del proyecto `editar-reels` (`.claude/skills/editar-reels/`), con su guía `Reglas-de-estilo.md`.
