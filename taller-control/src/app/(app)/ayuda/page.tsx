@@ -56,7 +56,9 @@ const GUIAS: Record<Rol, { para: string; pasos: string[] }> = {
     para: "Saber qué carros esperan repuesto.",
     pasos: [
       "El panel muestra los carros parados por un repuesto. Toca uno para ver sus servicios y avances.",
-      "Registrar compras y repuestos entregados a cada carro llega en la Fase 3.",
+      "Registrar compra: la factura del proveedor (sube el XML o una foto y se llena sola). En cada línea eliges si va a una orden o al inventario.",
+      "En Inventario ves el stock de cada repuesto. «Entregar» lo saca para una orden; los que llegaron a su mínimo salen en rojo.",
+      "Por WhatsApp puedes mandar la foto de la factura: queda por confirmar hasta que la revises.",
     ],
   },
   vendedor_redes: {
