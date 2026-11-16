@@ -1,6 +1,6 @@
 # Fase 0 — Plan de Taller Control
 
-> **Estado:** esperando tu visto bueno. Todavía no hay código de la app: solo este plan, el [modelo de datos](modelo-de-datos.md) y la [especificación](../ESPECIFICACION.md).
+> **Estado:** aprobado. El usuario respondió «Sí», tomado como aceptación de todas las recomendaciones de la sección 2. La Fase 1 está en curso: ver [Entrega 1A](fase-1a-entrega.md).
 
 ---
 

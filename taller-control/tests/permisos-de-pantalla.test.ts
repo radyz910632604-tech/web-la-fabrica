@@ -1,0 +1,97 @@
+import { describe, expect, it } from "vitest";
+import { accionesPara, gestionPara, seccionesPara } from "@/lib/navegacion";
+import { vistaPanel } from "@/lib/panel/vista";
+import { esGestor, rolesAsignables, ROLES } from "@/lib/roles";
+
+const claves = (lista: { clave: string }[]) => lista.map((d) => d.clave);
+const sinPermisoExtra = { adminVeUtilidad: false };
+
+describe("qué ve cada rol en el panel (especificación, sección 4)", () => {
+  it("gerencia ve todo, incluida la utilidad", () => {
+    const v = vistaPanel(["gerencia"], sinPermisoExtra);
+    expect(v.indicadores).toEqual(["ventas", "compras", "utilidad", "entregados"]);
+    expect(v.grafico).toBe(true);
+    expect(v.columnas).toEqual({ cliente: true, monto: true });
+  });
+
+  it("administración no ve la utilidad, salvo que gerencia lo permita", () => {
+    expect(vistaPanel(["administrador"], sinPermisoExtra).indicadores).not.toContain("utilidad");
+    expect(vistaPanel(["administrador"], sinPermisoExtra).grafico).toBe(false);
+    expect(vistaPanel(["administrador"], { adminVeUtilidad: true }).indicadores).toContain("utilidad");
+  });
+
+  it("el asesor ve ventas y cobros pero nunca la utilidad", () => {
+    const v = vistaPanel(["asesor"], { adminVeUtilidad: true });
+    expect(v.indicadores).not.toContain("utilidad");
+    expect(v.grafico).toBe(false);
+    expect(v.acciones.registrarPago).toBe(true);
+  });
+
+  it("el técnico no ve precios, costos ni clientes", () => {
+    const v = vistaPanel(["tecnico"], sinPermisoExtra);
+    expect(v.indicadores).not.toContain("ventas");
+    expect(v.indicadores).not.toContain("compras");
+    expect(v.columnas).toEqual({ cliente: false, monto: false });
+    expect(v.destacada).toBe("mis_trabajos");
+  });
+
+  it("almacén ve compras pero no ventas", () => {
+    const v = vistaPanel(["almacen"], sinPermisoExtra);
+    expect(v.indicadores).toContain("compras");
+    expect(v.indicadores).not.toContain("ventas");
+    expect(v.meta).toBe(false);
+    expect(v.columnas.monto).toBe(false);
+  });
+
+  it("ventas por redes y confirmación no ven costos", () => {
+    for (const rol of ["vendedor_redes", "confirmador"] as const) {
+      const v = vistaPanel([rol], sinPermisoExtra);
+      expect(v.indicadores).not.toContain("compras");
+      expect(v.indicadores).not.toContain("utilidad");
+      expect(v.destacada).toBe("citas_hoy");
+    }
+  });
+
+  it("con dos roles se suma lo que permite cada uno", () => {
+    const v = vistaPanel(["tecnico", "asesor"], sinPermisoExtra);
+    expect(v.indicadores).toContain("ventas");
+    expect(v.columnas.monto).toBe(true);
+  });
+});
+
+describe("navegación", () => {
+  it("cada rol tiene el panel", () => {
+    for (const rol of ROLES) expect(claves(seccionesPara([rol]))).toContain("panel");
+  });
+
+  it("los reportes son solo de gerencia", () => {
+    expect(claves(seccionesPara(["gerencia"]))).toContain("reportes");
+    for (const rol of ROLES.filter((r) => r !== "gerencia")) expect(claves(seccionesPara([rol]))).not.toContain("reportes");
+  });
+
+  it("el técnico tiene sus trabajos, no la lista de órdenes ni de clientes", () => {
+    const s = claves(seccionesPara(["tecnico"]));
+    expect(s).toContain("mis-trabajos");
+    expect(s).not.toContain("ordenes");
+    expect(s).not.toContain("clientes");
+    expect(claves(accionesPara(["tecnico"]))).toEqual(["reportar-avance", "subir-fotos"]);
+  });
+
+  it("solo gerencia y administración ven personal y configuración", () => {
+    expect(claves(gestionPara(["gerencia"]))).toEqual(["usuarios", "configuracion"]);
+    expect(claves(gestionPara(["administrador"]))).toEqual(["usuarios", "configuracion"]);
+    for (const rol of ["asesor", "tecnico", "almacen", "vendedor_redes", "confirmador"] as const) {
+      expect(gestionPara([rol])).toEqual([]);
+    }
+  });
+});
+
+describe("roles que se pueden asignar", () => {
+  it("gerencia asigna cualquiera; administración, todos menos gerencia; el resto, ninguno", () => {
+    expect(rolesAsignables(["gerencia"])).toEqual([...ROLES]);
+    expect(rolesAsignables(["administrador"])).not.toContain("gerencia");
+    expect(rolesAsignables(["administrador"])).toHaveLength(ROLES.length - 1);
+    expect(rolesAsignables(["asesor"])).toEqual([]);
+    expect(esGestor(["asesor"])).toBe(false);
+  });
+});
