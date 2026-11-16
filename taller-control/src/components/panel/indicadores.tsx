@@ -3,6 +3,7 @@ import type { Indicador } from "@/lib/panel/vista";
 import type { ResumenMes } from "@/lib/panel/ejemplo";
 import { formatearEntero, formatearSoles, formatearVariacion, variacion } from "@/lib/formato";
 import { cn } from "@/lib/utils";
+import { Ejemplo } from "./bloques";
 
 const ETIQUETA: Record<Indicador, string> = {
   ventas: "Ventas del mes",
@@ -32,7 +33,9 @@ export function Indicadores({
   anterior,
   mesAnterior,
   diaDelMes,
+  ejemplo = [],
 }: {
+  ejemplo?: Indicador[];
   indicadores: Indicador[];
   mes: ResumenMes;
   anterior: ResumenMes;
@@ -55,7 +58,7 @@ export function Indicadores({
             <p className="num truncate text-[24px] leading-tight font-medium tracking-[-0.02em] md:text-[28px]">
               {ind === "entregados" ? formatearEntero(actual) : formatearSoles(actual, { sinDecimales: true })}
             </p>
-            <Variacion cambio={cambio} subirEsBueno={SUBIR_ES_BUENO[ind]} base={`${mesAnterior} al día ${diaDelMes}`} />
+            <Variacion cambio={cambio} subirEsBueno={SUBIR_ES_BUENO[ind]} base={`${mesAnterior} al día ${diaDelMes}`} ejemplo={ejemplo.includes(ind)} />
           </li>
         );
       })}
@@ -63,9 +66,9 @@ export function Indicadores({
   );
 }
 
-function Variacion({ cambio, subirEsBueno, base }: { cambio: number | null; subirEsBueno: boolean | null; base: string }) {
+function Variacion({ cambio, subirEsBueno, base, ejemplo }: { cambio: number | null; subirEsBueno: boolean | null; base: string; ejemplo: boolean }) {
   if (cambio === null) {
-    return <p className="text-sm text-tinta-3">— sin mes anterior</p>;
+    return <p className="text-sm text-tinta-3">Sin mes anterior para comparar</p>;
   }
   const sube = cambio > 0;
   const tono =
@@ -85,6 +88,7 @@ function Variacion({ cambio, subirEsBueno, base }: { cambio: number | null; subi
         {formatearVariacion(cambio)}
       </span>
       <span>este mes</span>
+      {ejemplo ? <Ejemplo /> : null}
       <span className="sr-only">(comparado con {base})</span>
     </p>
   );

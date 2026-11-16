@@ -51,3 +51,21 @@ describe("placas", () => {
     expect(formatearPlaca("1234AB")).toBe("1234AB");
   });
 });
+
+import { numeroOrden, siguientesEstados } from "@/lib/taller/estados";
+
+describe("órdenes", () => {
+  it("numera las órdenes como OT-000123", () => {
+    expect(numeroOrden(1)).toBe("OT-000001");
+    expect(numeroOrden(123456)).toBe("OT-123456");
+  });
+  it("el técnico nunca ve el botón de entregar al cliente", () => {
+    expect(siguientesEstados("listo", true).map((p) => p.estado)).toEqual(["en_proceso"]);
+    expect(siguientesEstados("listo", false).map((p) => p.estado)).toContain("entregado");
+    expect(siguientesEstados("entregado", true)).toEqual([]);
+  });
+  it("cada estado ofrece el siguiente paso lógico", () => {
+    expect(siguientesEstados("en_taller", false)[0].estado).toBe("en_proceso");
+    expect(siguientesEstados("esperando_repuesto", false)[0].estado).toBe("en_proceso");
+  });
+});

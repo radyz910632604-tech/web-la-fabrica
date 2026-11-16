@@ -95,3 +95,24 @@ describe("roles que se pueden asignar", () => {
     expect(esGestor(["asesor"])).toBe(false);
   });
 });
+
+describe("Entrega 1B: lo construido ya no apunta a «Próximamente»", () => {
+  const todos = (rol: Parameters<typeof seccionesPara>[0][number]) => [...seccionesPara([rol]), ...accionesPara([rol])];
+  it.each([
+    ["ordenes", "/ordenes"],
+    ["citas", "/citas"],
+    ["clientes", "/clientes"],
+    ["nuevo-ingreso", "/ordenes/nueva"],
+  ])("%s lleva a %s", (clave, href) => {
+    const d = todos("gerencia").find((x) => x.clave === clave) ?? todos("asesor").find((x) => x.clave === clave);
+    expect(d?.href.startsWith(href)).toBe(true);
+  });
+  it("el técnico va a sus trabajos para avances y fotos", () => {
+    for (const d of todos("tecnico")) expect(d.href.startsWith("/pronto")).toBe(false);
+  });
+  it("lo que llega en fases siguientes sigue marcado con su fase", () => {
+    const pago = accionesPara(["asesor"]).find((d) => d.clave === "registrar-pago");
+    expect(pago?.href).toBe("/pronto/registrar-pago");
+    expect(pago?.llega).toBe("Fase 4");
+  });
+});
