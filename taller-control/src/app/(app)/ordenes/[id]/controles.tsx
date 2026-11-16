@@ -1,0 +1,217 @@
+"use client";
+
+import { useRef, useState, useTransition } from "react";
+import { Camera, Plus } from "lucide-react";
+import { Boton } from "@/components/ui/boton";
+import { Entrada, Selector } from "@/components/ui/campo";
+import { siguientesEstados, type EstadoOrden } from "@/lib/taller/estados";
+import { reducirFoto } from "@/lib/taller/fotos";
+import { subirFoto } from "../nueva/acciones";
+import { agregarAvance, agregarServicio, asignarTecnico, cambiarEstado, type Resultado } from "./acciones";
+
+function Mensaje({ r }: { r: Resultado }) {
+  if (r.error) return <p role="alert" className="mt-3 text-sm text-negativo">{r.error}</p>;
+  if (r.ok) return <p role="status" className="mt-3 text-sm text-positivo">{r.ok}</p>;
+  return null;
+}
+
+export function BotonesEstado({ ordenId, estado, esTecnico }: { ordenId: string; estado: EstadoOrden; esTecnico: boolean }) {
+  const [nota, setNota] = useState("");
+  const [r, setR] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  const pasos = siguientesEstados(estado, esTecnico);
+
+  if (pasos.length === 0) {
+    return <p className="text-[15px] text-tinta-2">{estado === "entregado" ? "Esta orden ya se entregó al cliente." : "No hay cambios disponibles."}</p>;
+  }
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2">
+        {pasos.map((p, i) => (
+          <Boton
+            key={p.estado}
+            type="button"
+            variante={i === 0 ? "primario" : "secundario"}
+            disabled={pendiente}
+            onClick={() =>
+              iniciar(async () => {
+                const res = await cambiarEstado(ordenId, p.estado, nota);
+                setR(res);
+                if (res.ok) setNota("");
+              })
+            }
+          >
+            {p.texto}
+          </Boton>
+        ))}
+      </div>
+      <Entrada
+        value={nota}
+        onChange={(e) => setNota(e.target.value)}
+        placeholder="Nota opcional: por ejemplo, qué repuesto falta"
+        aria-label="Nota del cambio de estado"
+        className="mt-3"
+        maxLength={300}
+      />
+      <Mensaje r={r} />
+    </div>
+  );
+}
+
+export function FormAvance({ ordenId }: { ordenId: string }) {
+  const [texto, setTexto] = useState("");
+  const [r, setR] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        iniciar(async () => {
+          const res = await agregarAvance(ordenId, texto);
+          setR(res);
+          if (res.ok) setTexto("");
+        });
+      }}
+    >
+      <label htmlFor="avance" className="sr-only">
+        Avance
+      </label>
+      <textarea
+        id="avance"
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        rows={2}
+        placeholder="Ejemplo: Bajé la caja, falta el kit de embrague."
+        className="w-full rounded-2xl border border-borde bg-tarjeta px-4 py-3 text-[15px] outline-none focus-visible:border-tinta focus-visible:ring-4 focus-visible:ring-acento/15"
+      />
+      <div className="mt-2 flex justify-end">
+        <Boton type="submit" disabled={pendiente || texto.trim().length < 2} className="w-full sm:w-auto">
+          {pendiente ? "Guardando…" : "Guardar avance"}
+        </Boton>
+      </div>
+      <Mensaje r={r} />
+    </form>
+  );
+}
+
+export function AsignarTecnico({ ordenId, tecnicoId, tecnicos }: { ordenId: string; tecnicoId: string; tecnicos: { id: string; nombre: string }[] }) {
+  const [r, setR] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  return (
+    <div>
+      <label htmlFor="tecnico" className="sr-only">
+        Técnico responsable
+      </label>
+      <Selector
+        id="tecnico"
+        defaultValue={tecnicoId}
+        disabled={pendiente}
+        onChange={(e) => {
+          const valor = e.target.value;
+          iniciar(async () => setR(await asignarTecnico(ordenId, valor)));
+        }}
+      >
+        <option value="">Sin asignar</option>
+        {tecnicos.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.nombre}
+          </option>
+        ))}
+      </Selector>
+      {tecnicos.length === 0 ? <p className="mt-2 text-sm text-tinta-2">No hay personas con rol técnico. Agrégalas en Personal y roles.</p> : null}
+      <Mensaje r={r} />
+    </div>
+  );
+}
+
+export function AgregarServicio({ ordenId, sugerencias }: { ordenId: string; sugerencias: string[] }) {
+  const [texto, setTexto] = useState("");
+  const [r, setR] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  return (
+    <form
+      className="mt-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        iniciar(async () => {
+          const res = await agregarServicio(ordenId, texto, true);
+          setR(res);
+          if (res.ok) setTexto("");
+        });
+      }}
+    >
+      <div className="flex gap-2">
+        <Entrada
+          value={texto}
+          onChange={(e) => setTexto(e.target.value)}
+          list="sugerencias-servicio"
+          placeholder="Agregar un trabajo adicional"
+          aria-label="Trabajo adicional"
+        />
+        <datalist id="sugerencias-servicio">
+          {sugerencias.map((s) => (
+            <option key={s} value={s} />
+          ))}
+        </datalist>
+        <Boton type="submit" variante="secundario" tamano="icono" disabled={pendiente || texto.trim().length < 2} aria-label="Agregar trabajo adicional">
+          <Plus />
+        </Boton>
+      </div>
+      <p className="mt-2 text-[13px] text-tinta-3">La aprobación del cliente para trabajos adicionales llega en la Fase 4.</p>
+      <Mensaje r={r} />
+    </form>
+  );
+}
+
+export function SubirFotos({ ordenId, etapa }: { ordenId: string; etapa: "ingreso" | "proceso" | "entrega" }) {
+  const entrada = useRef<HTMLInputElement>(null);
+  const [estado, setEstado] = useState<string>();
+  const [error, setError] = useState<string>();
+  const [pendiente, iniciar] = useTransition();
+
+  function subir(lista: FileList | null) {
+    if (!lista?.length) return;
+    const archivos = [...lista].filter((a) => a.type.startsWith("image/")).slice(0, 12);
+    setError(undefined);
+    iniciar(async () => {
+      let fallidas = 0;
+      for (const [i, a] of archivos.entries()) {
+        setEstado(`Subiendo foto ${i + 1} de ${archivos.length}…`);
+        try {
+          const datos = new FormData();
+          datos.set("foto", await reducirFoto(a));
+          datos.set("etapa", etapa);
+          const r = await subirFoto(ordenId, datos);
+          if (r.error) fallidas += 1;
+        } catch {
+          fallidas += 1;
+        }
+      }
+      setEstado(undefined);
+      if (fallidas) setError(`${fallidas} ${fallidas === 1 ? "foto no se pudo subir" : "fotos no se pudieron subir"}. Intenta otra vez.`);
+      if (entrada.current) entrada.current.value = "";
+    });
+  }
+
+  return (
+    <div className="mt-4">
+      <input
+        ref={entrada}
+        id={`fotos-${ordenId}`}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        multiple
+        className="sr-only"
+        onChange={(e) => subir(e.target.files)}
+      />
+      <Boton asChild variante="secundario" className={pendiente ? "pointer-events-none opacity-60" : undefined}>
+        <label htmlFor={`fotos-${ordenId}`}>
+          <Camera />
+          {estado ?? "Agregar fotos"}
+        </label>
+      </Boton>
+      {error ? <p role="alert" className="mt-2 text-sm text-negativo">{error}</p> : null}
+    </div>
+  );
+}
