@@ -62,6 +62,7 @@ const esquemaReglas = z.object({
   dias_garantia_defecto: entero(0, 1095, "los días"),
   dias_cliente_inactivo: entero(30, 1095, "los días"),
   horas_orden_sin_cambio: entero(1, 720, "las horas"),
+  minutos_aviso_entrega: entero(15, 1440, "los minutos"),
   margen_minimo_pct: z.coerce.number().min(0, "Mínimo 0.").max(100, "Máximo 100."),
   igv_pct: z.coerce.number().min(0, "Mínimo 0.").max(50, "Máximo 50."),
   hora_resumen_mediodia: hora,

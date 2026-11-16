@@ -83,7 +83,7 @@ Fase en la que se crea cada tabla: **F1** base · **F2** WhatsApp · **F3** dine
 ### 3.2 Configuración (F1, se completa en F3)
 
 **`configuracion_empresa`** — una fila por taller.
-- `tasa_igv` (0.18), `dias_cliente_inactivo` (180), `dias_garantia_defecto` (por definir), `tolerancia_cita_minutos` (30), `horas_orden_sin_cambio` (48), `margen_minimo_pct`, `hora_resumen_mediodia` (12:00), `hora_cierre` (por definir), `regla_mano_obra` (`fijo_por_servicio` o `prorrateo_mensual`), `admin_ve_utilidad` (no), `admin_ve_sueldos` (no).
+- `tasa_igv` (0.18), `dias_cliente_inactivo` (180), `dias_garantia_defecto` (por definir), `tolerancia_cita_minutos` (30), `horas_orden_sin_cambio` (48), `margen_minimo_pct`, `hora_resumen_mediodia` (12:00), `hora_cierre` (por definir), `regla_mano_obra` (`fijo_por_servicio` o `prorrateo_mensual`), `admin_ve_utilidad` (no), `admin_ve_sueldos` (no), `minutos_aviso_entrega` (120: cuánto antes de la hora prometida se avisa al asesor).
 
 **`metas_ventas`** — `empresa_id`, `anio`, `mes`, `meta_sin_igv`. Una por mes.
 
@@ -107,7 +107,8 @@ Fase en la que se crea cada tabla: **F1** base · **F2** WhatsApp · **F3** dine
 ### 3.4 Órdenes de trabajo (F1)
 
 **`ordenes_trabajo`** — una por visita.
-- `numero` (correlativo por taller: OT-000123), `vehiculo_id`, `cliente_id`, `cita_id` (si vino por cita), `kilometraje_ingreso`, `observaciones_ingreso`, `tecnico_id` (técnico responsable), `estado`, `estado_cambiado_en`, `ingresado_en`, `listo_en`, `entregado_en`, `es_reingreso_garantia` (sí/no), `orden_garantia_origen_id` (la orden original), `origen`.
+- `numero` (correlativo por taller: OT-000123), `vehiculo_id`, `cliente_id`, `cita_id` (si vino por cita), `kilometraje_ingreso`, `observaciones_ingreso`, `tecnico_id` (técnico responsable), `estado`, `estado_cambiado_en`, `ingresado_en`, `listo_en`, `entregado_en`, `es_reingreso_garantia` (sí/no), `orden_garantia_origen_id` (la orden original), `origen`, `entrega_prometida` (día y hora que se le prometió al cliente; vacío = por definir), `entrega_reprogramada` (cuántas veces se cambió; la lleva la base).
+- Cambiar `entrega_prometida` deja una nota en `orden_avances` con la hora nueva y la de antes. Solo la cambian gerencia, administración y asesor (el técnico la ve, no la toca).
 - Estados: `en_taller` → `en_proceso` → `esperando_repuesto` → `listo` → `entregado`. Se puede volver atrás (por ejemplo de `listo` a `en_proceso`), y queda registrado.
 - **No tiene precios.** El dinero vive en otras tablas; así el técnico puede ver la orden completa sin ver montos.
 
@@ -203,7 +204,7 @@ Fase en la que se crea cada tabla: **F1** base · **F2** WhatsApp · **F3** dine
 
 **`preferencias_whatsapp`** — en qué taller registra por WhatsApp quien pertenece a varios.
 
-**`config_avisos`** — canal de cada tipo de aviso por taller: `push`, `whatsapp`, `ambos` o `apagado` (al cliente: `whatsapp` o `apagado`).
+**`config_avisos`** — canal de cada tipo de aviso por taller: `push`, `whatsapp`, `ambos` o `apagado` (al cliente: `whatsapp` o `apagado`). Al personal: resúmenes, citas, `entrega_por_vencer` (al asesor, antes de la hora prometida si el carro no está listo) y `entrega_atrasada` (al asesor y a gerencia, si pasó la hora).
 
 **`avisos`** — cada aviso armado: `tipo`, `destino` (`personal` o `cliente`), `perfil_id` o `cliente_id`, `celular`, `canal`, `titulo`, `texto`, `plantilla` y `variables` (para Meta), `botones`, `clave_unica` (evita repetidos), `programado_para`, `estado` (`pendiente`, `enviado`, `fallido`, `omitido`), `intentos`.
 

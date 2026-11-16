@@ -60,11 +60,12 @@ export function ElegirEntrega({
         ) : null}
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <Campo etiqueta="Día" error={error}>
+        <Campo etiqueta="Día">
           {(p) => (
             <Entrada
               {...p}
               type="date"
+              aria-invalid={error ? true : undefined}
               min={diaEnLima(momento)}
               value={valor.dia}
               onChange={(e) => onChange({ ...valor, dia: e.target.value, porDefinir: false })}
@@ -86,19 +87,26 @@ export function ElegirEntrega({
           )}
         </Campo>
       </div>
-      <p className="text-sm text-tinta-2" aria-live="polite">
-        {valor.porDefinir
-          ? "Queda por definir. Ponla en la orden apenas la sepas: así el sistema puede avisarte a tiempo."
-          : elegido && pasada
-            ? "Esa hora ya pasó. Elige una hora que todavía no llegue."
-            : elegido
-              ? (
-                  <>
-                    Le prometes el carro para <strong className="font-semibold text-tinta">{cuandoEntrega(elegido, momento)}</strong>. Si se acerca la hora y no está listo, te avisamos.
-                  </>
-                )
-              : "Elige un atajo o pon el día y la hora."}
-      </p>
+      {error ? (
+        <p role="alert" className="text-sm text-negativo">
+          {error}
+        </p>
+      ) : (
+        <p className="text-sm text-tinta-2" aria-live="polite">
+          {valor.porDefinir
+            ? "Queda por definir. Ponla en la orden apenas la sepas: así el sistema puede avisarte a tiempo."
+            : elegido && pasada
+              ? "Esa hora ya pasó. Elige una hora que todavía no llegue."
+              : elegido
+                ? (
+                    <>
+                      Le prometes el carro para <strong className="font-semibold text-tinta">{cuandoEntrega(elegido, momento)}</strong>
+                      {cuandoEntrega(elegido, momento).endsWith(".") ? "" : "."} Si se acerca la hora y no está listo, te avisamos.
+                    </>
+                  )
+                : "Elige un atajo o pon el día y la hora."}
+        </p>
+      )}
     </div>
   );
 }

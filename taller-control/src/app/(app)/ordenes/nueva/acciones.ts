@@ -132,6 +132,10 @@ export async function registrarIngreso(datos: unknown): Promise<ResultadoIngreso
   if (!r.success) {
     const errores: Record<string, string> = {};
     for (const i of r.error.issues) errores[i.path.join(".")] ??= i.message;
+    // La hora de entrega se revisa igual, para mostrar todos los errores de una vez.
+    const e = esquemaIngreso.shape.entrega.safeParse((datos as { entrega?: unknown } | null)?.entrega);
+    const entrega = e.success ? validarEntrega(e.data, new Date()) : null;
+    if (entrega && "error" in entrega) errores.entrega = entrega.error;
     return { errores };
   }
   const d = r.data;

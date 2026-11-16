@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { calcularAlertas, type OrdenParaAlertas } from "@/lib/alertas";
 import { entregaAtrasada, entregaPorVencer } from "@/lib/avisos/textos";
 import { fechaHoraDesdeTexto, interpretarSinIa } from "@/lib/ia/sin-ia";
-import { atajosEntrega, colorSituacion, cuandoEntrega, duracion, instanteLima, partesLima, situacionEntrega, textoSituacion } from "@/lib/taller/entrega";
+import { atajosEntrega, colorSituacion, cuandoEntrega, duracion, instanteLima, partesLima, situacionEntrega, textoSituacion, validarEntrega } from "@/lib/taller/entrega";
 
 // Lunes 16 de noviembre de 2026, 3:00 p. m. en Lima
 const ahora = new Date("2026-11-16T15:00:00-05:00");
@@ -40,6 +41,13 @@ describe("cómo se dice la hora", () => {
     expect(cuandoEntrega(new Date("2026-11-16T18:00:00-05:00"), ahora)).toBe("hoy 6:00 p. m.");
     expect(cuandoEntrega(new Date("2026-11-17T10:30:00-05:00"), ahora)).toBe("mañana 10:30 a. m.");
     expect(cuandoEntrega(new Date("2026-11-19T09:00:00-05:00"), ahora)).toMatch(/^jue 19\/11 9:00 a\. m\.$/);
+    expect(cuandoEntrega(new Date("2026-11-17T12:00:00-05:00"), ahora)).toBe("mañana 12:00 m.");
+  });
+  it("valida lo que llega de la pantalla", () => {
+    expect(validarEntrega({ dia: "", hora: "", porDefinir: true }, ahora)).toEqual({ instante: null });
+    expect(validarEntrega({ dia: "", hora: "", porDefinir: false }, ahora)).toHaveProperty("error");
+    expect(validarEntrega({ dia: "2026-11-16", hora: "10:00", porDefinir: false }, ahora)).toEqual({ error: "Esa hora ya pasó. Elige una hora que todavía no llegue." });
+    expect(validarEntrega({ dia: "2026-11-16", hora: "18:00", porDefinir: false }, ahora)).toEqual({ instante: new Date("2026-11-16T23:00:00.000Z") });
   });
   it("de los campos de pantalla al instante y de vuelta", () => {
     const d = instanteLima("2026-11-18", "17:30")!;
@@ -80,5 +88,24 @@ describe("WhatsApp: hora prometida al recibir el carro", () => {
     expect(interpretarSinIa("ingreso ABC123 por frenos se entrega mañana a las 10am").entrega_prometida).toBe("mañana a las 10am");
     expect(interpretarSinIa("ingreso ABC123 por frenos, recoge el jueves 5pm").entrega_prometida).toBe("el jueves 5pm");
     expect(interpretarSinIa("ingreso ABC123 por frenos").entrega_prometida).toBeNull();
+  });
+});
+
+describe("alertas de entrega", () => {
+  const base: OrdenParaAlertas = {
+    id: "o1", numero: "OT-000001", estado: "en_proceso", estadoCambiadoEn: ahora.toISOString(), fotos: 2, servicios: 1, adicionales: 0,
+    cotizacionesAdicionalesAprobadas: 0, tieneComprobante: false, detalleComprobantes: "", repuestosComprados: [], saldo: null, ventaSinIgv: null, margen: null, placa: "ABC-123",
+  };
+  const correr = (o: Partial<OrdenParaAlertas>) =>
+    calcularAlertas({ ahora, ordenes: [{ ...base, ...o }], itemsCompra: [], comprobantesSinOrden: [], horasSinCambio: 48, margenMinimoPct: 20, verDinero: false, verMargen: false });
+  it("atrasada es urgente, por vencer es atención y sin hora es para revisar", () => {
+    expect(correr({ entregaPrometida: en(-30).toISOString() })[0]).toMatchObject({ tipo: "entrega_atrasada", severidad: "urgente" });
+    expect(correr({ entregaPrometida: en(-30).toISOString() })[0].mensaje).toContain("OT-000001 (ABC-123) se prometió para hoy 2:30 p. m. y va 30 min tarde");
+    expect(correr({ entregaPrometida: en(60).toISOString() })[0]).toMatchObject({ tipo: "entrega_por_vencer", severidad: "atencion" });
+    expect(correr({ entregaPrometida: null })[0]).toMatchObject({ tipo: "entrega_sin_hora", severidad: "info" });
+    expect(correr({ entregaPrometida: en(600).toISOString() })).toHaveLength(0);
+  });
+  it("un carro listo no tiene alerta de entrega", () => {
+    expect(correr({ estado: "listo", entregaPrometida: en(-30).toISOString() })).toHaveLength(0);
   });
 });

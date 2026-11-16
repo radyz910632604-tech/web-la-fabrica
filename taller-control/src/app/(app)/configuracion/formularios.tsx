@@ -85,6 +85,7 @@ type ValoresReglas = {
   dias_garantia_defecto: number;
   dias_cliente_inactivo: number;
   horas_orden_sin_cambio: number;
+  minutos_aviso_entrega: number;
   margen_minimo_pct: number;
   igv_pct: number;
   hora_resumen_mediodia: string;
@@ -114,6 +115,7 @@ export function FormReglas({ valores }: { valores: ValoresReglas }) {
         <Numero nombre="dias_garantia_defecto" etiqueta="Plazo de garantía" unidad="días" valor={valores.dias_garantia_defecto} error={e.dias_garantia_defecto} />
         <Numero nombre="horas_orden_sin_cambio" etiqueta="Avisar si una orden no avanza en" unidad="horas" valor={valores.horas_orden_sin_cambio} error={e.horas_orden_sin_cambio} />
         <Numero nombre="dias_cliente_inactivo" etiqueta="Cliente inactivo después de" unidad="días" valor={valores.dias_cliente_inactivo} error={e.dias_cliente_inactivo} />
+        <Numero nombre="minutos_aviso_entrega" etiqueta="Avisar antes de la hora prometida" unidad="minutos" valor={valores.minutos_aviso_entrega} error={e.minutos_aviso_entrega} paso={15} />
         <Numero nombre="margen_minimo_pct" etiqueta="Margen mínimo por orden" unidad="%" valor={valores.margen_minimo_pct} error={e.margen_minimo_pct} paso={0.5} />
         <Numero nombre="igv_pct" etiqueta="IGV" unidad="%" valor={valores.igv_pct} error={e.igv_pct} paso={0.01} />
         <Campo etiqueta="Resumen del mediodía" error={e.hora_resumen_mediodia}>

@@ -4,6 +4,8 @@ export const TIPOS_AVISO = [
   { tipo: "resumen_cierre", nombre: "Resumen del cierre", detalle: "Al final del día, según su rol.", destino: "personal", defecto: "push" },
   { tipo: "citas_del_dia", nombre: "Citas del día", detalle: "Cada mañana, para confirmación.", destino: "personal", defecto: "push" },
   { tipo: "cita_no_llego", nombre: "Cita que no llegó", detalle: "Al vendedor que la agendó.", destino: "personal", defecto: "push" },
+  { tipo: "entrega_por_vencer", nombre: "Entrega por vencer", detalle: "Al asesor, antes de la hora prometida si el carro no está listo.", destino: "personal", defecto: "push" },
+  { tipo: "entrega_atrasada", nombre: "Entrega atrasada", detalle: "Al asesor y a gerencia, si pasó la hora prometida.", destino: "personal", defecto: "push" },
   { tipo: "carro_listo", nombre: "Carro listo", detalle: "Al cliente, si aceptó mensajes.", destino: "cliente", defecto: "whatsapp" },
   { tipo: "cotizacion", nombre: "Cotización", detalle: "Al cliente, con botones para aprobar.", destino: "cliente", defecto: "whatsapp" },
   { tipo: "encuesta", nombre: "Encuesta de satisfacción", detalle: "Al cliente, 3 horas después de entregar.", destino: "cliente", defecto: "whatsapp" },

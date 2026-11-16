@@ -51,13 +51,14 @@ export default async function Configuracion() {
         <FormTaller valores={taller} />
       </Seccion>
 
-      <Seccion titulo="Reglas del taller" descripcion="Cuándo una cita cuenta como &quot;no llegó&quot;, cuánto dura la garantía y a qué hora salen los resúmenes.">
+      <Seccion titulo="Reglas del taller" descripcion="Cuándo una cita cuenta como &quot;no llegó&quot;, cuánto antes se avisa de una entrega, cuánto dura la garantía y a qué hora salen los resúmenes.">
         <FormReglas
           valores={{
             tolerancia_cita_minutos: config.tolerancia_cita_minutos,
             dias_garantia_defecto: config.dias_garantia_defecto,
             dias_cliente_inactivo: config.dias_cliente_inactivo,
             horas_orden_sin_cambio: config.horas_orden_sin_cambio,
+            minutos_aviso_entrega: config.minutos_aviso_entrega,
             margen_minimo_pct: Number(config.margen_minimo_pct),
             igv_pct: Math.round(Number(config.tasa_igv) * 10000) / 100,
             hora_resumen_mediodia: String(config.hora_resumen_mediodia).slice(0, 5),

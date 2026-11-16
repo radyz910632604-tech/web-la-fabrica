@@ -159,7 +159,7 @@ export function AgregarServicio({ ordenId, sugerencias }: { ordenId: string; sug
           <Plus />
         </Boton>
       </div>
-      <p className="mt-2 text-[13px] text-tinta-3">La aprobación del cliente para trabajos adicionales llega en la Fase 4.</p>
+      <p className="mt-2 text-[13px] text-tinta-3">Para cobrarlo, arma una cotización adicional en Dinero y envíasela al cliente para que la apruebe.</p>
       <Mensaje r={r} />
     </form>
   );
@@ -252,7 +252,15 @@ export function CambiarEntrega({ ordenId, actual, ahora, cliente }: { ordenId: s
             });
           }}
         >
-          <ElegirEntrega valor={valor} onChange={setValor} ahora={ahora} error={r.error} />
+          <ElegirEntrega
+            valor={valor}
+            onChange={(v) => {
+              setValor(v);
+              setR({});
+            }}
+            ahora={ahora}
+            error={r.error}
+          />
           <Boton type="submit" disabled={pendiente} className="mt-5 h-12 w-full">
             {pendiente ? "Guardando…" : "Guardar hora"}
           </Boton>

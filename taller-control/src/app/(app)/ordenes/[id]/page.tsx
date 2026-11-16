@@ -87,6 +87,38 @@ export default async function Orden({ params, searchParams }: { params: Promise<
     v?.transmision ? `Caja ${v.transmision === "cvt" ? "CVT" : TRANSMISIONES[v.transmision as keyof typeof TRANSMISIONES].toLowerCase()}` : null,
   ].filter(Boolean);
 
+  const tarjetaEntrega = (id: string) =>
+    estado !== "entregado" || prometida ? (
+      <Tarjeta aria-labelledby={id}>
+        <CabeceraTarjeta id={id} titulo="Entrega al cliente" detalle={prometida ? "Lo que se le prometió" : undefined} />
+        {prometida ? (
+          <>
+            <p className="text-[26px] leading-tight font-semibold tracking-[-0.02em] first-letter:uppercase">{cuandoEntrega(prometida, ahora)}</p>
+            <Estado color={colorSituacion(situacion)} texto={textoSituacion(situacion)} className="mt-2 text-[15px]" />
+            {situacion.tipo === "atrasada" ? (
+              <p role="alert" className="mt-3 rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">
+                Ya pasó la hora. Llama al cliente{c ? ` (${formatearCelular(c.celular)})` : ""}, dale la nueva hora y cámbiala aquí.
+              </p>
+            ) : situacion.tipo === "por_vencer" ? (
+              <p className="mt-3 rounded-2xl bg-aviso-fondo px-4 py-3 text-sm text-aviso">
+                Se acerca la hora y el carro no está listo. Si no llega, avísale al cliente antes.
+              </p>
+            ) : null}
+            {o.entrega_reprogramada > 0 ? (
+              <p className="mt-3 text-sm text-tinta-2">
+                Se cambió {o.entrega_reprogramada === 1 ? "una vez" : `${o.entrega_reprogramada} veces`}. Los cambios quedan en Avances.
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <p className="text-[15px] text-tinta-2">Todavía no hay hora prometida. Ponla apenas la sepas: así el sistema te avisa antes de que venza.</p>
+        )}
+        {gestiona && (estado === "en_taller" || estado === "en_proceso" || estado === "esperando_repuesto") ? (
+          <CambiarEntrega ordenId={o.id} actual={prometida ? partesLima(prometida) : null} ahora={ahora.toISOString()} cliente={c?.nombre.split(" ")[0] ?? "el cliente"} />
+        ) : null}
+      </Tarjeta>
+    ) : null;
+
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <header className="flex flex-col gap-3">
@@ -121,6 +153,8 @@ export default async function Orden({ params, searchParams }: { params: Promise<
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-12">
         <div className="flex min-w-0 flex-col gap-4 xl:col-span-7">
+          {/* En celular la hora prometida va arriba; en computadora, en la columna derecha. */}
+          <div className="contents xl:hidden">{tarjetaEntrega("t-entrega-movil")}</div>
           {puedeTrabajar ? (
             <Tarjeta aria-labelledby="t-estado">
               <CabeceraTarjeta id="t-estado" titulo="Cambiar estado" detalle="Un toque. Si quieres, deja una nota." />
@@ -195,36 +229,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
         </div>
 
         <div className="flex min-w-0 flex-col gap-4 xl:col-span-5">
-          {estado !== "entregado" || prometida ? (
-            <Tarjeta aria-labelledby="t-entrega">
-              <CabeceraTarjeta id="t-entrega" titulo="Entrega al cliente" detalle={prometida ? "Lo que se le prometió" : undefined} />
-              {prometida ? (
-                <>
-                  <p className="text-[26px] leading-tight font-semibold tracking-[-0.02em] first-letter:uppercase">{cuandoEntrega(prometida, ahora)}</p>
-                  <Estado color={colorSituacion(situacion)} texto={textoSituacion(situacion)} className="mt-2 text-[15px]" />
-                  {situacion.tipo === "atrasada" ? (
-                    <p role="alert" className="mt-3 rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">
-                      Ya pasó la hora. Llama al cliente{c ? ` (${formatearCelular(c.celular)})` : ""}, dale la nueva hora y cámbiala aquí.
-                    </p>
-                  ) : situacion.tipo === "por_vencer" ? (
-                    <p className="mt-3 rounded-2xl bg-aviso-fondo px-4 py-3 text-sm text-aviso">
-                      Se acerca la hora y el carro no está listo. Si no llega, avísale al cliente antes.
-                    </p>
-                  ) : null}
-                  {o.entrega_reprogramada > 0 ? (
-                    <p className="mt-3 text-sm text-tinta-2">
-                      Se cambió {o.entrega_reprogramada === 1 ? "una vez" : `${o.entrega_reprogramada} veces`}. Los cambios quedan en Avances.
-                    </p>
-                  ) : null}
-                </>
-              ) : (
-                <p className="text-[15px] text-tinta-2">Todavía no hay hora prometida. Ponla apenas la sepas: así el sistema te avisa antes de que venza.</p>
-              )}
-              {gestiona && (estado === "en_taller" || estado === "en_proceso" || estado === "esperando_repuesto") ? (
-                <CambiarEntrega ordenId={o.id} actual={prometida ? partesLima(prometida) : null} ahora={ahora.toISOString()} cliente={c?.nombre.split(" ")[0] ?? "el cliente"} />
-              ) : null}
-            </Tarjeta>
-          ) : null}
+          <div className="hidden xl:contents">{tarjetaEntrega("t-entrega")}</div>
 
           {c ? (
             <Tarjeta aria-labelledby="t-cliente">

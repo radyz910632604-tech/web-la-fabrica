@@ -45,8 +45,10 @@ export function duracion(minutos: number): string {
   return `${Math.round(m / 1440)} días`;
 }
 
-/** "6:00 p. m." en hora de Lima. */
+/** "6:00 p. m." en hora de Lima; el mediodía exacto, "12:00 m." como se dice en Perú. */
 export function horaCorta(fecha: Date): string {
+  const hhmm = new Intl.DateTimeFormat("en-GB", { timeZone: ZONA, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(fecha);
+  if (hhmm === "12:00") return "12:00 m.";
   return new Intl.DateTimeFormat("es-PE", { timeZone: ZONA, hour: "numeric", minute: "2-digit", hour12: true })
     .format(fecha)
     .replace(/\s+/g, " ")

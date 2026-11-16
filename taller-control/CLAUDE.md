@@ -10,6 +10,8 @@ Sistema interno de gestión para talleres automotrices en Lima. **No tiene relac
 - IA: `src/lib/ia/` (proveedor por `IA_PROVEEDOR`: claude, openai o prueba; `sin-ia.ts` entiende mensajes simples sin IA). Prompts en `n8n/prompts/`. Todo lo leído por IA queda `por_confirmar` (lo fuerza la base).
 - WhatsApp: `src/lib/whatsapp/` y `src/app/api/interna/` (clave `CLAVE_API_INTERNA`). Escribe con la sesión de quien escribe (`sesion.ts`); la llave de servicio solo se usa para identificar el celular, la auditoría de mensajes, el ciclo de avisos y las respuestas de clientes (encuesta y cotización), que no tienen sesión.
 - Avisos: `src/lib/avisos/` (ciclo cada 15 min desde n8n, push con `web-push`). Flujos de n8n en `n8n/`.
+- Hora de entrega prometida: `ordenes_trabajo.entrega_prometida` (migración 0011). Reglas puras en `src/lib/taller/entrega.ts`; se elige con `src/components/taller/elegir-entrega.tsx`; el ciclo de avisos alerta al asesor antes de vencer y al atrasarse.
+- Carga instantánea: `src/app/(app)/loading.tsx` (sin él, Next.js no adelanta nada de las páginas dinámicas).
 - PDF: `src/lib/pdf/` (pdf-lib, Helvetica) y la ruta `src/app/pdf/[tipo]/[id]/route.ts`; leen con la sesión de quien pide.
 - Dinero: cálculos puros en `src/lib/dinero.ts` y `src/lib/alertas.ts` (con pruebas); consultas en `src/lib/taller/*-consultas.ts` y `reportes.ts`. Nada con dinero se borra: se anula con motivo (disparador `privado.proteger_dinero`).
 - Plan y modelo de datos: `docs/fase-0-plan.md`, `docs/modelo-de-datos.md`. Contexto de producto: `PRODUCT.md`.

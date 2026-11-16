@@ -175,10 +175,10 @@ if (!yaHay) {
     return { clienteId: c.id, vehiculoId: v.id };
   }
 
-  async function orden({ clienteId, vehiculoId, servicio, estado, tecnico, ingreso, cambio, km }) {
+  async function orden({ clienteId, vehiculoId, servicio, estado, tecnico, ingreso, cambio, km, entrega = null }) {
     const { data: o, error } = await db.from("ordenes_trabajo").insert({
       empresa_id: norte, cliente_id: clienteId, vehiculo_id: vehiculoId, estado, tecnico_id: tecnico,
-      ingresado_en: ingreso, kilometraje_ingreso: km,
+      ingresado_en: ingreso, kilometraje_ingreso: km, entrega_prometida: entrega,
     }).select("id").single();
     await falla("orden", error);
     // Fechas reales del pasado (el disparador pone "ahora" al crear).
@@ -194,7 +194,12 @@ if (!yaHay) {
 
   for (const [i, [placa, nombre, cel, marca, modelo, anio, comb, caja, servicio, estado, tecnico, min]] of ACTIVAS.entries()) {
     const ids2 = await clienteYCarro(placa, nombre, cel, marca, modelo, anio, comb, caja);
-    const id = await orden({ ...ids2, servicio, estado, tecnico, ingreso: hace(min), cambio: hace(Math.max(5, Math.round(min / 3) - i)), km: 40000 + i * 7311 });
+    // Hora prometida: una atrasada, una por vencer, otras para más tarde o mañana, alguna por definir.
+    const PROMESAS = [-50, 70, 240, 1500, null, 360, -15, 2900];
+    const abierta = ["en_taller", "en_proceso", "esperando_repuesto"].includes(estado);
+    const promesa = abierta ? PROMESAS[i % PROMESAS.length] : 6 * 60 - min; // las listas: 6 horas después de entrar
+    const entrega = promesa === null ? null : hace(-promesa);
+    const id = await orden({ ...ids2, servicio, estado, tecnico, ingreso: hace(min), cambio: hace(Math.max(5, Math.round(min / 3) - i)), km: 40000 + i * 7311, entrega });
     if (estado === "esperando_repuesto") {
       await db.from("orden_avances").insert({ empresa_id: norte, orden_id: id, texto: "Se desarmó y se pidió el repuesto al proveedor. Llega mañana.", autor_id: tecnico, creado_en: hace(Math.round(min / 2)) });
     }

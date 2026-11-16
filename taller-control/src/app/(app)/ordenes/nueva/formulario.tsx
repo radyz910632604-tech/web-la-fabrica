@@ -397,7 +397,20 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
         {/* 5. Entrega prometida */}
         <Tarjeta aria-labelledby="t-entrega">
           <CabeceraTarjeta id="t-entrega" titulo="¿Cuándo se lo entregas?" detalle="El día y la hora que le prometes al cliente" />
-          <ElegirEntrega valor={entrega} onChange={setEntrega} ahora={ahora} error={errores.entrega} />
+          <ElegirEntrega
+            valor={entrega}
+            onChange={(v) => {
+              setEntrega(v);
+              if (errores.entrega)
+                setErrores((previos) => {
+                  const resto = { ...previos };
+                  delete resto.entrega;
+                  return resto;
+                });
+            }}
+            ahora={ahora}
+            error={errores.entrega}
+          />
         </Tarjeta>
 
         {/* 6. Observaciones y técnico */}
@@ -474,7 +487,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tinta-2">
             Vas a registrar <Placa placa={resultadoPlaca.placa} /> con {elegidos.length} {elegidos.length === 1 ? "servicio" : "servicios"} y {fotos.length}{" "}
             {fotos.length === 1 ? "foto" : "fotos"}
-            {instanteLima(entrega.dia, entrega.hora) ? `, para entregar ${cuandoEntrega(instanteLima(entrega.dia, entrega.hora)!, new Date(ahora))}` : ""}.
+            {instanteLima(entrega.dia, entrega.hora) ? `, para entregar ${cuandoEntrega(instanteLima(entrega.dia, entrega.hora)!, new Date(ahora)).replace(/\.$/, "")}` : ""}.
           </p>
         ) : null}
         {error ? (

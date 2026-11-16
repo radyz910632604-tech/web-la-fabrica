@@ -44,7 +44,7 @@ export function ListaOrdenes({
               <th scope="col" className="w-[118px] pl-4 font-medium">Placa</th>
               <th scope="col" className="px-3 font-medium">{verCliente ? "Cliente y servicios" : "Carro y servicios"}</th>
               {verTecnico ? <th scope="col" className="w-[150px] px-3 font-medium">Técnico</th> : null}
-              <th scope="col" className="w-[160px] px-3 font-medium">Estado</th>
+              <th scope="col" className="w-[190px] px-3 font-medium">Estado</th>
               <th scope="col" className="w-[110px] px-3 text-right font-medium">{fecha === "ingreso" ? "Ingreso" : "Desde"}</th>
               <th scope="col" className="w-10 pr-3">
                 <span className="sr-only">Abrir</span>
@@ -117,7 +117,7 @@ function Entrega({ o, ahora, minutosAviso }: { o: FilaOrden; ahora: Date; minuto
   const prometida = new Date(o.entregaPrometida);
   const s = situacionEntrega({ entregaPrometida: prometida, estado: o.estado }, ahora, minutosAviso);
   return (
-    <p className={cn("text-[13px] whitespace-nowrap text-tinta-3", TONO[s.tipo])}>
+    <p className={cn("text-[13px] text-tinta-3", TONO[s.tipo])}>
       {s.tipo === "atrasada" ? "Atrasada · " : "Entrega "}
       {cuandoEntrega(prometida, ahora)}
     </p>
