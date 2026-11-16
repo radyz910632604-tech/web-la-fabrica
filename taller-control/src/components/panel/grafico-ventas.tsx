@@ -11,10 +11,12 @@ type Mes = { etiqueta: string; ventas: number; costos: number; utilidad: number;
  * El mes en curso va más tenue porque todavía no termina.
  */
 export function GraficoVentas({ meses }: { meses: Mes[] }) {
+  // Sin ventas todavía, el eje va de 0 a 4k en vez de mostrar decimales cortados.
+  const sinDatos = meses.every((m) => !m.ventas && !m.costos);
   return (
     <div className="h-[216px] w-full" role="img" aria-label={descripcion(meses)}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={meses} margin={{ top: 4, right: 0, bottom: 0, left: -8 }} barCategoryGap="26%">
+        <BarChart data={meses} margin={{ top: 12, right: 0, bottom: 0, left: -8 }} barCategoryGap="26%">
           <defs>
             <pattern id="trama-utilidad" patternUnits="userSpaceOnUse" width="7" height="7" patternTransform="rotate(45)">
               <rect width="7" height="7" fill="var(--acento-suave)" />
@@ -34,9 +36,10 @@ export function GraficoVentas({ meses }: { meses: Mes[] }) {
             axisLine={false}
             tickLine={false}
             tick={{ fill: "var(--tinta-3)", fontSize: 12 }}
-            tickFormatter={(v: number) => (v === 0 ? "0" : `${v / 1000}k`)}
+            tickFormatter={(v: number) => (Math.abs(v) < 1000 ? String(Math.round(v)) : `${Math.round(v / 1000)}k`)}
+            domain={sinDatos ? [0, 4000] : undefined}
             tickCount={5}
-            width={40}
+            width={44}
             allowDecimals={false}
           />
           <Tooltip cursor={{ fill: "var(--interna)", radius: 8 }} content={<Globo />} />
