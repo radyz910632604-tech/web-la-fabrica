@@ -184,7 +184,7 @@ export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInic
                 Los precios incluyen IGV
               </label>
             ) : (
-              <p className="text-sm text-tinta-3">Sin crédito de IGV: el costo es el total.</p>
+              <p className="text-sm text-tinta-3">Sin crédito de IGV: el precio es el costo.</p>
             )}
           </div>
           {e.lineas ? <p className="text-sm text-negativo">{e.lineas}</p> : null}
@@ -195,7 +195,7 @@ export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInic
                   {(p) => <Entrada {...p} value={l.descripcion} onChange={(ev) => cambiarLinea(l.clave, "descripcion", ev.target.value)} placeholder="Ejemplo: pastillas de freno delanteras" />}
                 </Campo>
                 <Campo etiqueta="Cant.">{(p) => <Entrada {...p} type="number" step="0.01" min="0.01" inputMode="decimal" value={l.cantidad} onChange={(ev) => cambiarLinea(l.clave, "cantidad", ev.target.value)} className="num px-3" />}</Campo>
-                <Campo etiqueta={`Precio c/u${tasa > 0 ? (incluyeIgv ? " con IGV" : " sin IGV") : ""}`} error={e[`lineas.${i}.precio`]}>
+                <Campo etiqueta="Precio c/u" error={e[`lineas.${i}.precio`]}>
                   {(p) => <Entrada {...p} type="number" step="0.01" min="0" inputMode="decimal" value={l.precio} onChange={(ev) => cambiarLinea(l.clave, "precio", ev.target.value)} className="num px-3" />}
                 </Campo>
                 <button

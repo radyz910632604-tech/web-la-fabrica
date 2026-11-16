@@ -46,3 +46,6 @@ supabase/.temp
 supabase/.branches
 .taste-skill
 .impeccable
+
+# Respaldos de la base (contienen datos de clientes)
+respaldos/

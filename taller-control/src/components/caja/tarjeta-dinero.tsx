@@ -54,15 +54,15 @@ export function TarjetaDinero({
   return (
     <Tarjeta aria-labelledby="t-dinero">
       <CabeceraTarjeta id="t-dinero" titulo="Dinero" detalle="Cotización, comprobante y pagos" />
-      <dl className="num grid grid-cols-3 gap-2">
+      <dl className="num grid grid-cols-1 gap-2 sm:grid-cols-3">
         {[
           ["A cobrar", d.aCobrar, ""],
           ["Pagado", d.pagado, ""],
           [d.saldo < -0.009 ? "A favor" : "Saldo", Math.abs(d.saldo), d.saldo > 0.009 ? (entregada ? "text-negativo" : "") : "text-positivo"],
         ].map(([n, v, clase]) => (
-          <div key={String(n)} className="min-w-0 rounded-2xl bg-interna px-3 py-3">
+          <div key={String(n)} className="flex min-w-0 items-baseline justify-between gap-3 rounded-2xl bg-interna px-4 py-2.5 sm:block sm:px-3 sm:py-3">
             <dt className="text-[13px] text-tinta-2">{n}</dt>
-            <dd className={cn("mt-0.5 truncate text-[17px] font-semibold tracking-[-0.01em]", String(clase))}>{formatearSoles(Number(v))}</dd>
+            <dd className={cn("text-[17px] font-semibold tracking-[-0.01em] sm:mt-0.5 sm:truncate", String(clase))}>{formatearSoles(Number(v))}</dd>
           </div>
         ))}
       </dl>

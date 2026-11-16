@@ -92,16 +92,17 @@ El Taller Norte trae 14 carros en el taller, 90 entregas recientes, citas de hoy
 | `npm run build` | Compila la versión de producción |
 | `npm run db:iniciar` / `db:detener` | Enciende o apaga la base local |
 | `npm run db:reiniciar` | Borra la base local y la vuelve a crear desde las migraciones |
-| `npm run datos:ejemplo` | Carga los datos ficticios |
+| `npm run datos:ejemplo` | Carga los datos ficticios (incluye dinero de ejemplo) |
+| `npm run respaldo` | Respaldo de la base local; con `-- --nube`, de la base en la nube ([guía](docs/respaldo.md)) |
 
 ## Carpetas
 
 ```
-src/app/            pantallas (ingresar, panel, órdenes, clientes, citas, personal, configuración…)
+src/app/            pantallas (ingresar, panel, órdenes, clientes, citas, caja, compras, reportes, configuración…)
 src/components/     piezas visuales (ui/ base, panel/, armazon/ = barras)
 src/lib/            reglas: roles, navegación, formatos, celulares, placas, sesión
 supabase/           migraciones (tablas y permisos), configuración y pruebas de la base
-scripts/            datos de ejemplo
+scripts/            datos de ejemplo y respaldo
 tests/              pruebas automáticas
 docs/               plan, modelo de datos, entregas y despliegue
 ```

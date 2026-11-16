@@ -5,7 +5,8 @@ Sistema interno de gestión para talleres automotrices en Lima. **No tiene relac
 @AGENTS.md
 
 - Fuente de verdad: `ESPECIFICACION.md`. Léela completa antes de trabajar.
-- Fase actual: **Fase 1 completa** (`docs/fase-1a-entrega.md`, `docs/fase-1b-entrega.md`). Siguiente: publicar en EasyPanel y Fase 2 (WhatsApp con n8n). El usuario autorizó avanzar sin esperar aprobación entre entregas («avanza solo»).
+- Fase actual: **Fases 1, 3, 4 y 5 completas** (`docs/fase-1a-entrega.md`, `docs/fase-1b-entrega.md`, `docs/fase-3-4-5-entrega.md`). Pendiente: Fase 2 (WhatsApp con n8n), lectura con IA, publicar en EasyPanel y Fase 6 (inventario). El usuario autorizó avanzar sin esperar aprobación entre entregas («avanza solo»).
+- Dinero: cálculos puros en `src/lib/dinero.ts` y `src/lib/alertas.ts` (con pruebas); consultas en `src/lib/taller/*-consultas.ts` y `reportes.ts`. Nada con dinero se borra: se anula con motivo (disparador `privado.proteger_dinero`).
 - Plan y modelo de datos: `docs/fase-0-plan.md`, `docs/modelo-de-datos.md`. Contexto de producto: `PRODUCT.md`.
 - Pide aprobación antes de cambiar de fase salvo que el usuario haya dicho que avances solo.
 - Habla en español sencillo: el usuario no es programador.
@@ -24,4 +25,4 @@ Sistema interno de gestión para talleres automotrices en Lima. **No tiene relac
 
 ## Revisar antes de entregar
 
-`npm test`, `npm run test:db`, `npm run lint`, `npm run build`, y capturas con Playwright a 390 y 1440 px (claro y oscuro) para cada rol afectado.
+`npm test`, `npm run test:db`, `npm run lint`, `npm run build`, `npm run respaldo` (si tocaste la base), y capturas con Playwright a 390 y 1440 px (claro y oscuro) para cada rol afectado.
