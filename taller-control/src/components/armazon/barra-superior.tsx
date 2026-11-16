@@ -143,11 +143,13 @@ function Buscar() {
           </Boton>
         </DisparadorVentana>
       </Consejo>
-      <ContenidoVentana titulo="Buscar" descripcion="Por placa, nombre del cliente o celular.">
-        <Entrada type="search" placeholder="ABC-123, Juan Pérez o 987 654 321" aria-label="Qué buscar" disabled />
-        <p className="mt-3 text-sm text-tinta-2">
-          La búsqueda se activa en la Entrega 1B, cuando el sistema ya tenga clientes, carros y órdenes.
-        </p>
+      <ContenidoVentana titulo="Buscar" descripcion="Placa, nombre del cliente, celular o número de orden.">
+        <form action="/buscar" className="flex gap-2">
+          <Entrada type="search" name="q" placeholder="ABC-123, Juan Pérez o 987 654 321" aria-label="Qué buscar" autoFocus />
+          <Boton type="submit" tamano="icono" aria-label="Buscar">
+            <Search />
+          </Boton>
+        </form>
       </ContenidoVentana>
     </Ventana>
   );
@@ -205,7 +207,7 @@ function MenuUsuario({ nombre, rol }: { nombre: string; rol: string }) {
           {oscuro ? "Modo claro" : "Modo oscuro"}
         </OpcionMenu>
         <OpcionMenu asChild>
-          <Link href="/pronto/ayuda">
+          <Link href="/ayuda">
             <CircleQuestionMark />
             Ayuda
           </Link>

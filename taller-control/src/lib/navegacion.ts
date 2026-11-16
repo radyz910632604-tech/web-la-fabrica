@@ -40,21 +40,21 @@ const pronto = (clave: string) => `/pronto/${clave}`;
 
 const SECCIONES: (Destino & { roles: readonly Rol[] })[] = [
   { clave: "panel", nombre: "Panel", corto: "Panel", href: "/", icono: "panel", roles: ["gerencia", "administrador", "asesor", "tecnico", "almacen", "vendedor_redes", "confirmador"] },
-  { clave: "ordenes", nombre: "Órdenes", corto: "Órdenes", href: pronto("ordenes"), icono: "ordenes", llega: "Entrega 1B", roles: ["gerencia", "administrador", "asesor", "almacen"] },
-  { clave: "mis-trabajos", nombre: "Mis trabajos", corto: "Trabajos", href: pronto("mis-trabajos"), icono: "ordenes", llega: "Entrega 1B", roles: ["tecnico"] },
-  { clave: "citas", nombre: "Citas", corto: "Citas", href: pronto("citas"), icono: "citas", llega: "Entrega 1B", roles: ["gerencia", "administrador", "asesor", "vendedor_redes", "confirmador"] },
-  { clave: "clientes", nombre: "Clientes", corto: "Clientes", href: pronto("clientes"), icono: "clientes", llega: "Entrega 1B", roles: ["gerencia", "administrador", "asesor", "vendedor_redes"] },
+  { clave: "ordenes", nombre: "Órdenes", corto: "Órdenes", href: "/ordenes", icono: "ordenes", roles: ["gerencia", "administrador", "asesor", "almacen"] },
+  { clave: "mis-trabajos", nombre: "Mis trabajos", corto: "Trabajos", href: "/mis-trabajos", icono: "ordenes", roles: ["tecnico"] },
+  { clave: "citas", nombre: "Citas", corto: "Citas", href: "/citas", icono: "citas", roles: ["gerencia", "administrador", "asesor", "vendedor_redes", "confirmador"] },
+  { clave: "clientes", nombre: "Clientes", corto: "Clientes", href: "/clientes", icono: "clientes", roles: ["gerencia", "administrador", "asesor", "vendedor_redes"] },
   { clave: "compras", nombre: "Compras", corto: "Compras", href: pronto("compras"), icono: "compras", llega: "Fase 3", roles: ["almacen"] },
   { clave: "reportes", nombre: "Reportes", corto: "Reportes", href: pronto("reportes"), icono: "reportes", llega: "Fase 5", roles: ["gerencia"] },
 ];
 
 const ACCIONES: (Destino & { roles: readonly Rol[] })[] = [
-  { clave: "nuevo-ingreso", nombre: "Nuevo ingreso", corto: "Ingreso", href: pronto("nuevo-ingreso"), icono: "nuevo-ingreso", llega: "Entrega 1B", roles: ["gerencia", "administrador", "asesor"] },
+  { clave: "nuevo-ingreso", nombre: "Nuevo ingreso", corto: "Ingreso", href: "/ordenes/nueva", icono: "nuevo-ingreso", roles: ["gerencia", "administrador", "asesor"] },
   { clave: "registrar-pago", nombre: "Registrar pago", corto: "Pago", href: pronto("registrar-pago"), icono: "pago", llega: "Fase 4", roles: ["gerencia", "administrador", "asesor"] },
-  { clave: "agendar-cita", nombre: "Agendar cita", corto: "Cita", href: pronto("agendar-cita"), icono: "agendar", llega: "Entrega 1B", roles: ["asesor", "vendedor_redes"] },
-  { clave: "confirmar-citas", nombre: "Confirmar citas", corto: "Confirmar", href: pronto("confirmar-citas"), icono: "confirmar", llega: "Entrega 1B", roles: ["confirmador"] },
-  { clave: "reportar-avance", nombre: "Reportar avance", corto: "Avance", href: pronto("reportar-avance"), icono: "avance", llega: "Entrega 1B", roles: ["tecnico"] },
-  { clave: "subir-fotos", nombre: "Subir fotos", corto: "Fotos", href: pronto("subir-fotos"), icono: "fotos", llega: "Entrega 1B", roles: ["tecnico"] },
+  { clave: "agendar-cita", nombre: "Agendar cita", corto: "Cita", href: "/citas?agendar=1", icono: "agendar", roles: ["asesor", "vendedor_redes"] },
+  { clave: "confirmar-citas", nombre: "Confirmar citas", corto: "Confirmar", href: "/citas", icono: "confirmar", roles: ["confirmador"] },
+  { clave: "reportar-avance", nombre: "Reportar avance", corto: "Avance", href: "/mis-trabajos", icono: "avance", roles: ["tecnico"] },
+  { clave: "subir-fotos", nombre: "Subir fotos", corto: "Fotos", href: "/mis-trabajos", icono: "fotos", roles: ["tecnico"] },
   { clave: "registrar-compra", nombre: "Registrar compra", corto: "Compra", href: pronto("registrar-compra"), icono: "compras", llega: "Fase 3", roles: ["almacen"] },
   { clave: "entregar-repuesto", nombre: "Entregar repuesto", corto: "Repuesto", href: pronto("entregar-repuesto"), icono: "repuesto", llega: "Fase 3", roles: ["almacen"] },
 ];

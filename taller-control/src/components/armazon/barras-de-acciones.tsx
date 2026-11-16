@@ -38,7 +38,7 @@ export function BarraLateral({ acciones, gestion }: { acciones: Destino[]; gesti
 
       <div className={cn(pildoraVertical, "mt-auto")}>
         <Consejo texto="Ayuda">
-          <Link href="/pronto/ayuda" className={botonRiel} aria-label="Ayuda">
+          <Link href="/ayuda" className={botonRiel} aria-label="Ayuda">
             <CircleQuestionMark strokeWidth={1.75} />
           </Link>
         </Consejo>
@@ -161,7 +161,7 @@ export function BarraInferior({ acciones, gestion }: { acciones: Destino[]; gest
                 </li>
                 <li>
                   <CerrarVentana asChild>
-                    <Link href="/pronto/ayuda" className="flex min-h-12 items-center gap-3 rounded-2xl px-3 text-[15px] hover:bg-interna">
+                    <Link href="/ayuda" className="flex min-h-12 items-center gap-3 rounded-2xl px-3 text-[15px] hover:bg-interna">
                       <CircleQuestionMark className="size-5 text-tinta-2" />
                       Ayuda
                     </Link>
