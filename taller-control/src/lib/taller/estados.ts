@@ -92,3 +92,9 @@ export function siguientesEstados(actual: EstadoOrden, esTecnico: boolean): { es
   };
   return pasos[actual].filter((p) => !(esTecnico && p.estado === "entregado"));
 }
+
+/** "OT-000012 · ABC-123 · Juan Pérez" para listas de órdenes. */
+export function etiquetaOrden(o: { numero: number; placa: string; cliente?: string | null }): string {
+  const placa = /^[A-Z0-9]{3}\d{3}$/.test(o.placa) ? `${o.placa.slice(0, 3)}-${o.placa.slice(3)}` : o.placa;
+  return `${numeroOrden(o.numero)} · ${placa}${o.cliente ? ` · ${o.cliente}` : ""}`;
+}
