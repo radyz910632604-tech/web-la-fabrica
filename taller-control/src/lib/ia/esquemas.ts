@@ -48,6 +48,8 @@ export const esquemaMensaje = z.object({
   medio_pago: z.enum(["efectivo", "yape", "plin", "tarjeta", "transferencia"]).nullable(),
   tipo_pago: z.enum(["adelanto", "abono", "saldo"]).nullable(),
   fecha_hora: z.string().nullable(),
+  /** Ingreso: cuándo se le prometió el carro al cliente (AAAA-MM-DDTHH:MM de Lima, o la frase tal cual sin IA). */
+  entrega_prometida: z.string().nullable(),
   red_origen: z.enum(["facebook", "instagram", "tiktok", "whatsapp", "google", "otro"]).nullable(),
   campana: z.string().nullable(),
   items_cotizacion: z.array(z.object({ descripcion: z.string(), tipo: z.enum(["servicio", "repuesto"]), cantidad: z.number(), precio_con_igv: z.number() })),
@@ -66,6 +68,6 @@ export function mensajeVacio(intencion: Intencion = "desconocido"): MensajeInter
   return {
     intencion, placa: null, cliente_nombre: null, cliente_celular: null, cliente_documento: null, servicios: [], kilometraje: null,
     observaciones: null, texto_avance: null, nuevo_estado: null, monto: null, medio_pago: null, tipo_pago: null, fecha_hora: null,
-    red_origen: null, campana: null, items_cotizacion: [], dudas: null,
+    entrega_prometida: null, red_origen: null, campana: null, items_cotizacion: [], dudas: null,
   };
 }

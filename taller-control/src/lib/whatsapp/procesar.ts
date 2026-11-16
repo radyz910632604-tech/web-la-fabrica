@@ -6,6 +6,7 @@ import { desdeTotal, montoNeto, montosLinea, redondear, saldo as calcularSaldo, 
 import { mensajeVacio, type ComprobanteLeido, type Intencion, type MensajeInterpretado } from "@/lib/ia/esquemas";
 import { interpretarMensaje, leerComprobante, leerPlaca, transcribirAudio, type Archivo } from "@/lib/ia/proveedor";
 import { fechaHoraDesdeTexto, itemsDesdeTexto, normalizarPlaca } from "@/lib/ia/sin-ia";
+import { cuandoEntrega } from "@/lib/taller/entrega";
 import { validarPlaca } from "@/lib/placas";
 import { tieneAlguno, type Rol } from "@/lib/roles";
 import { clienteAdmin } from "@/lib/supabase/admin";
@@ -260,9 +261,25 @@ async function completar(ctx: Ctx, m: MensajeInterpretado, faltan: string[], tex
     if (campo === "monto") n.monto = ia.monto ?? (Number((/(\d+(?:[.,]\d{1,2})?)/.exec(texto)?.[1] ?? "").replace(",", ".")) || null);
     if (campo === "medio_pago") n.medio_pago = ia.medio_pago ?? (["efectivo", "yape", "plin", "tarjeta", "transferencia"].find((x) => texto.toLowerCase().includes(x)) as MensajeInterpretado["medio_pago"]) ?? null;
     if (campo === "fecha_hora") n.fecha_hora = ia.fecha_hora ?? fechaHoraDesdeTexto(texto, ctx.hoy);
+    // Al responder «mañana 10am» la IA puede verlo como fecha de cita: sirve igual.
+    if (campo === "entrega_prometida") n.entrega_prometida = ia.entrega_prometida ?? ia.fecha_hora ?? texto;
     if (campo === "items_cotizacion") n.items_cotizacion = ia.items_cotizacion.length ? ia.items_cotizacion : itemsDesdeTexto(texto);
   }
   return n;
+}
+
+/**
+ * Hora prometida de un ingreso: la fecha si se entendió y es futura, null si
+ * dijeron que aún no se sabe, o undefined si hay que preguntarla.
+ */
+function entregaPrometida(texto: string | null, hoy: string): Date | null | undefined {
+  const t = texto?.trim();
+  if (!t) return undefined;
+  if (/por definir|no (?:se|sé|sabe|sabemos)|despu[eé]s|sin hora|a[uú]n no|todav[ií]a no|diagn[oó]stico/i.test(t)) return null;
+  const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(t) ? t.slice(0, 16) : fechaHoraDesdeTexto(t, hoy);
+  const cuando = iso ? new Date(`${iso}:00-05:00`) : null;
+  if (!cuando || Number.isNaN(cuando.getTime()) || cuando.getTime() < Date.now() - 5 * 60_000) return undefined;
+  return cuando;
 }
 
 // ---------------------------------------------------------------------------
@@ -306,7 +323,15 @@ async function preparar(ctx: Ctx, intencion: Intencion, m: MensajeInterpretado, 
         }
       }
       if (!servicios.length) faltan.push("servicios");
-      return { datos: { placa: placaOk, vehiculoId, cliente, servicios, kilometraje: m.kilometraje, observaciones: m.observaciones }, faltan };
+      const entrega = entregaPrometida(m.entrega_prometida, ctx.hoy);
+      if (entrega === undefined) faltan.push("entrega_prometida");
+      return {
+        datos: {
+          placa: placaOk, vehiculoId, cliente, servicios, kilometraje: m.kilometraje, observaciones: m.observaciones,
+          entregaPrometida: entrega?.toISOString() ?? null, entregaTexto: entrega ? cuandoEntrega(entrega) : "por definir",
+        },
+        faltan,
+      };
     }
     case "avance": {
       if (!placaOk) return { datos: { archivos: previo.archivos ?? [] }, faltan: ["placa"] };
@@ -434,7 +459,10 @@ async function ejecutar(ctx: Ctx, intencion: string, d: Record<string, unknown>)
       }
       const { data: orden, error } = await db
         .from("ordenes_trabajo")
-        .insert({ empresa_id: empresa, vehiculo_id: vehiculoId, cliente_id: clienteId, kilometraje_ingreso: d.kilometraje ?? null, observaciones_ingreso: d.observaciones ?? null })
+        .insert({
+          empresa_id: empresa, vehiculo_id: vehiculoId, cliente_id: clienteId, kilometraje_ingreso: d.kilometraje ?? null, observaciones_ingreso: d.observaciones ?? null,
+          entrega_prometida: (d.entregaPrometida as string | null | undefined) ?? null,
+        })
         .select("id, numero")
         .single();
       if (error || !orden) return falla("no se pudo abrir la orden (revisa tu rol).");
@@ -446,7 +474,10 @@ async function ejecutar(ctx: Ctx, intencion: string, d: Record<string, unknown>)
           servicio_id: (catalogo ?? []).find((x) => simple(x.nombre).includes(simple(s)) || simple(s).includes(simple(x.nombre)))?.id ?? null,
         })),
       );
-      return { ok: true, texto: `✅ Orden *OT-${String(orden.numero).padStart(6, "0")}* abierta para ${placaBonita(String(d.placa))}. Agrega las fotos del ingreso en la app o mándalas aquí con la placa.`, ids: { orden: orden.id } };
+      const promesa = d.entregaPrometida
+        ? ` Entrega prometida: ${String(d.entregaTexto)}; te aviso si se acerca la hora y el carro no está listo.`
+        : " La hora de entrega quedó por definir: ponla en la orden cuando la sepas.";
+      return { ok: true, texto: `✅ Orden *OT-${String(orden.numero).padStart(6, "0")}* abierta para ${placaBonita(String(d.placa))}.${promesa} Agrega las fotos del ingreso en la app o mándalas aquí con la placa.`, ids: { orden: orden.id } };
     }
     case "avance": {
       const ordenId = String(d.ordenId);

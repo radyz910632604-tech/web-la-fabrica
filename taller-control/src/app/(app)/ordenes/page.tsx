@@ -14,6 +14,7 @@ export const metadata = { title: "Órdenes" };
 
 const PESTANAS: { clave: string; nombre: string; estados: EstadoOrden[] }[] = [
   { clave: "taller", nombre: "En el taller", estados: ["en_taller", "en_proceso", "esperando_repuesto", "listo"] },
+  { clave: "entregas", nombre: "Por hora de entrega", estados: ["en_taller", "en_proceso", "esperando_repuesto"] },
   ...ESTADOS_ORDEN.map((e) => ({ clave: e, nombre: NOMBRE_ESTADO[e], estados: [e] })),
 ];
 
@@ -26,7 +27,7 @@ export default async function Ordenes({ searchParams }: { searchParams: Promise<
 
   const todas = await listarOrdenes(ctx.taller.id, {
     estados: pestana.estados,
-    orden: pestana.clave === "entregado" ? "reciente" : "ingreso",
+    orden: pestana.clave === "entregado" ? "reciente" : pestana.clave === "entregas" ? "entrega" : "ingreso",
     limite: pestana.clave === "entregado" ? 100 : 300,
   });
   const texto = q.trim().toLowerCase().replace(/-/g, "");
@@ -91,6 +92,7 @@ export default async function Ordenes({ searchParams }: { searchParams: Promise<
           ordenes={ordenes}
           verCliente={verCliente}
           fecha={pestana.clave === "entregado" ? "estado" : "ingreso"}
+          minutosAviso={ctx.configuracion.minutosAvisoEntrega}
           vacio={texto ? "Ninguna orden coincide con la búsqueda." : "No hay órdenes en este estado."}
         />
       </Tarjeta>

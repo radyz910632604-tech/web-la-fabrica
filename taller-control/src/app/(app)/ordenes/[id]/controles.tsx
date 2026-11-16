@@ -2,12 +2,14 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Camera, Plus } from "lucide-react";
+import { ElegirEntrega, type ValorEntrega } from "@/components/taller/elegir-entrega";
 import { Boton } from "@/components/ui/boton";
+import { ContenidoVentana, Ventana } from "@/components/ui/ventana";
 import { Entrada, Selector } from "@/components/ui/campo";
 import { siguientesEstados, type EstadoOrden } from "@/lib/taller/estados";
 import { reducirFoto } from "@/lib/taller/fotos";
 import { subirFoto } from "../nueva/acciones";
-import { agregarAvance, agregarServicio, asignarTecnico, cambiarEstado, type Resultado } from "./acciones";
+import { agregarAvance, agregarServicio, asignarTecnico, cambiarEntrega, cambiarEstado, type Resultado } from "./acciones";
 
 function Mensaje({ r }: { r: Resultado }) {
   if (r.error) return <p role="alert" className="mt-3 text-sm text-negativo">{r.error}</p>;
@@ -213,5 +215,49 @@ export function SubirFotos({ ordenId, etapa }: { ordenId: string; etapa: "ingres
       </Boton>
       {error ? <p role="alert" className="mt-2 text-sm text-negativo">{error}</p> : null}
     </div>
+  );
+}
+
+/** Botón y ventana para poner o cambiar la hora prometida al cliente. */
+export function CambiarEntrega({ ordenId, actual, ahora, cliente }: { ordenId: string; actual: { dia: string; hora: string } | null; ahora: string; cliente: string }) {
+  const [abierta, setAbierta] = useState(false);
+  const [valor, setValor] = useState<ValorEntrega>({ dia: actual?.dia ?? "", hora: actual?.hora ?? "", porDefinir: false });
+  const [r, setR] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  return (
+    <Ventana
+      open={abierta}
+      onOpenChange={(a) => {
+        setAbierta(a);
+        if (a) {
+          setValor({ dia: actual?.dia ?? "", hora: actual?.hora ?? "", porDefinir: false });
+          setR({});
+        }
+      }}
+    >
+      <Boton type="button" variante="secundario" onClick={() => setAbierta(true)} className="mt-4 w-full sm:w-auto">
+        {actual ? "Cambiar hora" : "Poner hora de entrega"}
+      </Boton>
+      <ContenidoVentana
+        titulo={actual ? "Cambiar la hora de entrega" : "Hora de entrega"}
+        descripcion={actual ? `Avísale a ${cliente} la nueva hora. El cambio queda anotado en la orden.` : `La que le prometes a ${cliente}.`}
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            iniciar(async () => {
+              const res = await cambiarEntrega(ordenId, valor);
+              setR(res);
+              if (res.ok) setAbierta(false);
+            });
+          }}
+        >
+          <ElegirEntrega valor={valor} onChange={setValor} ahora={ahora} error={r.error} />
+          <Boton type="submit" disabled={pendiente} className="mt-5 h-12 w-full">
+            {pendiente ? "Guardando…" : "Guardar hora"}
+          </Boton>
+        </form>
+      </ContenidoVentana>
+    </Ventana>
   );
 }

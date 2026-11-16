@@ -22,6 +22,8 @@ export type FilaOrden = {
   ingresadoEn: string;
   estadoCambiadoEn: string;
   garantia: boolean;
+  entregaPrometida: string | null;
+  listoEn: string | null;
 };
 
 type OrdenCruda = {
@@ -32,13 +34,15 @@ type OrdenCruda = {
   ingresado_en: string;
   estado_cambiado_en: string;
   es_reingreso_garantia: boolean;
+  entrega_prometida: string | null;
+  listo_en: string | null;
   vehiculos: { placa: string; marca: string | null; modelo: string | null } | null;
   clientes: { nombre: string } | null;
   orden_servicios: { descripcion: string }[] | null;
 };
 
 const SELECCION_ORDEN =
-  "id, numero, estado, tecnico_id, ingresado_en, estado_cambiado_en, es_reingreso_garantia, vehiculos (placa, marca, modelo), clientes (nombre), orden_servicios (descripcion)";
+  "id, numero, estado, tecnico_id, ingresado_en, estado_cambiado_en, es_reingreso_garantia, entrega_prometida, listo_en, vehiculos (placa, marca, modelo), clientes (nombre), orden_servicios (descripcion)";
 
 /** Nombres del personal del taller (para mostrar el técnico de cada orden). */
 export const nombresPersonal = cache(async (empresaId: string): Promise<Map<string, string>> => {
@@ -62,12 +66,14 @@ function aFila(o: OrdenCruda, nombres: Map<string, string>): FilaOrden {
     ingresadoEn: o.ingresado_en,
     estadoCambiadoEn: o.estado_cambiado_en,
     garantia: o.es_reingreso_garantia,
+    entregaPrometida: o.entrega_prometida,
+    listoEn: o.listo_en,
   };
 }
 
 export async function listarOrdenes(
   empresaId: string,
-  filtro: { estados?: EstadoOrden[]; vehiculoId?: string; clienteId?: string; tecnicoId?: string; limite?: number; orden?: "reciente" | "ingreso" } = {},
+  filtro: { estados?: EstadoOrden[]; vehiculoId?: string; clienteId?: string; tecnicoId?: string; limite?: number; orden?: "reciente" | "ingreso" | "entrega" } = {},
 ): Promise<FilaOrden[]> {
   const supabase = await clienteServidor();
   let q = supabase
@@ -79,7 +85,12 @@ export async function listarOrdenes(
   if (filtro.vehiculoId) q = q.eq("vehiculo_id", filtro.vehiculoId);
   if (filtro.clienteId) q = q.eq("cliente_id", filtro.clienteId);
   if (filtro.tecnicoId) q = q.eq("tecnico_id", filtro.tecnicoId);
-  q = filtro.orden === "ingreso" ? q.order("ingresado_en", { ascending: false }) : q.order("estado_cambiado_en", { ascending: false });
+  q =
+    filtro.orden === "entrega"
+      ? q.order("entrega_prometida", { ascending: true, nullsFirst: false }).order("ingresado_en", { ascending: true })
+      : filtro.orden === "ingreso"
+        ? q.order("ingresado_en", { ascending: false })
+        : q.order("estado_cambiado_en", { ascending: false });
   const [{ data }, nombres] = await Promise.all([q.limit(filtro.limite ?? 200), nombresPersonal(empresaId)]);
   return ((data ?? []) as unknown as OrdenCruda[]).map((o) => aFila(o, nombres));
 }

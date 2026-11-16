@@ -50,6 +50,24 @@ export function citaNoLlego(nombre: string, hora: string, servicio: string): { t
   return { titulo: "Cita sin llegada", texto: `${nombre} no llegó a su cita de las ${hora} (${servicio}). Llámalo para reagendar.` };
 }
 
+type DatosEntrega = { placa: string; cliente: string; celular: string; hora: string; estado: string; minutos: string };
+
+/** Antes de la hora prometida, si el carro todavía no está listo. */
+export function entregaPorVencer(d: DatosEntrega): { titulo: string; texto: string } {
+  return {
+    titulo: `Entrega en ${d.minutos}: ${d.placa}`,
+    texto: `Se le prometió a ${d.cliente} para ${d.hora} y el carro sigue «${d.estado}». Si no llega a tiempo, avísale antes: ${d.celular}.`,
+  };
+}
+
+/** Pasada la hora prometida, con el carro todavía sin terminar. */
+export function entregaAtrasada(d: DatosEntrega): { titulo: string; texto: string } {
+  return {
+    titulo: `Entrega atrasada: ${d.placa}`,
+    texto: `Se le prometió a ${d.cliente} para ${d.hora} (hace ${d.minutos}) y sigue «${d.estado}». Llámalo con la nueva hora: ${d.celular}, y cámbiala en la orden.`,
+  };
+}
+
 /** Las variables de una plantilla de WhatsApp no pueden tener saltos de línea. */
 export function aUnaLinea(texto: string): string {
   return texto.replace(/\s*\n+\s*/g, " · ").replace(/\s{4,}/g, "   ").slice(0, 1000);

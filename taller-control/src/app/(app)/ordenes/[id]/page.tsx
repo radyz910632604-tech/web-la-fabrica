@@ -16,8 +16,9 @@ import { catalogo, nombresPersonal, personalConRol } from "@/lib/taller/consulta
 import { configDinero, dineroDeOrden } from "@/lib/taller/dinero-consultas";
 import { COLOR_ESTADO, COMBUSTIBLES, etiquetaOrden, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "@/lib/taller/estados";
 import { listarRepuestos } from "@/lib/taller/inventario-consultas";
+import { colorSituacion, cuandoEntrega, partesLima, situacionEntrega, textoSituacion } from "@/lib/taller/entrega";
 import { SacarDelInventario } from "../../inventario/controles";
-import { AgregarServicio, AsignarTecnico, BotonesEstado, FormAvance, SubirFotos } from "./controles";
+import { AgregarServicio, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, SubirFotos } from "./controles";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await clienteServidor();
@@ -36,7 +37,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
   const { data: o } = await supabase
     .from("ordenes_trabajo")
     .select(
-      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, es_reingreso_garantia, orden_garantia_origen_id, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
+      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, es_reingreso_garantia, orden_garantia_origen_id, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
     )
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
@@ -76,6 +77,8 @@ export default async function Orden({ params, searchParams }: { params: Promise<
       ])
     : [null, null, []];
   const ahora = new Date();
+  const prometida = o.entrega_prometida ? new Date(o.entrega_prometida) : null;
+  const situacion = situacionEntrega({ entregaPrometida: prometida, estado, listoEn: o.listo_en ? new Date(o.listo_en) : null }, ahora, ctx.configuracion.minutosAvisoEntrega);
   const datosCarro = [
     v?.marca && v?.modelo ? `${v.marca} ${v.modelo}` : (v?.marca ?? v?.modelo),
     v?.anio ? String(v.anio) : null,
@@ -96,6 +99,13 @@ export default async function Orden({ params, searchParams }: { params: Promise<
           <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.025em] md:text-[32px]">{numeroOrden(o.numero)}</h1>
           <Estado color={COLOR_ESTADO[estado]} texto={NOMBRE_ESTADO[estado]} className="rounded-full bg-tarjeta px-3 py-1.5 text-[15px] shadow-reposo" />
           {o.es_reingreso_garantia ? <GarantiaChip /> : null}
+          {prometida && estado !== "entregado" ? (
+            <Estado
+              color={colorSituacion(situacion)}
+              texto={`Entrega ${cuandoEntrega(prometida, ahora)}`}
+              className="rounded-full bg-tarjeta px-3 py-1.5 text-[15px] shadow-reposo"
+            />
+          ) : null}
           <EnlacePdf href={`/pdf/orden/${o.id}`} texto="Orden de trabajo" boton className="md:ml-auto" />
         </div>
         <p className="text-[15px] text-tinta-2 md:text-base">
@@ -185,6 +195,37 @@ export default async function Orden({ params, searchParams }: { params: Promise<
         </div>
 
         <div className="flex min-w-0 flex-col gap-4 xl:col-span-5">
+          {estado !== "entregado" || prometida ? (
+            <Tarjeta aria-labelledby="t-entrega">
+              <CabeceraTarjeta id="t-entrega" titulo="Entrega al cliente" detalle={prometida ? "Lo que se le prometió" : undefined} />
+              {prometida ? (
+                <>
+                  <p className="text-[26px] leading-tight font-semibold tracking-[-0.02em] first-letter:uppercase">{cuandoEntrega(prometida, ahora)}</p>
+                  <Estado color={colorSituacion(situacion)} texto={textoSituacion(situacion)} className="mt-2 text-[15px]" />
+                  {situacion.tipo === "atrasada" ? (
+                    <p role="alert" className="mt-3 rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">
+                      Ya pasó la hora. Llama al cliente{c ? ` (${formatearCelular(c.celular)})` : ""}, dale la nueva hora y cámbiala aquí.
+                    </p>
+                  ) : situacion.tipo === "por_vencer" ? (
+                    <p className="mt-3 rounded-2xl bg-aviso-fondo px-4 py-3 text-sm text-aviso">
+                      Se acerca la hora y el carro no está listo. Si no llega, avísale al cliente antes.
+                    </p>
+                  ) : null}
+                  {o.entrega_reprogramada > 0 ? (
+                    <p className="mt-3 text-sm text-tinta-2">
+                      Se cambió {o.entrega_reprogramada === 1 ? "una vez" : `${o.entrega_reprogramada} veces`}. Los cambios quedan en Avances.
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <p className="text-[15px] text-tinta-2">Todavía no hay hora prometida. Ponla apenas la sepas: así el sistema te avisa antes de que venza.</p>
+              )}
+              {gestiona && (estado === "en_taller" || estado === "en_proceso" || estado === "esperando_repuesto") ? (
+                <CambiarEntrega ordenId={o.id} actual={prometida ? partesLima(prometida) : null} ahora={ahora.toISOString()} cliente={c?.nombre.split(" ")[0] ?? "el cliente"} />
+              ) : null}
+            </Tarjeta>
+          ) : null}
+
           {c ? (
             <Tarjeta aria-labelledby="t-cliente">
               <CabeceraTarjeta id="t-cliente" titulo="Cliente" />

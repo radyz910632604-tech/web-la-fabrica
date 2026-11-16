@@ -1,4 +1,5 @@
 import { normalizarDescripcion } from "./dinero";
+import { cuandoEntrega, duracion, situacionEntrega } from "./taller/entrega";
 
 /**
  * Las 9 alertas de la especificación (5.8). Función pura: recibe los datos
@@ -16,7 +17,10 @@ export type TipoAlerta =
   | "adicional_sin_aprobacion"
   | "comprobante_sin_orden"
   | "stock_bajo"
-  | "por_confirmar";
+  | "por_confirmar"
+  | "entrega_atrasada"
+  | "entrega_por_vencer"
+  | "entrega_sin_hora";
 
 export type Alerta = { tipo: TipoAlerta; severidad: "urgente" | "atencion" | "info"; ordenId?: string; href?: string; mensaje: string };
 
@@ -32,6 +36,9 @@ export const NOMBRE_ALERTA: Record<TipoAlerta, string> = {
   comprobante_sin_orden: "Comprobante sin orden",
   stock_bajo: "Stock bajo",
   por_confirmar: "Montos por confirmar",
+  entrega_atrasada: "Entrega atrasada",
+  entrega_por_vencer: "Entrega por vencer",
+  entrega_sin_hora: "Sin hora de entrega",
 };
 
 /**
@@ -61,6 +68,9 @@ export type OrdenParaAlertas = {
   saldo: number | null;
   ventaSinIgv: number | null;
   margen: number | null;
+  /** Hora prometida al cliente (ISO) y placa, para las alertas de entrega. */
+  entregaPrometida?: string | null;
+  placa?: string;
 };
 
 export type CompraItemParaAlertas = { proveedor: string; descripcion: string; precioUnitarioSinIgv: number; fecha: string; ordenNumero?: string };
@@ -78,6 +88,8 @@ export function calcularAlertas(d: {
   stockBajo?: { codigo: string; nombre: string; stock: number; minimo: number }[];
   /** Documentos leídos por IA que esperan que una persona los apruebe. */
   porConfirmar?: { texto: string; href: string }[];
+  /** Cuánto antes de la hora prometida se avisa (minutos). */
+  minutosAvisoEntrega?: number;
 }): Alerta[] {
   const alertas: Alerta[] = [];
   const limite = d.ahora.getTime() - d.horasSinCambio * 60 * 60 * 1000;
@@ -86,6 +98,20 @@ export function calcularAlertas(d: {
     const entregada = o.estado === "entregado";
     if (!entregada && new Date(o.estadoCambiadoEn).getTime() < limite) {
       alertas.push({ tipo: "orden_estancada", severidad: "atencion", ordenId: o.id, mensaje: `${o.numero} lleva más de ${d.horasSinCambio} horas sin cambiar de estado.` });
+    }
+    if (o.entregaPrometida !== undefined && ["en_taller", "en_proceso", "esperando_repuesto"].includes(o.estado)) {
+      const carro = o.placa ? `${o.numero} (${o.placa})` : o.numero;
+      if (!o.entregaPrometida) {
+        alertas.push({ tipo: "entrega_sin_hora", severidad: "info", ordenId: o.id, mensaje: `${carro} no tiene hora de entrega prometida al cliente.` });
+      } else {
+        const prometida = new Date(o.entregaPrometida);
+        const s = situacionEntrega({ entregaPrometida: prometida, estado: o.estado }, d.ahora, d.minutosAvisoEntrega ?? 120);
+        if (s.tipo === "atrasada") {
+          alertas.push({ tipo: "entrega_atrasada", severidad: "urgente", ordenId: o.id, mensaje: `${carro} se prometió para ${cuandoEntrega(prometida, d.ahora)} y va ${duracion(s.minutos)} tarde. Llama al cliente con la nueva hora.` });
+        } else if (s.tipo === "por_vencer") {
+          alertas.push({ tipo: "entrega_por_vencer", severidad: "atencion", ordenId: o.id, mensaje: `${carro} se entrega ${cuandoEntrega(prometida, d.ahora)} (faltan ${duracion(s.minutos)}) y todavía no está listo.` });
+        }
+      }
     }
     if (!entregada && (o.fotos === 0 || o.servicios === 0)) {
       const falta = [o.fotos === 0 ? "fotos" : null, o.servicios === 0 ? "servicios" : null].filter(Boolean).join(" ni ");

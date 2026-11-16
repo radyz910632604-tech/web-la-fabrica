@@ -5,6 +5,7 @@ import { clienteServidor } from "../supabase/servidor";
 import { listarOrdenes } from "./consultas";
 import { configDinero, costosVigentes } from "./dinero-consultas";
 import { numeroOrden } from "./estados";
+import { formatearPlaca } from "../placas";
 
 type Num = number | string | null;
 const n = (v: Num) => Number(v ?? 0);
@@ -15,7 +16,7 @@ const uno = <T,>(x: T | T[] | null | undefined): T | undefined => (Array.isArray
  * últimos 30 días, sus fotos, servicios, cotizaciones, comprobantes, pagos y
  * compras. Lee con la sesión de quien mira: sin permiso, no hay datos de dinero.
  */
-export async function alertasDelTaller(empresaId: string, permisos: { verDinero: boolean; verMargen: boolean }): Promise<Alerta[]> {
+export async function alertasDelTaller(empresaId: string, permisos: { verDinero: boolean; verMargen: boolean }, minutosAvisoEntrega = 120): Promise<Alerta[]> {
   const supabase = await clienteServidor();
   const ahora = new Date();
   const hace30 = new Date(ahora.getTime() - 30 * 24 * 3600 * 1000);
@@ -140,6 +141,8 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
       saldo: permisos.verDinero ? s.saldo : null,
       ventaSinIgv: permisos.verMargen ? ventaSinIgv : null,
       margen,
+      entregaPrometida: o.entregaPrometida,
+      placa: formatearPlaca(o.placa),
     };
   });
 
@@ -167,5 +170,6 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
     porConfirmar,
     verDinero: permisos.verDinero,
     verMargen: permisos.verMargen,
+    minutosAvisoEntrega,
   });
 }

@@ -15,7 +15,7 @@ export type Contexto = {
   taller: TallerDeUsuario;
   roles: Rol[];
   rolPrincipal: Rol;
-  configuracion: { adminVeUtilidad: boolean; adminVeSueldos: boolean };
+  configuracion: { adminVeUtilidad: boolean; adminVeSueldos: boolean; minutosAvisoEntrega: number };
 };
 
 /**
@@ -35,14 +35,14 @@ export const obtenerContexto = cache(async (): Promise<Contexto> => {
     supabase
       .from("miembros")
       // La configuración del taller viene en la misma consulta: una ida a la base menos por página.
-      .select("rol, empresa_id, empresas (id, nombre, activa, configuracion_empresa (admin_ve_utilidad, admin_ve_sueldos))")
+      .select("rol, empresa_id, empresas (id, nombre, activa, configuracion_empresa (admin_ve_utilidad, admin_ve_sueldos, minutos_aviso_entrega))")
       .eq("perfil_id", usuarioId)
       .eq("activo", true),
   ]);
 
   if (!perfil || !perfil.activo) redirect("/ingresar?motivo=inactivo");
 
-  type Config = { admin_ve_utilidad: boolean; admin_ve_sueldos: boolean };
+  type Config = { admin_ve_utilidad: boolean; admin_ve_sueldos: boolean; minutos_aviso_entrega: number };
   const configPorTaller = new Map<string, Config | undefined>();
   const porTaller = new Map<string, TallerDeUsuario>();
   for (const fila of membresias ?? []) {
@@ -71,6 +71,7 @@ export const obtenerContexto = cache(async (): Promise<Contexto> => {
     configuracion: {
       adminVeUtilidad: Boolean(config?.admin_ve_utilidad),
       adminVeSueldos: Boolean(config?.admin_ve_sueldos),
+      minutosAvisoEntrega: config?.minutos_aviso_entrega ?? 120,
     },
   };
 });

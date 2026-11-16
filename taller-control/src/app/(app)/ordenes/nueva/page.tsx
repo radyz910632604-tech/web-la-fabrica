@@ -31,6 +31,7 @@ export default async function NuevoIngreso({ searchParams }: { searchParams: Pro
         </p>
       </header>
       <FormularioIngreso
+        ahora={new Date().toISOString()}
         servicios={servicios.map((s) => ({ id: s.id, nombre: s.nombre }))}
         tecnicos={tecnicos}
         cita={

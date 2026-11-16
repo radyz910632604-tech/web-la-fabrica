@@ -24,7 +24,7 @@ export const PERMITIDO: Record<Exclude<Intencion, "ayuda" | "desconocido" | "his
 };
 
 const EJEMPLOS: Record<string, string> = {
-  nuevo_ingreso: "• *Ingreso:* «ingreso ABC123 Juan Pérez 987654321 para cambio de aceite, 85000 km»",
+  nuevo_ingreso: "• *Ingreso:* «ingreso ABC123 Juan Pérez 987654321 para cambio de aceite, 85000 km, entrega hoy 6pm»",
   avance: "• *Avance:* «ABC123 ya se cambió el embrague» o «ABC123 listo». Puedes mandar fotos o video con la placa escrita.",
   compra: "• *Compra:* manda la foto o el PDF de la factura del proveedor (escribe la placa si es para un carro).",
   comprobante_venta: "• *Boleta o factura:* manda la foto o el PDF de la que entregaste al cliente.",
@@ -60,6 +60,7 @@ const CAMPO: Record<string, string> = {
   monto: "¿De cuánto fue el *pago*?",
   medio_pago: "¿Cómo pagó? Efectivo, Yape, Plin, tarjeta o transferencia.",
   fecha_hora: "¿Para qué *día y hora* es la cita?",
+  entrega_prometida: "¿Para qué *día y hora* le prometiste el carro al cliente? Por ejemplo «hoy 6pm» o «mañana 10am». Si todavía no se sabe, responde «por definir».",
   items_cotizacion: "¿Qué ítems lleva la cotización? Por ejemplo «pastillas 180, mano de obra 60».",
   orden: "No encontré una orden abierta para esa placa. Revisa la placa.",
 };
@@ -90,6 +91,7 @@ export function resumen(intencion: string, d: Record<string, unknown>): string {
         `Servicios: ${(d.servicios as string[]).join(", ")}`,
         d.kilometraje ? `Kilometraje: ${Number(d.kilometraje).toLocaleString("es-PE")} km` : null,
         d.observaciones ? `Observaciones: ${d.observaciones}` : null,
+        `Entrega prometida: ${typeof d.entregaTexto === "string" ? d.entregaTexto : "por definir"}`,
       ].filter(Boolean).join("\n");
     }
     case "avance":

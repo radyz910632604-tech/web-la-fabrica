@@ -245,3 +245,22 @@ textarea {
     animation-name: aparecer !important;
   }
 }
+
+/* Pantalla de carga: aparece solo si la página tarda más de un instante (sin parpadeo). */
+.cargando {
+  animation: aparecer 200ms var(--ease-salida) 140ms both;
+}
+.cargando .hueso {
+  background: var(--hundida);
+  animation: respirar 1.4s ease-in-out infinite;
+}
+@keyframes respirar {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cargando .hueso {
+    animation: none;
+  }
+}

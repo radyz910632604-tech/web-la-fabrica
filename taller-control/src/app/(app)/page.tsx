@@ -11,6 +11,7 @@ import { tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { limitesDiaLima, listarCitas, listarOrdenes, type FilaOrden } from "@/lib/taller/consultas";
+import { situacionEntrega } from "@/lib/taller/entrega";
 import { totalesPeriodo, type ResumenMesDinero } from "@/lib/taller/dinero-consultas";
 import { mesesHasta, reporteMensual } from "@/lib/taller/reportes";
 
@@ -89,6 +90,10 @@ export default async function Panel() {
 
   const listos = enTaller.filter((o) => o.estado === "listo");
   const esperando = enTaller.filter((o) => o.estado === "esperando_repuesto");
+  const atrasadas = enTaller.filter(
+    (o) => situacionEntrega({ entregaPrometida: o.entregaPrometida ? new Date(o.entregaPrometida) : null, estado: o.estado }, ahora, ctx.configuracion.minutosAvisoEntrega).tipo === "atrasada",
+  ).length;
+  const conAtraso = atrasadas ? ` ${atrasadas === 1 ? "Uno ya pasó" : `${atrasadas} ya pasaron`} la hora prometida al cliente.` : "";
   const misTrabajos = enTaller.filter((o) => o.tecnicoId === ctx.perfil.id);
   const verCliente = vista.columnas.cliente;
   const aItem = (o: FilaOrden): ItemAtender => ({
@@ -113,7 +118,7 @@ export default async function Panel() {
     vista.destacada === "taller"
       ? enTaller.length === 0
         ? "No hay carros en el taller ahora."
-        : `Hay ${enTaller.length} ${enTaller.length === 1 ? "carro" : "carros"} en el taller: ${listos.length} ${listos.length === 1 ? "listo" : "listos"} para entregar y ${esperando.length} esperando repuesto.`
+        : `Hay ${enTaller.length} ${enTaller.length === 1 ? "carro" : "carros"} en el taller: ${listos.length} ${listos.length === 1 ? "listo" : "listos"} para entregar y ${esperando.length} esperando repuesto.${conAtraso}`
       : vista.destacada === "mis_trabajos"
         ? misTrabajos.length === 0
           ? "No tienes carros asignados ahora."

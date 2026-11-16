@@ -52,9 +52,12 @@ export function interpretarSinIa(entrada: string): MensajeInterpretado {
 
   // Ingreso: "ingreso ABC123 Juan Perez 987654321 cambio de aceite y frenos 85000 km"
   if (/\b(ingres[oa]|nuevo ingreso|entr[oó]|lleg[oó])\b/.test(bajo)) {
-    const cel = CELULAR.exec(texto);
-    const km = /(\d{1,3}(?:[.\s]?\d{3})+|\d{3,6})\s*(?:km|kms|kilometros)/i.exec(texto);
-    const resto = quitar(texto.replace(/^(nuevo\s+)?ingres[oa]\s*:?/i, ""), placaCruda, cel?.[0], km?.[0]);
+    // «…, entrega hoy 6pm», «se entrega mañana a las 10am», «lo recoge el jueves 5pm»: va al final.
+    const entrega = /(?:,\s*|\s+)(?:se\s+|lo\s+)?(?:entrega(?:r|mos)?|recoge(?:r|n)?|prometid[oa]|listo)\s+(?:para\s+)?(.*\d.*)$/i.exec(texto);
+    const cuerpo = entrega ? texto.slice(0, entrega.index) : texto;
+    const cel = CELULAR.exec(cuerpo);
+    const km = /(\d{1,3}(?:[.\s]?\d{3})+|\d{3,6})\s*(?:km|kms|kilometros)/i.exec(cuerpo);
+    const resto = quitar(cuerpo.replace(/^(nuevo\s+)?ingres[oa]\s*:?/i, ""), placaCruda, cel?.[0], km?.[0]);
     const [nombreParte, ...servicioParte] = resto.split(/\s+(?:para|por|servicio:?)\s+/i);
     const servicios = (servicioParte.join(" ") || "").split(/\s*(?:,|\by\b)\s*/).map((s) => s.trim()).filter((s) => s.length > 2);
     return {
@@ -64,6 +67,7 @@ export function interpretarSinIa(entrada: string): MensajeInterpretado {
       cliente_nombre: nombreParte && servicioParte.length ? nombreParte.trim() || null : null,
       servicios: servicioParte.length ? servicios : resto ? [resto] : [],
       kilometraje: km ? Number(km[1].replace(/[.\s]/g, "")) : null,
+      entrega_prometida: entrega ? entrega[1].trim() : null,
     };
   }
 

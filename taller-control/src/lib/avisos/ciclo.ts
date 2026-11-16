@@ -1,10 +1,14 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { formatearCelular } from "@/lib/celulares";
 import { stockBajo } from "@/lib/inventario";
+import { formatearPlaca } from "@/lib/placas";
 import type { Rol } from "@/lib/roles";
 import { clienteAdmin } from "@/lib/supabase/admin";
+import { cuandoEntrega, duracion } from "@/lib/taller/entrega";
+import { NOMBRE_ESTADO, type EstadoOrden } from "@/lib/taller/estados";
 import { pushAPersona, pushConfigurado } from "./push";
-import { aUnaLinea, citaNoLlego, citasDelDia, resumenDelDia, type DatosPersona } from "./textos";
+import { aUnaLinea, citaNoLlego, citasDelDia, entregaAtrasada, entregaPorVencer, resumenDelDia, type DatosPersona } from "./textos";
 
 /**
  * Ciclo de avisos: n8n lo llama cada 15 minutos. Arma lo que toca a esa
@@ -16,7 +20,7 @@ import { aUnaLinea, citaNoLlego, citasDelDia, resumenDelDia, type DatosPersona }
  * regla de la base; no toca dinero ni órdenes.
  */
 
-type TipoPersonal = "resumen_mediodia" | "resumen_cierre" | "citas_del_dia" | "cita_no_llego";
+type TipoPersonal = "resumen_mediodia" | "resumen_cierre" | "citas_del_dia" | "cita_no_llego" | "entrega_por_vencer" | "entrega_atrasada";
 type Canal = "push" | "whatsapp" | "ambos" | "apagado";
 
 const diaLima = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(d);
@@ -24,7 +28,7 @@ const horaLima = (d: Date) => new Intl.DateTimeFormat("en-GB", { timeZone: "Amer
 const inicioDia = (dia: string) => new Date(`${dia}T00:00:00-05:00`);
 const uno = <T,>(x: T | T[] | null | undefined): T | null => (Array.isArray(x) ? (x[0] ?? null) : (x ?? null));
 
-type Empresa = { id: string; nombre: string; telefono: string | null; mediodia: string; cierre: string; horasSinCambio: number; tolerancia: number; canales: Map<string, Canal> };
+type Empresa = { id: string; nombre: string; telefono: string | null; mediodia: string; cierre: string; horasSinCambio: number; tolerancia: number; minutosEntrega: number; canales: Map<string, Canal> };
 
 export type AvisoWhatsapp = { id: string; celular: string; plantilla: string | null; idioma: string; variables: string[]; botones: { id: string; titulo: string }[]; texto: string };
 
@@ -34,20 +38,23 @@ export async function cicloDeAvisos(ahora = new Date()) {
   const hora = horaLima(ahora);
   const { data: filas } = await admin
     .from("empresas")
-    .select("id, nombre, telefono, configuracion_empresa (hora_resumen_mediodia, hora_cierre, horas_orden_sin_cambio, tolerancia_cita_minutos), config_avisos (tipo, canal)")
+    .select("id, nombre, telefono, configuracion_empresa (hora_resumen_mediodia, hora_cierre, horas_orden_sin_cambio, tolerancia_cita_minutos, minutos_aviso_entrega), config_avisos (tipo, canal)")
     .eq("activa", true);
   const creados: Record<string, number> = {};
   const sumar = (k: string, n = 1) => (creados[k] = (creados[k] ?? 0) + n);
 
   for (const f of filas ?? []) {
-    const cfg = uno(f.configuracion_empresa as never) as { hora_resumen_mediodia: string; hora_cierre: string; horas_orden_sin_cambio: number; tolerancia_cita_minutos: number } | null;
+    const cfg = uno(f.configuracion_empresa as never) as { hora_resumen_mediodia: string; hora_cierre: string; horas_orden_sin_cambio: number; tolerancia_cita_minutos: number; minutos_aviso_entrega: number } | null;
     const e: Empresa = {
       id: f.id, nombre: f.nombre, telefono: f.telefono,
       mediodia: (cfg?.hora_resumen_mediodia ?? "12:00").slice(0, 5), cierre: (cfg?.hora_cierre ?? "19:00").slice(0, 5),
-      horasSinCambio: cfg?.horas_orden_sin_cambio ?? 48, tolerancia: cfg?.tolerancia_cita_minutos ?? 30,
+      horasSinCambio: cfg?.horas_orden_sin_cambio ?? 48, tolerancia: cfg?.tolerancia_cita_minutos ?? 30, minutosEntrega: cfg?.minutos_aviso_entrega ?? 120,
       canales: new Map(((f.config_avisos ?? []) as { tipo: string; canal: Canal }[]).map((c) => [c.tipo, c.canal])),
     };
     sumar("cita_no_llego", await citasSinLlegada(admin, e, ahora));
+    const entregas = await entregasQueVencen(admin, e, ahora);
+    sumar("entrega_por_vencer", entregas.porVencer);
+    sumar("entrega_atrasada", entregas.atrasadas);
     sumar("recordatorio_mantenimiento", await recordatoriosQueTocan(admin, e, hoy));
     if (hora >= e.mediodia && hora < e.cierre) sumar("resumen_mediodia", await resumenes(admin, e, "mediodia", hoy, ahora));
     if (hora >= e.cierre) sumar("resumen_cierre", await resumenes(admin, e, "cierre", hoy, ahora));
@@ -150,6 +157,56 @@ async function citasSinLlegada(admin: SupabaseClient, e: Empresa, ahora: Date): 
     n += await avisoPersonal(admin, e, "cita_no_llego", v, { ...citaNoLlego(c.nombre_cliente, horaLima(new Date(c.fecha_hora)), c.servicio), enlace: "/citas" }, `cita_no_llego:${c.id}`);
   }
   return n;
+}
+
+/**
+ * Hora prometida al cliente: avisa a quien abrió la orden (o a los asesores)
+ * cuando falta poco y el carro no está listo, y otra vez, también a gerencia,
+ * si la hora pasó. Una sola vez por cada hora prometida: si se reprograma,
+ * vuelve a avisar con la hora nueva.
+ */
+async function entregasQueVencen(admin: SupabaseClient, e: Empresa, ahora: Date): Promise<{ porVencer: number; atrasadas: number }> {
+  const cuenta = { porVencer: 0, atrasadas: 0 };
+  const { data } = await admin
+    .from("ordenes_trabajo")
+    .select("id, estado, entrega_prometida, creado_por, clientes (nombre, celular), vehiculos (placa)")
+    .eq("empresa_id", e.id)
+    .eq("anulada", false)
+    .in("estado", ["en_taller", "en_proceso", "esperando_repuesto"])
+    .not("entrega_prometida", "is", null)
+    .lte("entrega_prometida", new Date(ahora.getTime() + e.minutosEntrega * 60_000).toISOString())
+    .gt("entrega_prometida", new Date(ahora.getTime() - 7 * 86_400_000).toISOString())
+    .limit(200);
+  if (!data?.length) return cuenta;
+
+  const gente = await personal(admin, e.id);
+  const porId = new Map(gente.map((p) => [p.id, p]));
+  const atiende = (p: (typeof gente)[number]) => p.roles.some((r) => r === "gerencia" || r === "administrador" || r === "asesor");
+  const asesores = gente.filter((p) => p.roles.includes("asesor"));
+  const gerencia = gente.filter((p) => p.roles.includes("gerencia"));
+
+  for (const o of data) {
+    const c = uno(o.clientes as never) as { nombre: string; celular: string } | null;
+    const v = uno(o.vehiculos as never) as { placa: string } | null;
+    if (!o.entrega_prometida || !c || !v) continue;
+    const prometida = new Date(o.entrega_prometida);
+    const atrasada = prometida.getTime() <= ahora.getTime();
+    const creador = o.creado_por ? porId.get(o.creado_por) : undefined;
+    const responsables = creador && atiende(creador) ? [creador] : asesores.length ? asesores : gerencia;
+    const destino = atrasada ? [...new Map([...responsables, ...gerencia].map((p) => [p.id, p])).values()] : responsables;
+    const tipo = atrasada ? "entrega_atrasada" : "entrega_por_vencer";
+    const datos = {
+      placa: formatearPlaca(v.placa), cliente: c.nombre, celular: formatearCelular(c.celular), hora: cuandoEntrega(prometida, ahora),
+      estado: NOMBRE_ESTADO[o.estado as EstadoOrden] ?? o.estado, minutos: duracion(Math.abs(prometida.getTime() - ahora.getTime()) / 60_000),
+    };
+    const aviso = { ...(atrasada ? entregaAtrasada(datos) : entregaPorVencer(datos)), enlace: `/ordenes/${o.id}` };
+    for (const p of destino) {
+      const n = await avisoPersonal(admin, e, tipo, p, aviso, `${tipo}:${o.id}:${prometida.getTime()}:${p.id}`);
+      if (atrasada) cuenta.atrasadas += n;
+      else cuenta.porVencer += n;
+    }
+  }
+  return cuenta;
 }
 
 async function recordatoriosQueTocan(admin: SupabaseClient, e: Empresa, hoy: string): Promise<number> {

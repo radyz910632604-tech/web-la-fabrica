@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 export const metadata = { title: "Alertas" };
 
 const GRUPOS: { severidad: Alerta["severidad"]; titulo: string; detalle: string; punto: string }[] = [
-  { severidad: "urgente", titulo: "Urgente", detalle: "Dinero que se puede perder", punto: "bg-negativo" },
+  { severidad: "urgente", titulo: "Urgente", detalle: "Dinero o clientes que se pueden perder", punto: "bg-negativo" },
   { severidad: "atencion", titulo: "Atención", detalle: "Revísalo hoy", punto: "bg-aviso" },
   { severidad: "info", titulo: "Para revisar", detalle: "Cuando tengas un momento", punto: "bg-tinta-3" },
 ];
@@ -23,7 +23,7 @@ export default async function Alertas() {
   const alertas = await alertasDelTaller(ctx.taller.id, {
     verDinero: tieneAlguno(ctx.roles, CAJA),
     verMargen: ctx.roles.includes("gerencia"),
-  });
+  }, ctx.configuracion.minutosAvisoEntrega);
   const urgentes = alertas.filter((a) => a.severidad === "urgente").length;
 
   return (

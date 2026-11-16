@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { ESTADOS_ORDEN } from "@/lib/taller/estados";
 import { obtenerContexto } from "@/lib/sesion";
+import { tieneAlguno } from "@/lib/roles";
+import { validarEntrega } from "@/lib/taller/entrega";
 import { clienteServidor } from "@/lib/supabase/servidor";
 
 export type Resultado = { ok?: string; error?: string };
@@ -62,4 +64,25 @@ export async function agregarServicio(ordenId: string, descripcion: string, adic
   if (error) return { error: "No puedes agregar servicios a esta orden." };
   revalidatePath(`/ordenes/${ordenId}`);
   return { ok: "Servicio agregado." };
+}
+
+/** Pone o cambia la hora prometida al cliente. La base anota el cambio en la orden. */
+export async function cambiarEntrega(ordenId: string, valor: { dia: string; hora: string; porDefinir: boolean }): Promise<Resultado> {
+  const ctx = await obtenerContexto();
+  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"])) return { error: "La hora de entrega la cambia el asesor." };
+  const v = z.object({ dia: z.string(), hora: z.string(), porDefinir: z.boolean() }).safeParse(valor);
+  if (!v.success) return { error: "Revisa el día y la hora." };
+  const entrega = validarEntrega(v.data, new Date());
+  if ("error" in entrega) return { error: entrega.error };
+  const supabase = await clienteServidor();
+  const { error, count } = await supabase
+    .from("ordenes_trabajo")
+    .update({ entrega_prometida: entrega.instante?.toISOString() ?? null }, { count: "exact" })
+    .eq("id", ordenId)
+    .eq("empresa_id", ctx.taller.id)
+    .eq("anulada", false);
+  if (error || !count) return { error: "No se pudo cambiar la hora de entrega." };
+  revalidatePath(`/ordenes/${ordenId}`);
+  revalidatePath("/", "layout");
+  return { ok: entrega.instante ? "Hora de entrega guardada." : "La hora de entrega quedó por definir." };
 }

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { normalizarCelular } from "@/lib/celulares";
 import { normalizarPlaca, validarPlaca } from "@/lib/placas";
 import { tieneAlguno } from "@/lib/roles";
+import { validarEntrega } from "@/lib/taller/entrega";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 
@@ -112,6 +113,7 @@ const esquemaIngreso = z.object({
   observaciones: z.preprocess(vacioANulo, z.string().trim().max(2000).nullable()),
   tecnicoId: z.preprocess(vacioANulo, z.string().uuid().nullable()),
   citaId: z.preprocess(vacioANulo, z.string().uuid().nullable()),
+  entrega: z.object({ dia: z.string(), hora: z.string(), porDefinir: z.boolean() }),
 });
 
 
@@ -144,7 +146,9 @@ export async function registrarIngreso(datos: unknown): Promise<ResultadoIngreso
   if (tipo !== "ninguno" && !(d.cliente.numeroDocumento && DOCUMENTO[tipo].test(d.cliente.numeroDocumento))) {
     errores["cliente.numeroDocumento"] = MENSAJE_DOC[tipo];
   }
-  if (Object.keys(errores).length > 0 || placa.estado === "invalida" || !celular) return { errores };
+  const entrega = validarEntrega(d.entrega, new Date());
+  if ("error" in entrega) errores.entrega = entrega.error;
+  if (Object.keys(errores).length > 0 || placa.estado === "invalida" || !celular || "error" in entrega) return { errores };
 
   const supabase = await clienteServidor();
   const empresa = ctx.taller.id;
@@ -192,6 +196,7 @@ export async function registrarIngreso(datos: unknown): Promise<ResultadoIngreso
       observaciones_ingreso: d.observaciones,
       tecnico_id: d.tecnicoId,
       cita_id: d.citaId,
+      entrega_prometida: entrega.instante?.toISOString() ?? null,
     })
     .select("id")
     .single();

@@ -23,7 +23,7 @@ export default async function MisTrabajos() {
       </header>
       <Tarjeta aria-labelledby="t-activos">
         <CabeceraTarjeta id="t-activos" titulo="En el taller" detalle={`${activas.length} ${activas.length === 1 ? "carro asignado" : "carros asignados"}`} />
-        <ListaOrdenes ordenes={activas} verCliente={false} verTecnico={false} fecha="ingreso" vacio="No tienes carros asignados ahora." />
+        <ListaOrdenes ordenes={activas} verCliente={false} verTecnico={false} fecha="ingreso" minutosAviso={ctx.configuracion.minutosAvisoEntrega} vacio="No tienes carros asignados ahora." />
       </Tarjeta>
       <Tarjeta aria-labelledby="t-entregados">
         <CabeceraTarjeta id="t-entregados" titulo="Entregados hace poco" />

@@ -4,12 +4,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Camera, Check, Plus, X } from "lucide-react";
 import { Placa } from "@/components/marca/placa";
+import { ElegirEntrega, type ValorEntrega } from "@/components/taller/elegir-entrega";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
 import { validarPlaca } from "@/lib/placas";
 import { COMBUSTIBLES, DOCUMENTOS, ORIGENES_CLIENTE, TRANSMISIONES } from "@/lib/taller/estados";
+import { cuandoEntrega, instanteLima } from "@/lib/taller/entrega";
 import { reducirFoto } from "@/lib/taller/fotos";
 import { cn } from "@/lib/utils";
 import { buscarCelular, buscarPlaca, registrarIngreso, subirFoto, type ClienteConocido, type VehiculoConocido } from "./acciones";
@@ -18,11 +20,12 @@ type Props = {
   servicios: { id: string; nombre: string }[];
   tecnicos: { id: string; nombre: string }[];
   cita: { id: string; nombre: string; celular: string; servicio: string } | null;
+  ahora: string;
 };
 
 type Foto = { clave: string; archivo: File; vista: string };
 
-export function FormularioIngreso({ servicios, tecnicos, cita }: Props) {
+export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
   const router = useRouter();
   const [enviando, iniciar] = useTransition();
   const [errores, setErrores] = useState<Record<string, string>>({});
@@ -52,6 +55,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita }: Props) {
   const [otro, setOtro] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [tecnicoId, setTecnicoId] = useState("");
+  const [entrega, setEntrega] = useState<ValorEntrega>({ dia: "", hora: "", porDefinir: false });
   const [fotos, setFotos] = useState<Foto[]>([]);
   const entradaFotos = useRef<HTMLInputElement>(null);
 
@@ -134,6 +138,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita }: Props) {
         observaciones,
         tecnicoId,
         citaId: cita?.id ?? "",
+        entrega,
       });
       if (r.errores) {
         setErrores(r.errores);
@@ -389,7 +394,13 @@ export function FormularioIngreso({ servicios, tecnicos, cita }: Props) {
           {errores.servicios ? <p className="mt-2 text-sm text-negativo">{errores.servicios}</p> : null}
         </Tarjeta>
 
-        {/* 5. Observaciones y técnico */}
+        {/* 5. Entrega prometida */}
+        <Tarjeta aria-labelledby="t-entrega">
+          <CabeceraTarjeta id="t-entrega" titulo="¿Cuándo se lo entregas?" detalle="El día y la hora que le prometes al cliente" />
+          <ElegirEntrega valor={entrega} onChange={setEntrega} ahora={ahora} error={errores.entrega} />
+        </Tarjeta>
+
+        {/* 6. Observaciones y técnico */}
         <Tarjeta aria-labelledby="t-obs">
           <CabeceraTarjeta id="t-obs" titulo="Al recibir el carro" />
           <div className="flex flex-col gap-4">
@@ -419,7 +430,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita }: Props) {
           </div>
         </Tarjeta>
 
-        {/* 6. Fotos */}
+        {/* 7. Fotos */}
         <Tarjeta aria-labelledby="t-fotos">
           <CabeceraTarjeta id="t-fotos" titulo="Fotos del ingreso" detalle="Las cuatro esquinas, el tablero y cualquier golpe" />
           <input
@@ -460,9 +471,10 @@ export function FormularioIngreso({ servicios, tecnicos, cita }: Props) {
         </Tarjeta>
 
         {resultadoPlaca && resultadoPlaca.estado !== "invalida" ? (
-          <p className="flex items-center gap-2 text-sm text-tinta-2">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tinta-2">
             Vas a registrar <Placa placa={resultadoPlaca.placa} /> con {elegidos.length} {elegidos.length === 1 ? "servicio" : "servicios"} y {fotos.length}{" "}
-            {fotos.length === 1 ? "foto" : "fotos"}.
+            {fotos.length === 1 ? "foto" : "fotos"}
+            {instanteLima(entrega.dia, entrega.hora) ? `, para entregar ${cuandoEntrega(instanteLima(entrega.dia, entrega.hora)!, new Date(ahora))}` : ""}.
           </p>
         ) : null}
         {error ? (
