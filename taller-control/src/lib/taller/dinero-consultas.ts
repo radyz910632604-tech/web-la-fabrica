@@ -28,14 +28,16 @@ export async function configDinero(empresaId: string): Promise<ConfigDinero> {
   };
 }
 
-/** Costo mensual vigente de cada persona (vacío si quien mira no ve sueldos). */
-export async function costosVigentes(empresaId: string): Promise<Map<string, number>> {
+/**
+ * Costo mensual vigente de cada persona (vacío si quien mira no ve sueldos).
+ * Con `antesDe` ("2026-10-01"), el que regía antes de ese día: así un mes
+ * pasado usa el sueldo de entonces y no cuenta a quien aún no trabajaba.
+ */
+export async function costosVigentes(empresaId: string, antesDe?: string): Promise<Map<string, number>> {
   const supabase = await clienteServidor();
-  const { data } = await supabase
-    .from("costos_personal")
-    .select("perfil_id, costo_mensual, vigente_desde")
-    .eq("empresa_id", empresaId)
-    .order("vigente_desde", { ascending: true });
+  let q = supabase.from("costos_personal").select("perfil_id, costo_mensual, vigente_desde").eq("empresa_id", empresaId);
+  if (antesDe) q = q.lt("vigente_desde", antesDe);
+  const { data } = await q.order("vigente_desde", { ascending: true });
   const mapa = new Map<string, number>();
   for (const c of data ?? []) mapa.set(c.perfil_id, n(c.costo_mensual));
   return mapa;
@@ -147,10 +149,10 @@ export async function manoObraDeOrden(
     return manoObra("fijo_por_servicio", { montosFijos: (servicios ?? []).map((s) => mapa.get(s.servicio_id) ?? 0) });
   }
   if (!orden.tecnicoId) return 0;
-  const costos = await costosVigentes(empresaId);
-  const costo = costos.get(orden.tecnicoId) ?? 0;
   const mes = (orden.entregadoEn ?? new Date().toISOString()).slice(0, 7);
-  const { desde, hasta } = limitesMes(mes);
+  const { desde, hasta, hastaDia } = limitesMes(mes);
+  const costos = await costosVigentes(empresaId, hastaDia);
+  const costo = costos.get(orden.tecnicoId) ?? 0;
   const { count } = await supabase
     .from("ordenes_trabajo")
     .select("id", { count: "exact", head: true })
@@ -180,7 +182,7 @@ export async function totalesPeriodo(empresaId: string, desdeDia: string, hastaD
       .eq("estado", "entregado")
       .gte("entregado_en", limitesDiaLima(desdeDia).desde.toISOString())
       .lt("entregado_en", limitesDiaLima(hastaDia).desde.toISOString()),
-    verSueldos ? costosVigentes(empresaId) : Promise.resolve(new Map<string, number>()),
+    verSueldos ? costosVigentes(empresaId, hastaDia) : Promise.resolve(new Map<string, number>()),
     verSueldos ? supabase.from("miembros").select("perfil_id").eq("empresa_id", empresaId).eq("rol", "tecnico").eq("activo", true) : Promise.resolve({ data: [] }),
   ]);
   const ventasSin = redondear((ventas ?? []).reduce((a, v) => a + n(v.subtotal_sin_igv), 0));

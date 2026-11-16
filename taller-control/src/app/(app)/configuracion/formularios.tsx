@@ -32,7 +32,7 @@ export function Seccion({ titulo, descripcion, children }: { titulo: string; des
   );
 }
 
-function Pie({ estado, enviando, texto = "Guardar" }: { estado: Resultado; enviando: boolean; texto?: string }) {
+export function Pie({ estado, enviando, texto = "Guardar" }: { estado: Resultado; enviando: boolean; texto?: string }) {
   return (
     <div className="mt-5 flex flex-wrap items-center justify-end gap-3">
       {estado.error ? (

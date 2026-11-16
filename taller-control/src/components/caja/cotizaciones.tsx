@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { FilePlus2, Plus, X } from "lucide-react";
 import { crearCotizacion, responderCotizacion, type Resultado } from "@/app/(app)/ordenes/[id]/dinero-acciones";
 import { Boton } from "@/components/ui/boton";
@@ -10,14 +10,14 @@ import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ve
 import { formatearSoles } from "@/lib/formato";
 
 type Linea = { clave: number; tipo: "servicio" | "repuesto"; descripcion: string; cantidad: string; precio: string };
-let siguiente = 1;
-const nueva = (tipo: Linea["tipo"] = "servicio", descripcion = ""): Linea => ({ clave: siguiente++, tipo, descripcion, cantidad: "1", precio: "" });
+const nueva = (clave: number, tipo: Linea["tipo"] = "servicio", descripcion = ""): Linea => ({ clave, tipo, descripcion, cantidad: "1", precio: "" });
 
 /** Crear una cotización con sus líneas (servicios y repuestos), con precios que incluyen IGV. */
 export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: string; servicios: string[]; hayAprobada: boolean }) {
   const [abierta, setAbierta] = useState(false);
   const [adicional, setAdicional] = useState(hayAprobada);
-  const [lineas, setLineas] = useState<Linea[]>(() => (servicios.length ? servicios.map((s) => nueva("servicio", s)) : [nueva()]));
+  const siguiente = useRef(servicios.length + 1);
+  const [lineas, setLineas] = useState<Linea[]>(() => (servicios.length ? servicios.map((s, i) => nueva(i, "servicio", s)) : [nueva(0)]));
   const [r, setR] = useState<Resultado>({});
   const [pendiente, iniciar] = useTransition();
   const total = lineas.reduce((a, l) => a + (Number(l.cantidad) || 0) * (Number(l.precio) || 0), 0);
@@ -56,11 +56,11 @@ export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: 
             ))}
           </ul>
           <div className="flex flex-wrap gap-2">
-            <Boton type="button" variante="secundario" tamano="chico" onClick={() => setLineas((ls) => [...ls, nueva("servicio")])}>
+            <Boton type="button" variante="secundario" tamano="chico" onClick={() => setLineas((ls) => [...ls, nueva(siguiente.current++, "servicio")])}>
               <Plus />
               Servicio
             </Boton>
-            <Boton type="button" variante="secundario" tamano="chico" onClick={() => setLineas((ls) => [...ls, nueva("repuesto")])}>
+            <Boton type="button" variante="secundario" tamano="chico" onClick={() => setLineas((ls) => [...ls, nueva(siguiente.current++, "repuesto")])}>
               <Plus />
               Repuesto
             </Boton>

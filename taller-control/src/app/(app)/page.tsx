@@ -1,17 +1,18 @@
-import { Info } from "lucide-react";
-import { CitasPorRed, Ejemplo, MetaVentas, PorAtender, type ItemAtender } from "@/components/panel/bloques";
+import { CitasPorRed, MetaVentas, PorAtender, type ItemAtender } from "@/components/panel/bloques";
 import { GraficoVentas, LeyendaVentas } from "@/components/panel/grafico-ventas";
 import { Indicadores } from "@/components/panel/indicadores";
 import { TablaActividad, TablaCitas, type FilaActividad } from "@/components/panel/tablas";
 import { resumirEstados, TarjetaCitasHoy, TarjetaMisTrabajos, TarjetaTaller } from "@/components/panel/tarjeta-destacada";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { diaEnLima, nombreMes, primerNombre, saludo } from "@/lib/formato";
-import { datosPanelEjemplo } from "@/lib/panel/ejemplo";
+import type { ResumenMes } from "@/lib/panel/ejemplo";
 import { vistaPanel } from "@/lib/panel/vista";
 import { tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { limitesDiaLima, listarCitas, listarOrdenes, type FilaOrden } from "@/lib/taller/consultas";
+import { totalesPeriodo, type ResumenMesDinero } from "@/lib/taller/dinero-consultas";
+import { mesesHasta, reporteMensual } from "@/lib/taller/reportes";
 
 export const metadata = { title: "Panel" };
 
@@ -22,14 +23,13 @@ const ACTIVOS = ["en_taller", "en_proceso", "esperando_repuesto", "listo"] as co
  * Fila 1: destacada (4) + indicadores (4) + gráfico o meta (4). Las tres terminan juntas.
  * Fila 2: la columna de 4 y la tabla de 8 terminan a la misma altura.
  *
- * Carros, órdenes, citas y entregados son reales. Los montos (ventas, compras,
- * utilidad, lo vendido de la meta) son de ejemplo hasta la Fase 3 y lo dicen.
+ * Todo es real: carros, órdenes y citas; los montos salen de los comprobantes y
+ * compras confirmados (sin IGV) y la mano de obra, del costo del personal técnico.
  */
 export default async function Panel() {
   const ctx = await obtenerContexto();
   const ahora = new Date();
   const vista = vistaPanel(ctx.roles, { adminVeUtilidad: ctx.configuracion.adminVeUtilidad });
-  const ejemplo = datosPanelEjemplo(ahora);
   const supabase = await clienteServidor();
 
   const hoy = diaEnLima(ahora);
@@ -42,6 +42,12 @@ export default async function Panel() {
   const diasRestantes = diasDelMes - dia + 1;
   const mes = nombreMes(ahora);
   const mesAnterior = nombreMes(new Date(Date.UTC(anio, numMes - 2, 15)));
+  const verMontos = vista.indicadores.some((i) => i !== "entregados") || vista.meta || vista.grafico;
+  const verSueldos = ctx.roles.includes("gerencia");
+  const manana = new Date(Date.UTC(anio, numMes - 1, dia + 1)).toISOString().slice(0, 10);
+  const diasMesAnterior = new Date(Date.UTC(anio, numMes - 1, 0)).getUTCDate();
+  const diaAnterior = Math.min(dia, diasMesAnterior);
+  const finAnterior = new Date(Date.UTC(anio, numMes - 2, diaAnterior + 1)).toISOString().slice(0, 10);
   const verCitas = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes", "confirmador"]);
 
   const entregados = (desde: Date, hasta: Date) =>
@@ -54,14 +60,32 @@ export default async function Panel() {
       .gte("entregado_en", desde.toISOString())
       .lt("entregado_en", hasta.toISOString());
 
-  const [enTaller, recientes, citasHoy, entregadosMes, entregadosAntes, { data: metaReal }] = await Promise.all([
+  const sinMontos: ResumenMesDinero = { ventas: 0, ventasConIgv: 0, compras: 0, manoObra: 0, utilidad: 0, entregados: 0 };
+  const [enTaller, recientes, citasHoy, entregadosMes, entregadosAntes, { data: metaReal }, dineroMes, dineroAntes, historico] = await Promise.all([
     vista.tabla === "citas" ? Promise.resolve([] as FilaOrden[]) : listarOrdenes(ctx.taller.id, { estados: [...ACTIVOS], orden: "ingreso" }),
     vista.tabla === "citas" ? Promise.resolve([] as FilaOrden[]) : listarOrdenes(ctx.taller.id, { limite: 40 }),
     verCitas ? listarCitas(ctx.taller.id, limitesDiaLima(hoy).desde, limitesDiaLima(hoy).hasta) : Promise.resolve([]),
     entregados(inicioMes, ahora),
     entregados(inicioMesAnterior, mismoDiaMesAnterior),
     supabase.from("metas_ventas").select("meta_sin_igv").eq("empresa_id", ctx.taller.id).eq("anio", anio).eq("mes", numMes).maybeSingle(),
+    verMontos ? totalesPeriodo(ctx.taller.id, `${hoy.slice(0, 7)}-01`, manana, dia / diasDelMes, verSueldos) : Promise.resolve(sinMontos),
+    verMontos ? totalesPeriodo(ctx.taller.id, `${mesAnteriorClave}-01`, finAnterior, diaAnterior / diasMesAnterior, verSueldos) : Promise.resolve(sinMontos),
+    vista.grafico ? reporteMensual(ctx.taller.id, mesesHasta(hoy.slice(0, 7), 8), hoy, verSueldos) : Promise.resolve([]),
   ]);
+  const aResumen = (t: ResumenMesDinero, entregados: number): ResumenMes => ({
+    ventas: t.ventas,
+    compras: t.compras,
+    manoObra: t.manoObra,
+    costos: t.compras + t.manoObra,
+    utilidad: t.utilidad,
+    entregados,
+  });
+  const etiquetaCorta = new Intl.DateTimeFormat("es-PE", { month: "short", timeZone: "UTC" });
+  const mesesGrafico = historico.map((f) => {
+    const [a, m] = f.mes.split("-").map(Number);
+    const texto = etiquetaCorta.format(new Date(Date.UTC(a, m - 1, 15))).replace(".", "");
+    return { etiqueta: texto.charAt(0).toUpperCase() + texto.slice(1), ventas: f.ventas, costos: f.compras + f.manoObra, utilidad: f.utilidad, enCurso: f.parcial };
+  });
 
   const listos = enTaller.filter((o) => o.estado === "listo");
   const esperando = enTaller.filter((o) => o.estado === "esperando_repuesto");
@@ -96,14 +120,12 @@ export default async function Panel() {
           : `Tienes ${misTrabajos.length} ${misTrabajos.length === 1 ? "carro asignado" : "carros asignados"}: ${resumirEstados(misTrabajos)}.`
         : `Hoy hay ${vivas.length} ${vivas.length === 1 ? "cita" : "citas"}: ${citasHoy.filter((c) => c.estado === "llego").length} ya llegaron y ${citasHoy.filter((c) => c.estado === "agendada").length} faltan confirmar.`;
 
-  // Indicadores: entregados es real; los montos, de ejemplo.
-  const mesActual = { ...ejemplo.mes, entregados: entregadosMes.count ?? 0 };
-  const anterior = { ...ejemplo.mesAnteriorAlMismoDia, entregados: entregadosAntes.count ?? 0 };
+  const mesActual = aResumen(dineroMes, entregadosMes.count ?? 0);
+  const anterior = aResumen(dineroAntes, entregadosAntes.count ?? 0);
   const indicadores =
     vista.indicadores.length > 0 ? (
       <Indicadores
         indicadores={vista.indicadores}
-        ejemplo={["ventas", "compras", "utilidad"]}
         mes={mesActual}
         anterior={anterior}
         mesAnterior={mesAnterior}
@@ -114,8 +136,8 @@ export default async function Panel() {
   const meta = (conRitmo: boolean) =>
     vista.meta ? (
       <MetaVentas
-        vendido={ejemplo.mes.ventas}
-        meta={metaReal ? Number(metaReal.meta_sin_igv) : ejemplo.meta}
+        vendido={dineroMes.ventas}
+        meta={metaReal ? Number(metaReal.meta_sin_igv) : 0}
         mes={mes}
         diasRestantes={diasRestantes}
         diasTranscurridos={dia}
@@ -182,17 +204,12 @@ export default async function Panel() {
             <Tarjeta aria-labelledby="titulo-grafico" className="flex flex-col">
               <CabeceraTarjeta
                 id="titulo-grafico"
-                titulo={
-                  <>
-                    Ventas vs. costos por mes
-                    <Ejemplo />
-                  </>
-                }
+                titulo="Ventas vs. costos por mes"
                 detalle={`Sin IGV. ${mes.charAt(0).toUpperCase() + mes.slice(1)} va hasta el día ${dia}.`}
               />
               <LeyendaVentas />
               <div className="mt-3">
-                <GraficoVentas meses={ejemplo.meses} />
+                <GraficoVentas meses={mesesGrafico} />
               </div>
             </Tarjeta>
           </div>
@@ -248,12 +265,6 @@ export default async function Panel() {
           {saludo(ahora)}, {primerNombre(ctx.perfil.nombre)}
         </h1>
         <p className="mt-1.5 text-[15px] text-tinta-2 md:text-base">{hallazgo}</p>
-        {vista.indicadores.some((i) => i !== "entregados") || vista.meta ? (
-          <p className="mt-3 inline-flex items-start gap-2 rounded-2xl border border-aviso-borde bg-aviso-fondo px-3 py-2 text-[13px] text-aviso">
-            <Info className="mt-px size-4 shrink-0" aria-hidden />
-            Carros, órdenes y citas son reales. Los montos marcados «Ejemplo» se vuelven reales en la Fase 3.
-          </p>
-        ) : null}
       </header>
       {cuerpo}
     </div>

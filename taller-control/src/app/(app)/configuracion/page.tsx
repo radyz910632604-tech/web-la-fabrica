@@ -3,7 +3,10 @@ import { diaEnLima, nombreMes } from "@/lib/formato";
 import { esGestor } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { NOMBRE_ROL, type Rol } from "@/lib/roles";
 import { catalogo } from "@/lib/taller/consultas";
+import { costosVigentes } from "@/lib/taller/dinero-consultas";
+import { FormComisiones, FormCostos, FormManoObra, FormManoObraServicios } from "./dinero";
 import { FormMeta, FormNuevoTaller, FormPermisosAdmin, FormReglas, FormServicios, FormTaller, Seccion } from "./formularios";
 
 export const metadata = { title: "Configuración del taller" };
@@ -23,6 +26,15 @@ export default async function Configuracion() {
   if (!taller || !config) notFound();
 
   const esGerencia = ctx.roles.includes("gerencia");
+  const [{ data: personas }, costos, { data: fijos }, { data: reglas }] = esGerencia
+    ? await Promise.all([
+        supabase.rpc("directorio", { p_empresa: ctx.taller.id }),
+        costosVigentes(ctx.taller.id),
+        supabase.from("mano_obra_servicio").select("servicio_id, monto").eq("empresa_id", ctx.taller.id),
+        supabase.from("reglas_comision").select("id, nombre, evento, tipo_monto, valor, activa").eq("empresa_id", ctx.taller.id).order("creado_en"),
+      ])
+    : [{ data: [] }, new Map<string, number>(), { data: [] }, { data: [] }];
+  const fijoPor = new Map(((fijos ?? []) as { servicio_id: string; monto: number }[]).map((f) => [f.servicio_id, Number(f.monto)]));
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -64,6 +76,38 @@ export default async function Configuracion() {
         <Seccion titulo="Lo que ve administración" descripcion="Por defecto, administración no ve la utilidad ni los sueldos. Solo gerencia lo cambia.">
           <FormPermisosAdmin utilidad={config.admin_ve_utilidad} sueldos={config.admin_ve_sueldos} />
         </Seccion>
+      ) : null}
+
+      {esGerencia ? (
+        <>
+          <Seccion titulo="Mano de obra" descripcion="Cómo se calcula el costo de mano de obra de cada orden, para su utilidad.">
+            <FormManoObra regla={config.regla_mano_obra} />
+          </Seccion>
+          <Seccion titulo="Costo mensual del personal" descripcion="Sueldo más cargas, por mes. Solo lo ve gerencia (y administración si se lo permites). Un cambio vale desde hoy.">
+            <FormCostos
+              personas={((personas ?? []) as { perfil_id: string; nombre: string; roles: Rol[]; activo: boolean }[])
+                .filter((p) => p.activo)
+                .map((p) => ({ id: p.perfil_id, nombre: p.nombre, roles: p.roles.map((r) => NOMBRE_ROL[r]).join(", "), costo: costos.get(p.perfil_id) ?? null }))}
+            />
+          </Seccion>
+          {config.regla_mano_obra === "fijo_por_servicio" ? (
+            <Seccion titulo="Mano de obra por servicio" descripcion="Monto fijo de mano de obra de cada servicio, sin IGV. Vacío = cero.">
+              <FormManoObraServicios servicios={servicios.filter((s) => s.activo).map((s) => ({ id: s.id, nombre: s.nombre, monto: fijoPor.get(s.id) ?? null }))} />
+            </Seccion>
+          ) : null}
+          <Seccion titulo="Comisiones" descripcion="Se calculan solas cada mes y salen en Reportes. Puedes pausar una regla sin borrarla.">
+            <FormComisiones
+              reglas={((reglas ?? []) as { id: string; nombre: string; evento: string; tipo_monto: string; valor: number; activa: boolean }[]).map((r) => ({
+                id: r.id,
+                nombre: r.nombre,
+                evento: r.evento,
+                tipo: r.tipo_monto,
+                valor: Number(r.valor),
+                activa: r.activa,
+              }))}
+            />
+          </Seccion>
+        </>
       ) : null}
 
       <Seccion titulo="Agregar un taller" descripcion="Para manejar otro local en el mismo sistema. Tendrá su propio personal, datos y reportes.">

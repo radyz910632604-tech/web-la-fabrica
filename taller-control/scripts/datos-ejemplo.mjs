@@ -148,6 +148,12 @@ if (!yaHay) {
     ["C8R552", "Teresa Molina", "911000118", "Hyundai", "Tucson", 2017, "Mantenimiento de caja automática"],
     ["A4X903", "Alberto Núñez", "911000119", "Toyota", "Rav4", 2016, "Revisión anual de GNV"],
     ["F2K118", "Gloria Benítez", "911000120", "Suzuki", "Celerio", 2021, "Cambio de aceite y filtro"],
+    ["BJL734", "Mario Cueva", "911000121", "Toyota", "Corolla", 2019, "Reparación de embrague"],
+    ["ACD415", "Silvia Ramos", "911000122", "Nissan", "Kicks", 2020, "Cambio de pastillas de freno"],
+    ["D6P287", "Enrique Soto", "911000123", "Hyundai", "Creta", 2021, "Conversión a GNV"],
+    ["BQN560", "Carmen Ortega", "911000124", "Kia", "Sportage", 2018, "Mantenimiento de caja automática"],
+    ["A7T941", "Víctor Lozano", "911000125", "Chevrolet", "Onix", 2020, "Carga de aire acondicionado"],
+    ["F9M372", "Julia Paredes", "911000126", "Toyota", "Yaris", 2017, "Rectificado de discos"],
   ];
 
   async function clienteYCarro(placa, nombre, celular, marca, modelo, anio, combustible = null, transmision = null) {
@@ -195,10 +201,10 @@ if (!yaHay) {
   // Entregas de este mes y del anterior (para "Carros entregados").
   const carrosEntregados = [];
   for (const [placa, nombre, cel, marca, modelo, anio] of ENTREGADAS_CLIENTES) carrosEntregados.push(await clienteYCarro(placa, nombre, cel, marca, modelo, anio));
-  for (let i = 0; i < 46; i++) {
+  for (let i = 0; i < 90; i++) {
     const c = carrosEntregados[i % carrosEntregados.length];
     const servicio = ENTREGADAS_CLIENTES[i % ENTREGADAS_CLIENTES.length][6];
-    const minutos = 60 + i * 1380; // una entrega cada ~23 horas hacia atrás
+    const minutos = 60 + i * 690; // una entrega cada ~11 horas y media hacia atrás
     await orden({ ...c, servicio, estado: "entregado", tecnico: i % 2 ? luis : ernesto, ingreso: hace(minutos + 600), cambio: hace(minutos), km: 30000 + i * 1200 });
   }
 
@@ -234,7 +240,155 @@ if (!yaHay) {
       estado: i % 3 === 0 ? "no_llego" : "llego",
     });
   }
-  console.log("Taller Norte: 14 carros en el taller, 46 entregas, 7 citas hoy y 24 en los últimos días.");
+  console.log("Taller Norte: 14 carros en el taller, 90 entregas, 7 citas hoy y 24 en los últimos días.");
+}
+
+// 5. Taller Norte: dinero ficticio (solo si todavía no hay comprobantes)
+const { count: hayDinero } = await db.from("comprobantes_venta").select("id", { count: "exact", head: true }).eq("empresa_id", norte);
+if (!hayDinero) {
+  const TASA = 0.18;
+  const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const desglose = (total) => { const sin = r2(total / (1 + TASA)); return { sin, igv: r2(total - sin), total: r2(total) }; };
+  const diaLimaDe = (iso) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date(iso));
+  const masMin = (iso, min) => new Date(new Date(iso).getTime() + min * 60_000).toISOString();
+
+  // Precio al cliente (con IGV) y repuestos que se compran (sin IGV) por servicio.
+  const PRECIOS = {
+    "Cambio de pastillas de freno": [350, [["Pastillas de freno delanteras", 1, 95]]],
+    "Cambio de aceite y filtro": [240, [["Aceite 10W-30 galón", 1, 58], ["Filtro de aceite", 1, 14]]],
+    "Carga de aire acondicionado": [280, [["Gas refrigerante R134a", 1, 45]]],
+    "Mantenimiento de caja automática": [890, [["Aceite ATF litro", 6, 32], ["Filtro de caja automática", 1, 68]]],
+    "Revisión anual de GNV": [190, [["Empaquetadura de válvula GNV", 1, 22]]],
+    "Conversión a GNV": [3800, [["Kit de conversión GNV 5ta generación", 1, 1850]]],
+    "Diagnóstico de caja automática": [150, []],
+    "Reparación de embrague": [1350, [["Kit de embrague", 1, 420]]],
+    "Revisión de GLP": [200, [["Filtro de GLP", 1, 25]]],
+    "Rectificado de discos": [320, []],
+  };
+  const PROVEEDORES = [
+    ["20000000011", "Repuestos del Norte SAC (ejemplo)"],
+    ["20000000022", "Lubricantes Lima EIRL (ejemplo)"],
+    ["20000000033", "Frenos y Embragues SAC (ejemplo)"],
+    ["20000000044", "Gas Vehicular Partes SAC (ejemplo)"],
+  ];
+  const { data: provs, error: eProv } = await db.from("proveedores").insert(PROVEEDORES.map(([ruc, razon_social]) => ({ empresa_id: norte, ruc, razon_social }))).select("id, ruc");
+  await falla("proveedores", eProv);
+  const prov = (servicio) => {
+    const i = /GNV|GLP/.test(servicio) ? 3 : /aceite|caja/i.test(servicio) ? 1 : /freno|embrague|discos/i.test(servicio) ? 2 : 0;
+    return provs.find((p) => p.ruc === PROVEEDORES[i][0]).id;
+  };
+
+  // Sueldos (costo mensual) y reglas de comisión.
+  const inicio = new Date(Date.UTC(Number(anio), Number(mes) - 2, 1)).toISOString().slice(0, 10);
+  const COSTOS = [["Luis Quispe", 2200], ["Ernesto Lara", 2000], ["Carla Mendoza", 2200], ["Pedro Rojas", 1800], ["Andrea Torres", 1500], ["Milagros Vega", 1300]];
+  await falla("sueldos", (await db.from("costos_personal").insert(COSTOS.map(([n, c]) => ({ empresa_id: norte, perfil_id: ids[n], costo_mensual: c, vigente_desde: inicio })))).error);
+  await falla("comisiones", (await db.from("reglas_comision").insert([
+    { empresa_id: norte, nombre: "S/ 20 por cita que llegó y pagó", evento: "cita_llego_y_pago", tipo_monto: "fijo", valor: 20 },
+    { empresa_id: norte, nombre: "3 % por trabajo entregado", evento: "trabajo_entregado", tipo_monto: "porcentaje", valor: 3 },
+  ])).error);
+
+  const { data: ords, error: eOrd } = await db.from("ordenes_trabajo")
+    .select("id, numero, estado, ingresado_en, entregado_en, orden_servicios (descripcion)")
+    .eq("empresa_id", norte).eq("anulada", false).order("numero");
+  await falla("leer órdenes", eOrd);
+
+  async function compra(proveedorId, fechaIso, items, ordenId) {
+    const lineas = items.map(([descripcion, cantidad, precio]) => {
+      const sin = r2(cantidad * precio);
+      return { descripcion, cantidad, precio_unitario_sin_igv: precio, subtotal_sin_igv: sin, igv: r2(sin * TASA), total: r2(sin * (1 + TASA)) };
+    });
+    const sin = r2(lineas.reduce((a, l) => a + l.subtotal_sin_igv, 0));
+    const igv = r2(lineas.reduce((a, l) => a + l.igv, 0));
+    compra.n = (compra.n ?? 3400) + 1;
+    const { data: c, error } = await db.from("compras").insert({
+      empresa_id: norte, proveedor_id: proveedorId, tipo_comprobante: "factura", serie: "F001", numero: String(compra.n),
+      fecha_emision: diaLimaDe(fechaIso), tasa_igv: TASA, subtotal_sin_igv: sin, igv, total: r2(sin + igv),
+    }).select("id").single();
+    await falla("compra", error);
+    await falla("líneas de compra", (await db.from("compra_items").insert(lineas.map((l) => ({
+      ...l, empresa_id: norte, compra_id: c.id, destino: ordenId ? "orden" : "stock", orden_id: ordenId ?? null,
+    })))).error);
+  }
+
+  let boleta = 1200;
+  let factura = 310;
+  const MEDIOS = ["yape", "efectivo", "tarjeta", "transferencia", "plin", "yape"];
+  const entregadas = ords.filter((o) => o.estado === "entregado").sort((a, b) => b.entregado_en.localeCompare(a.entregado_en));
+  for (const [i, o] of entregadas.entries()) {
+    const servicio = o.orden_servicios[0]?.descripcion;
+    const [precio, repuestos] = PRECIOS[servicio] ?? [200, []];
+    const total = precio + (i % 4) * 20;
+    if (repuestos.length) {
+      // El repuesto subió de precio en la compra más reciente de pastillas (para la alerta).
+      const items = repuestos.map(([d, c, p]) => [d, c, i === 0 && /Pastillas/.test(d) ? p * 1.12 : p]);
+      await compra(prov(servicio), masMin(o.ingresado_en, 90), items, o.id);
+    }
+    // Las 2 entregas más recientes: una sin comprobante y otra con saldo (para el cierre y las alertas).
+    if (i === 1) continue;
+    const esFactura = i % 5 === 0;
+    const m = desglose(total);
+    const detalle = [servicio, ...repuestos.map(([d]) => d)].join(", ");
+    await falla("comprobante", (await db.from("comprobantes_venta").insert({
+      empresa_id: norte, orden_id: o.id, tipo: esFactura ? "factura" : "boleta", serie: esFactura ? "F001" : "B001",
+      numero: String(esFactura ? ++factura : ++boleta), fecha_emision: diaLimaDe(o.entregado_en), tasa_igv: TASA,
+      subtotal_sin_igv: m.sin, igv: m.igv, total: m.total, detalle, documento_cliente: esFactura ? "20000000099" : null,
+    })).error);
+    const pagado = i === 2 ? r2(total * 0.5) : total;
+    if (i % 3 === 0 && i !== 2) {
+      const adelanto = r2(total * 0.4);
+      await db.from("pagos").insert({ empresa_id: norte, orden_id: o.id, monto: adelanto, tipo: "adelanto", medio: "yape", pagado_en: masMin(o.ingresado_en, 120) });
+      await db.from("pagos").insert({ empresa_id: norte, orden_id: o.id, monto: r2(total - adelanto), tipo: "saldo", medio: MEDIOS[i % MEDIOS.length], pagado_en: o.entregado_en });
+    } else {
+      await db.from("pagos").insert({ empresa_id: norte, orden_id: o.id, monto: pagado, tipo: i === 2 ? "adelanto" : "saldo", medio: MEDIOS[i % MEDIOS.length], pagado_en: o.entregado_en });
+    }
+  }
+
+  // Órdenes en el taller: cotización (aprobada, enviada o adicional pendiente) y algunos adelantos.
+  const abiertas = ords.filter((o) => o.estado !== "entregado");
+  for (const [i, o] of abiertas.entries()) {
+    const servicio = o.orden_servicios[0]?.descripcion;
+    const [precio, repuestos] = PRECIOS[servicio] ?? [200, []];
+    const items = [
+      { tipo: "servicio", descripcion: servicio, cantidad: 1, precio_unitario_total: r2(precio * 0.45) },
+      ...repuestos.map(([d, c]) => ({ tipo: "repuesto", descripcion: d, cantidad: c, precio_unitario_total: r2((precio * 0.55) / repuestos.length / c) })),
+    ];
+    if (!repuestos.length) items[0].precio_unitario_total = precio;
+    const lineas = items.map((x) => { const m = desglose(x.cantidad * x.precio_unitario_total); return { ...x, subtotal_sin_igv: m.sin, igv: m.igv, total: m.total }; });
+    const suma = (k) => r2(lineas.reduce((a, l) => a + l[k], 0));
+    const estado = o.estado === "en_taller" ? "enviada" : "aprobada";
+    const { data: cot, error } = await db.from("cotizaciones").insert({
+      empresa_id: norte, orden_id: o.id, version: 1, estado, tasa_igv: TASA,
+      enviada_en: masMin(o.ingresado_en, 60), respuesta_en: estado === "aprobada" ? masMin(o.ingresado_en, 150) : null,
+      aprobada_por_medio: estado === "aprobada" ? ["whatsapp", "presencial", "llamada"][i % 3] : null,
+      subtotal_sin_igv: suma("subtotal_sin_igv"), igv: suma("igv"), total: suma("total"),
+    }).select("id").single();
+    await falla("cotización", error);
+    await falla("líneas de cotización", (await db.from("cotizacion_items").insert(lineas.map((l) => ({ ...l, empresa_id: norte, cotizacion_id: cot.id })))).error);
+    if (estado === "aprobada" && repuestos.length && o.estado !== "esperando_repuesto") await compra(prov(servicio), masMin(o.ingresado_en, 180), repuestos, o.id);
+    if (estado === "aprobada" && i % 2 === 0) {
+      await db.from("pagos").insert({ empresa_id: norte, orden_id: o.id, monto: r2(suma("total") * 0.5), tipo: "adelanto", medio: MEDIOS[i % MEDIOS.length], pagado_en: masMin(o.ingresado_en, 160) });
+    }
+    if (i === 3) {
+      // Un adicional encontrado al revisar, cotizado y sin respuesta del cliente (alerta).
+      await db.from("orden_servicios").insert({ empresa_id: norte, orden_id: o.id, descripcion: "Cambio de faja de accesorios", es_adicional: true });
+      const m = desglose(190);
+      const { data: ad } = await db.from("cotizaciones").insert({ empresa_id: norte, orden_id: o.id, version: 2, es_adicional: true, estado: "enviada", tasa_igv: TASA, enviada_en: masMin(o.ingresado_en, 240), subtotal_sin_igv: m.sin, igv: m.igv, total: m.total }).select("id").single();
+      await db.from("cotizacion_items").insert({ empresa_id: norte, cotizacion_id: ad.id, tipo: "servicio", descripcion: "Cambio de faja de accesorios", cantidad: 1, precio_unitario_total: 190, subtotal_sin_igv: m.sin, igv: m.igv, total: m.total });
+    }
+  }
+
+  // Las citas de redes que llegaron quedan unidas a una orden entregada (para las comisiones).
+  const { data: llegaron } = await db.from("citas").select("id").eq("empresa_id", norte).eq("estado", "llego").is("orden_id", null).order("fecha_hora", { ascending: false });
+  for (const [k, c] of (llegaron ?? []).entries()) {
+    const o = entregadas[k * 2 + 2];
+    if (o) await db.from("citas").update({ orden_id: o.id }).eq("id", c.id);
+  }
+
+  // Stock del almacén sin orden y una boleta de hoy sin orden asignada (alerta).
+  await compra(provs.find((p) => p.ruc === PROVEEDORES[1][0]).id, new Date(Date.now() - 2 * 86_400_000).toISOString(), [["Aceite 10W-30 galón", 6, 58], ["Filtro de aire", 4, 21], ["Refrigerante 1 L", 6, 12]]);
+  const m = desglose(95);
+  await db.from("comprobantes_venta").insert({ empresa_id: norte, tipo: "boleta", serie: "B001", numero: String(++boleta), fecha_emision: diaLimaDe(new Date().toISOString()), tasa_igv: TASA, subtotal_sin_igv: m.sin, igv: m.igv, total: m.total, detalle: "Lavado de motor" });
+  console.log("Taller Norte: compras, comprobantes, pagos, cotizaciones, sueldos y comisiones de ejemplo.");
 }
 
 console.log("Listo. Personas de ejemplo (celular · rol):");

@@ -32,13 +32,8 @@ export function MetaVentas({
     <Tarjeta aria-labelledby="titulo-meta">
       <CabeceraTarjeta
         id="titulo-meta"
-        titulo={
-          <>
-            Meta de ventas de {mes}
-            <Ejemplo />
-          </>
-        }
-        detalle="Sin IGV. La meta se fija en Configuración; lo vendido llega en la Fase 3."
+        titulo={`Meta de ventas de ${mes}`}
+        detalle={meta > 0 ? "Sin IGV, según los comprobantes del mes." : "Sin IGV. Fija la meta del mes en Configuración."}
       />
       <div
         role="progressbar"

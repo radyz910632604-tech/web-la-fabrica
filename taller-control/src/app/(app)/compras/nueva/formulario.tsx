@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FileUp, Plus, X } from "lucide-react";
 import { Boton } from "@/components/ui/boton";
@@ -24,8 +24,7 @@ const TIPOS = [
   ["sin_comprobante", "Sin comprobante"],
 ] as const;
 
-let siguiente = 1;
-const lineaVacia = (orden = ""): Linea => ({ clave: siguiente++, descripcion: "", cantidad: "1", precio: "", orden });
+const lineaVacia = (clave: number, orden = ""): Linea => ({ clave, descripcion: "", cantidad: "1", precio: "", orden });
 
 export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInicial }: { proveedores: Proveedor[]; ordenes: Opcion[]; hoy: string; tasaIgv: number; ordenInicial?: string }) {
   const router = useRouter();
@@ -40,7 +39,8 @@ export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInic
   const [tipoCambio, setTipoCambio] = useState("1");
   const [incluyeIgv, setIncluyeIgv] = useState(true);
   const [origen, setOrigen] = useState<"manual" | "xml_sunat">("manual");
-  const [lineas, setLineas] = useState<Linea[]>(() => [lineaVacia(ordenInicial)]);
+  const siguiente = useRef(1);
+  const [lineas, setLineas] = useState<Linea[]>(() => [lineaVacia(0, ordenInicial)]);
   const [avisoXml, setAvisoXml] = useState<string>();
 
   const tasa = tipo === "factura" ? tasaIgv : 0;
@@ -74,8 +74,8 @@ export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInic
       setOrigen("xml_sunat");
       setLineas(
         c.lineas.length
-          ? c.lineas.map((l) => ({ clave: siguiente++, descripcion: l.descripcion, cantidad: String(l.cantidad), precio: String(l.precioUnitarioSinIgv), orden: ordenInicial ?? "" }))
-          : [lineaVacia(ordenInicial)],
+          ? c.lineas.map((l) => ({ clave: siguiente.current++, descripcion: l.descripcion, cantidad: String(l.cantidad), precio: String(l.precioUnitarioSinIgv), orden: ordenInicial ?? "" }))
+          : [lineaVacia(siguiente.current++, ordenInicial)],
       );
       setAvisoXml(`Leído del XML: ${c.emisor.nombre}, ${c.serie}-${c.numero}, total ${c.moneda === "USD" ? "US$" : "S/"} ${c.total.toFixed(2)}. Revisa y elige a qué orden va cada repuesto.`);
     } catch (err) {
@@ -226,7 +226,7 @@ export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInic
               </li>
             ))}
           </ul>
-          <Boton type="button" variante="secundario" tamano="chico" className="self-start" onClick={() => setLineas((ls) => [...ls, lineaVacia(ordenInicial)])}>
+          <Boton type="button" variante="secundario" tamano="chico" className="self-start" onClick={() => setLineas((ls) => [...ls, lineaVacia(siguiente.current++, ordenInicial)])}>
             <Plus />
             Otro repuesto
           </Boton>

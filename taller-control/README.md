@@ -79,7 +79,7 @@ Todas usan la contraseña `taller-ejemplo` en local. Los números son ficticios.
 | 900 000 008 | Diego Paredes | Asesor (Taller Sur) |
 | 900 000 010 | Ernesto Lara | Técnico |
 
-El Taller Norte trae 14 carros en el taller, 46 entregas recientes y citas de hoy, todo ficticio.
+El Taller Norte trae 14 carros en el taller, 90 entregas recientes, citas de hoy y su dinero (compras, boletas, pagos, cotizaciones y sueldos), todo ficticio.
 
 ## Comandos
 
