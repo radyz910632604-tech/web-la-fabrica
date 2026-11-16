@@ -29,8 +29,8 @@ export function FormAvisos({ canales }: { canales: Record<string, string> }) {
       </ul>
       {estado.ok ? <p role="status" className="rounded-2xl bg-positivo-fondo px-4 py-3 text-sm text-positivo">{estado.ok}</p> : null}
       {estado.error ? <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">{estado.error}</p> : null}
-      <Boton type="submit" variante="secundario" disabled={enviando} className="mt-2 self-start">
-        {enviando ? "Guardando…" : "Guardar avisos"}
+      <Boton type="submit" disabled={enviando} className="mt-2 self-end">
+        {enviando ? "Guardando…" : "Guardar"}
       </Boton>
       <p className="mt-2 text-sm text-tinta-3">Los mensajes que inicia el taller por WhatsApp usan plantillas aprobadas por Meta y se cobran por conversación. Al cliente solo se le escribe si aceptó recibir mensajes.</p>
     </form>

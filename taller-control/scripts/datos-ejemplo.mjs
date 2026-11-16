@@ -491,6 +491,50 @@ if (!hayRepuestos && process.env.SUPABASE_ANON_KEY) {
   console.log(`Taller Norte: ${CATALOGO.length} repuestos en inventario, una compra, ${salidas.length + 1} salidas y un ajuste.`);
 }
 
+// 8. Encuestas, recordatorios y mensajes de WhatsApp de ejemplo (solo si no hay encuestas).
+const { count: hayEncuestas } = await db.from("encuestas").select("id", { count: "exact", head: true }).eq("empresa_id", norte);
+if (!hayEncuestas) {
+  const { data: entregadas } = await db
+    .from("ordenes_trabajo")
+    .select("id, cliente_id, vehiculo_id, entregado_en, kilometraje_ingreso, orden_servicios (descripcion, servicio_id)")
+    .eq("empresa_id", norte)
+    .eq("estado", "entregado")
+    .order("entregado_en", { ascending: false })
+    .limit(40);
+  const { data: catalogo } = await db.from("catalogo_servicios").select("id, nombre, meses_recordatorio, km_recordatorio").eq("empresa_id", norte);
+  const porId = new Map((catalogo ?? []).map((c) => [c.id, c]));
+  const COMENTARIOS = [null, null, "Muy amables y rápidos.", null, "Me explicaron todo con fotos.", null, null, "Tardaron un día más de lo dicho.", null, null];
+  const encuestas = [];
+  const recordatorios = [];
+  for (const [i, o] of (entregadas ?? []).entries()) {
+    const respondio = i % 3 !== 2;
+    const puntaje = [5, 5, 4, 5, 3, 5, 4, 2, 5, 4][i % 10];
+    encuestas.push({ empresa_id: norte, orden_id: o.id, cliente_id: o.cliente_id, puntaje: respondio ? puntaje : null, comentario: respondio ? COMENTARIOS[i % 10] : null, respondida_en: respondio ? new Date(new Date(o.entregado_en).getTime() + 5 * 3600_000).toISOString() : null });
+    for (const sv of o.orden_servicios ?? []) {
+      const c = porId.get(sv.servicio_id);
+      if (!c?.meses_recordatorio) continue;
+      // Para el ejemplo, algunos ya vencen (como si la entrega hubiera sido hace meses).
+      const base = new Date(o.entregado_en);
+      const objetivo = new Date(base.getTime() + (i % 4 === 0 ? -5 : c.meses_recordatorio * 30) * 86400_000);
+      recordatorios.push({ empresa_id: norte, vehiculo_id: o.vehiculo_id, cliente_id: o.cliente_id, orden_id: o.id, servicio: c.nombre, fecha_objetivo: objetivo.toISOString().slice(0, 10), km_objetivo: c.km_recordatorio && o.kilometraje_ingreso ? o.kilometraje_ingreso + c.km_recordatorio : null });
+    }
+  }
+  await falla("encuestas", (await db.from("encuestas").insert(encuestas)).error);
+  if (recordatorios.length) await falla("recordatorios", (await db.from("recordatorios_mantenimiento").upsert(recordatorios, { onConflict: "orden_id,servicio", ignoreDuplicates: true })).error);
+  // Mensajes de WhatsApp ficticios para ver la auditoría.
+  const { data: luis } = await db.from("perfiles").select("id").eq("celular", normalizarCelular("900000004")).single();
+  const { data: carla } = await db.from("perfiles").select("id").eq("celular", normalizarCelular("900000003")).single();
+  const ahora = Date.now();
+  const mensajes = [
+    { perfil_id: carla.id, celular: "+51900000003", tipo: "texto", texto: "ayuda", intencion: "ayuda", resultado: "respondido", respuesta: "Hola, Carla. Puedes escribir, mandar un audio o una foto…" },
+    { perfil_id: luis.id, celular: "+51900000004", tipo: "audio", transcripcion: "La placa B7K789 ya está lista, se cambió el embrague", intencion: "avance", resultado: "borrador", respuesta: "*Avance* B7K-789\n«se cambió el embrague»\nNuevo estado: Listo para entregar\n\n¿Lo guardo?" },
+    { perfil_id: luis.id, celular: "+51900000004", tipo: "boton", texto: "Confirmar", intencion: "avance", resultado: "confirmado", respuesta: "✅ Avance guardado · estado: listo." },
+    { perfil_id: null, celular: "+51911111111", tipo: "texto", texto: "hola, precio de cambio de aceite?", resultado: "sin_acceso", respuesta: "Este número no está registrado en el sistema del taller…" },
+  ].map((m, k) => ({ ...m, empresa_id: m.perfil_id ? norte : null, wa_id: `wamid.ejemplo.${ahora}.${k}`, creado_en: new Date(ahora - (4 - k) * 600_000).toISOString(), procesado_en: new Date(ahora - (4 - k) * 600_000 + 3000).toISOString() }));
+  await falla("mensajes de WhatsApp", (await db.from("mensajes_whatsapp").insert(mensajes)).error);
+  console.log(`Taller Norte: ${encuestas.length} encuestas, ${recordatorios.length} recordatorios de mantenimiento y ${mensajes.length} mensajes de WhatsApp de ejemplo.`);
+}
+
 console.log("Listo. Personas de ejemplo (celular · rol):");
 for (const p of PERSONAS) {
   const roles = [...new Set(Object.values(p.roles).flat())].join(", ");

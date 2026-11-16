@@ -26,22 +26,22 @@ select 'a0000000-0000-0000-0000-0000000000b1', 'fb000000-0000-0000-0000-00000000
 select is((select meses_recordatorio from catalogo_servicios where empresa_id = 'a0000000-0000-0000-0000-0000000000b1' and nombre = 'Cambio de aceite y filtro'), 3, 'El cambio de aceite recuerda a los 3 meses');
 
 update ordenes_trabajo set estado = 'listo' where id in ('fb000000-0000-0000-0000-000000000001', 'fb000000-0000-0000-0000-000000000002');
-select is((select count(*)::int from avisos where tipo = 'carro_listo'), 1, 'Carro listo: aviso solo al cliente que aceptó mensajes');
-select is((select celular from avisos where tipo = 'carro_listo'), '+51966600051', 'El aviso va al celular del cliente');
+select is((select count(*)::int from avisos where empresa_id = 'a0000000-0000-0000-0000-0000000000b1' and tipo = 'carro_listo'), 1, 'Carro listo: aviso solo al cliente que aceptó mensajes');
+select is((select celular from avisos where empresa_id = 'a0000000-0000-0000-0000-0000000000b1' and tipo = 'carro_listo'), '+51966600051', 'El aviso va al celular del cliente');
 update ordenes_trabajo set estado = 'en_proceso' where id = 'fb000000-0000-0000-0000-000000000001';
 update ordenes_trabajo set estado = 'listo' where id = 'fb000000-0000-0000-0000-000000000001';
-select is((select count(*)::int from avisos where tipo = 'carro_listo'), 1, 'No se repite el aviso de la misma orden');
+select is((select count(*)::int from avisos where empresa_id = 'a0000000-0000-0000-0000-0000000000b1' and tipo = 'carro_listo'), 1, 'No se repite el aviso de la misma orden');
 
 update ordenes_trabajo set estado = 'entregado' where id in ('fb000000-0000-0000-0000-000000000001', 'fb000000-0000-0000-0000-000000000002');
-select is((select count(*)::int from encuestas), 2, 'Cada orden entregada tiene su encuesta');
-select is((select count(*)::int from avisos where tipo = 'encuesta'), 1, 'La encuesta se envía solo a quien aceptó mensajes');
+select is((select count(*)::int from encuestas where empresa_id = 'a0000000-0000-0000-0000-0000000000b1'), 2, 'Cada orden entregada tiene su encuesta');
+select is((select count(*)::int from avisos where empresa_id = 'a0000000-0000-0000-0000-0000000000b1' and tipo = 'encuesta'), 1, 'La encuesta se envía solo a quien aceptó mensajes');
 select is((select km_objetivo from recordatorios_mantenimiento where orden_id = 'fb000000-0000-0000-0000-000000000001'), 85000, 'Recordatorio de aceite a los 5 000 km');
 
 -- Canal apagado
 insert into config_avisos (empresa_id, tipo, canal) values ('a0000000-0000-0000-0000-0000000000b1', 'carro_listo', 'apagado');
 insert into ordenes_trabajo (id, empresa_id, vehiculo_id, cliente_id, estado) values ('fb000000-0000-0000-0000-000000000003', 'a0000000-0000-0000-0000-0000000000b1', 'db000000-0000-0000-0000-000000000001', 'cb000000-0000-0000-0000-000000000001', 'en_proceso');
 update ordenes_trabajo set estado = 'listo' where id = 'fb000000-0000-0000-0000-000000000003';
-select is((select count(*)::int from avisos where tipo = 'carro_listo'), 1, 'Con el canal apagado no se arma el aviso');
+select is((select count(*)::int from avisos where empresa_id = 'a0000000-0000-0000-0000-0000000000b1' and tipo = 'carro_listo'), 1, 'Con el canal apagado no se arma el aviso');
 
 -- Cotización: solo el servidor registra la respuesta del cliente, y solo desde su celular
 insert into cotizaciones (id, empresa_id, orden_id, version, tasa_igv, total, estado) values ('eb000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-0000000000b1', 'fb000000-0000-0000-0000-000000000003', 1, 0.18, 118, 'enviada');

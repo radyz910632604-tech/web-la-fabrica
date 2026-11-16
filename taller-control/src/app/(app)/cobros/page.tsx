@@ -78,7 +78,7 @@ export default async function Cobros({ searchParams }: { searchParams: Promise<{
               const o = porId.get(p.orden_id);
               return (
                 <li key={p.id} className="flex flex-wrap items-center gap-3 border-t border-regla py-3 first:border-t-0">
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 basis-56">
                     <p className="num text-[15px] font-medium">
                       {formatearSoles(Number(p.monto))} · {MEDIOS[p.medio as MedioPago]} · {TIPO_PAGO_CORTO[p.tipo] ?? p.tipo}
                     </p>
@@ -116,7 +116,7 @@ export default async function Cobros({ searchParams }: { searchParams: Promise<{
               {deudas.map((d) => (
                 <li key={d.id} className="flex flex-wrap items-center gap-3 border-t border-regla py-3 first:border-t-0">
                   <Placa placa={d.placa} />
-                  <Link href={`/ordenes/${d.id}`} className="min-w-0 flex-1">
+                  <Link href={`/ordenes/${d.id}`} className="min-w-0 flex-1 basis-40">
                     <p className="truncate text-[15px] font-medium hover:underline">{d.cliente ?? numeroOrden(d.numero)}</p>
                     <p className="num text-[13px] text-tinta-3">
                       {numeroOrden(d.numero)} · pagó {formatearSoles(d.pagado)} de {formatearSoles(d.aCobrar)}
@@ -137,7 +137,7 @@ export default async function Cobros({ searchParams }: { searchParams: Promise<{
                 {aFavor.map((d) => (
                   <li key={d.id} className="flex flex-wrap items-center gap-3 border-t border-regla py-3 first:border-t-0">
                     <Placa placa={d.placa} />
-                    <Link href={`/ordenes/${d.id}`} className="min-w-0 flex-1">
+                    <Link href={`/ordenes/${d.id}`} className="min-w-0 flex-1 basis-40">
                       <p className="truncate text-[15px] font-medium hover:underline">{d.cliente ?? numeroOrden(d.numero)}</p>
                       <p className="num text-[13px] text-tinta-3">{numeroOrden(d.numero)} · pagó {formatearSoles(d.pagado)} de {formatearSoles(d.aCobrar)}</p>
                     </Link>
