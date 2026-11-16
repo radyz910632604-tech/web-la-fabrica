@@ -110,9 +110,18 @@ describe("Entrega 1B: lo construido ya no apunta a «Próximamente»", () => {
   it("el técnico va a sus trabajos para avances y fotos", () => {
     for (const d of todos("tecnico")) expect(d.href.startsWith("/pronto")).toBe(false);
   });
-  it("lo que llega en fases siguientes sigue marcado con su fase", () => {
-    const pago = accionesPara(["asesor"]).find((d) => d.clave === "registrar-pago");
-    expect(pago?.href).toBe("/pronto/registrar-pago");
-    expect(pago?.llega).toBe("Fase 4");
+  it("el dinero ya tiene sus pantallas: caja, compras y reportes", () => {
+    expect(accionesPara(["asesor"]).find((d) => d.clave === "registrar-pago")?.href).toBe("/cobros?nuevo=1");
+    expect(seccionesPara(["administrador"]).find((d) => d.clave === "caja")?.href).toBe("/cobros");
+    expect(accionesPara(["almacen"]).map((d) => d.href)).toEqual(["/compras/nueva", "/compras?ver=stock"]);
+    expect(seccionesPara(["gerencia"]).find((d) => d.clave === "reportes")?.href).toBe("/reportes");
+  });
+  it("ningún rol ve botones que lleven a «Próximamente»", () => {
+    for (const rol of ["gerencia", "administrador", "asesor", "tecnico", "almacen", "vendedor_redes", "confirmador"] as const) {
+      for (const d of todos(rol)) expect(d.href.startsWith("/pronto")).toBe(false);
+    }
+  });
+  it("el técnico, el vendedor y el confirmador no ven la caja", () => {
+    for (const rol of ["tecnico", "vendedor_redes", "confirmador"] as const) expect(todos(rol).some((d) => d.clave === "caja" || d.clave === "registrar-pago")).toBe(false);
   });
 });

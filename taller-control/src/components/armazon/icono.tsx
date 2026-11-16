@@ -13,6 +13,7 @@ import {
   Settings,
   UserCog,
   Users,
+  Wallet,
   Wrench,
   type LucideProps,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const ICONOS = {
   citas: CalendarDays,
   clientes: Users,
   reportes: ChartColumn,
+  caja: Wallet,
   compras: ReceiptText,
   "nuevo-ingreso": CarFront,
   pago: Banknote,

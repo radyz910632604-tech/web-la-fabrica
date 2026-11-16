@@ -30,6 +30,18 @@ export const NOMBRE_ALERTA: Record<TipoAlerta, string> = {
   comprobante_sin_orden: "Comprobante sin orden",
 };
 
+/**
+ * ¿El repuesto aparece en el detalle del comprobante? Basta con la descripción
+ * completa o con una palabra importante (5 letras o más): "Pastillas de freno
+ * Bosch" se da por cobrado si el comprobante dice "cambio de pastillas".
+ */
+function apareceEn(detalleNormalizado: string, repuesto: string): boolean {
+  const r = normalizarDescripcion(repuesto);
+  if (detalleNormalizado.includes(r)) return true;
+  const palabras = new Set(detalleNormalizado.split(" "));
+  return r.split(" ").some((p) => p.length >= 5 && palabras.has(p));
+}
+
 export type OrdenParaAlertas = {
   id: string;
   numero: string;
@@ -83,7 +95,7 @@ export function calcularAlertas(d: {
     }
     if (o.tieneComprobante && o.detalleComprobantes.trim()) {
       const detalle = normalizarDescripcion(o.detalleComprobantes);
-      const faltan = o.repuestosComprados.filter((r) => !detalle.includes(normalizarDescripcion(r)));
+      const faltan = o.repuestosComprados.filter((r) => !apareceEn(detalle, r));
       if (faltan.length) {
         alertas.push({ tipo: "repuesto_no_cobrado", severidad: "atencion", ordenId: o.id, mensaje: `${o.numero}: se compró ${faltan.join(", ")} y no aparece en el comprobante.` });
       }

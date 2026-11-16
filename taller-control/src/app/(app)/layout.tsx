@@ -1,7 +1,7 @@
 import { BarraSuperior } from "@/components/armazon/barra-superior";
 import { BarraInferior, BarraLateral } from "@/components/armazon/barras-de-acciones";
 import { accionesPara, gestionPara, seccionesPara } from "@/lib/navegacion";
-import { NOMBRE_ROL } from "@/lib/roles";
+import { NOMBRE_ROL, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 
 export default async function LayoutApp({ children }: { children: React.ReactNode }) {
@@ -19,6 +19,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
           talleres={ctx.talleres.map(({ id, nombre }) => ({ id, nombre }))}
           tallerId={ctx.taller.id}
           secciones={secciones}
+          verAlertas={tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen"])}
         />
         <div className="mt-6 flex gap-6">
           <BarraLateral acciones={acciones} gestion={gestion} />

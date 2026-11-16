@@ -10,7 +10,19 @@ import { asignarOrdenComprobante, registrarComprobante, type Resultado } from ".
 
 type Opcion = { id: string; etiqueta: string };
 
-export function RegistrarComprobante({ ordenes, hoy, ordenFija }: { ordenes: Opcion[]; hoy: string; ordenFija?: string }) {
+export function RegistrarComprobante({
+  ordenes,
+  hoy,
+  ordenFija,
+  variante = "primario",
+  tamano = "normal",
+}: {
+  ordenes: Opcion[];
+  hoy: string;
+  ordenFija?: string;
+  variante?: "primario" | "secundario";
+  tamano?: "normal" | "chico";
+}) {
   const [abierta, setAbierta] = useState(false);
   const [v, setV] = useState({ tipo: "boleta", serie: "", numero: "", fecha: hoy, total: "", sin_igv: "", igv: "", documento: "", detalle: "", origen: "manual" });
   const [avisoXml, setAvisoXml] = useState<string>();
@@ -47,7 +59,7 @@ export function RegistrarComprobante({ ordenes, hoy, ordenFija }: { ordenes: Opc
   return (
     <Ventana open={abierta} onOpenChange={setAbierta}>
       <DisparadorVentana asChild>
-        <Boton>
+        <Boton variante={variante} tamano={tamano}>
           <Plus />
           Registrar comprobante
         </Boton>

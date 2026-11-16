@@ -6,12 +6,14 @@ import { GarantiaChip } from "@/components/taller/lista-ordenes";
 import { Estado } from "@/components/ui/estado";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
-import { formatearMomento } from "@/lib/formato";
+import { TarjetaDinero, TarjetaRepuestos, TarjetaUtilidad } from "@/components/caja/tarjeta-dinero";
+import { diaEnLima, formatearMomento } from "@/lib/formato";
 import { tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { catalogo, nombresPersonal, personalConRol } from "@/lib/taller/consultas";
-import { COLOR_ESTADO, COMBUSTIBLES, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "@/lib/taller/estados";
+import { configDinero, dineroDeOrden } from "@/lib/taller/dinero-consultas";
+import { COLOR_ESTADO, COMBUSTIBLES, etiquetaOrden, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "@/lib/taller/estados";
 import { AgregarServicio, AsignarTecnico, BotonesEstado, FormAvance, SubirFotos } from "./controles";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -58,6 +60,14 @@ export default async function Orden({ params, searchParams }: { params: Promise<
   const gestiona = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]);
   const esTecnicoAsignado = ctx.roles.includes("tecnico") && o.tecnico_id === ctx.perfil.id;
   const puedeTrabajar = gestiona || esTecnicoAsignado;
+  const verCompras = gestiona || ctx.roles.includes("almacen");
+  const verUtilidad = ctx.roles.includes("gerencia");
+  const [dinero, config] = verCompras
+    ? await Promise.all([
+        dineroDeOrden(ctx.taller.id, o.id, { verVentas: gestiona, verUtilidad }, { tecnicoId: o.tecnico_id, entregadoEn: o.entregado_en }),
+        configDinero(ctx.taller.id),
+      ])
+    : [null, null];
   const ahora = new Date();
   const datosCarro = [
     v?.marca && v?.modelo ? `${v.marca} ${v.modelo}` : (v?.marca ?? v?.modelo),
@@ -182,6 +192,19 @@ export default async function Orden({ params, searchParams }: { params: Promise<
               ) : null}
             </Tarjeta>
           ) : null}
+
+          {dinero && gestiona ? (
+            <TarjetaDinero
+              d={dinero}
+              ordenId={o.id}
+              etiqueta={etiquetaOrden({ numero: o.numero, placa: v?.placa ?? "", cliente: c?.nombre })}
+              entregada={estado === "entregado"}
+              servicios={(servicios ?? []).map((s) => s.descripcion)}
+              hoy={diaEnLima(ahora)}
+            />
+          ) : null}
+          {dinero ? <TarjetaRepuestos d={dinero} ordenId={o.id} registra={tieneAlguno(ctx.roles, ["gerencia", "administrador", "almacen"])} /> : null}
+          {dinero && config ? <TarjetaUtilidad d={dinero} margenMinimo={config.margenMinimo} /> : null}
 
           <Tarjeta aria-labelledby="t-tecnico">
             <CabeceraTarjeta id="t-tecnico" titulo="Técnico responsable" />

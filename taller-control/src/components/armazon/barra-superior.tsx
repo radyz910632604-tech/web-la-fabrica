@@ -31,6 +31,7 @@ type Props = {
   talleres: { id: string; nombre: string }[];
   tallerId: string;
   secciones: Destino[];
+  verAlertas: boolean;
 };
 
 export function esActivo(ruta: string, href: string) {
@@ -39,7 +40,7 @@ export function esActivo(ruta: string, href: string) {
 
 const pildora = "flex h-14 items-center rounded-full bg-tarjeta shadow-reposo";
 
-export function BarraSuperior({ nombre, rol, talleres, tallerId, secciones }: Props) {
+export function BarraSuperior({ nombre, rol, talleres, tallerId, secciones, verAlertas }: Props) {
   const ruta = usePathname();
   const taller = talleres.find((t) => t.id === tallerId) ?? talleres[0];
 
@@ -67,7 +68,7 @@ export function BarraSuperior({ nombre, rol, talleres, tallerId, secciones }: Pr
         <div className="flex shrink-0 items-center gap-2 md:gap-3">
           <div className={cn(pildora, "gap-0 px-1 md:gap-0.5 md:px-1.5")}>
             <Buscar />
-            <Avisos />
+            <Avisos verAlertas={verAlertas} />
           </div>
           <MenuUsuario nombre={nombre} rol={rol} />
         </div>
@@ -155,7 +156,7 @@ function Buscar() {
   );
 }
 
-function Avisos() {
+function Avisos({ verAlertas }: { verAlertas: boolean }) {
   return (
     <Menu>
       <Consejo texto="Avisos" lado="bottom">
@@ -166,10 +167,20 @@ function Avisos() {
         </DisparadorMenu>
       </Consejo>
       <ContenidoMenu align="end" className="w-80 p-4">
-        <p className="text-[15px] font-medium">No tienes avisos</p>
-        <p className="mt-1 text-sm text-tinta-2">
-          Aquí llegarán los resúmenes del día (Fase 2) y las alertas del taller, como una orden entregada sin comprobante (Fase 3).
-        </p>
+        {verAlertas ? (
+          <>
+            <p className="text-[15px] font-medium">Alertas del taller</p>
+            <p className="mt-1 text-sm text-tinta-2">Entregas sin comprobante, saldos pendientes, órdenes sin avance, repuestos no cobrados y más.</p>
+            <OpcionMenu asChild className="mt-3 justify-center rounded-full bg-primario font-medium text-primario-tinta data-highlighted:bg-primario/88">
+              <Link href="/alertas">Ver alertas</Link>
+            </OpcionMenu>
+          </>
+        ) : (
+          <>
+            <p className="text-[15px] font-medium">No tienes avisos</p>
+            <p className="mt-1 text-sm text-tinta-2">Aquí llegarán los resúmenes del día cuando se conecte WhatsApp (Fase 2).</p>
+          </>
+        )}
       </ContenidoMenu>
     </Menu>
   );

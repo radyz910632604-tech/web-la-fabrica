@@ -25,12 +25,14 @@ export function RegistrarPago({
   abrir = false,
   texto = "Registrar pago",
   variante = "primario",
+  tamano = "normal",
 }: {
   ordenes: OpcionOrden[];
   ordenFija?: string;
   abrir?: boolean;
   texto?: string;
   variante?: "primario" | "secundario";
+  tamano?: "normal" | "chico";
 }) {
   const [abierta, setAbierta] = useState(abrir);
   const [orden, setOrden] = useState(ordenFija ?? "");
@@ -45,7 +47,7 @@ export function RegistrarPago({
   return (
     <Ventana open={abierta} onOpenChange={setAbierta}>
       <DisparadorVentana asChild>
-        <Boton variante={variante}>
+        <Boton variante={variante} tamano={tamano}>
           <Banknote />
           {texto}
         </Boton>

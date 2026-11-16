@@ -178,6 +178,7 @@ describe("alertas", () => {
   });
   it("el repuesto que sí aparece en el comprobante no alerta", () => {
     expect(correr([{ ...base, tieneComprobante: true, detalleComprobantes: "Kit de embrague y mano de obra", repuestosComprados: ["Kit de embrague"] }])).toEqual([]);
+    expect(correr([{ ...base, tieneComprobante: true, detalleComprobantes: "Cambio de pastillas", repuestosComprados: ["Pastillas de freno Bosch"] }])).toEqual([]);
   });
   it("quien no ve dinero no recibe alertas de dinero; el margen solo lo ve gerencia", () => {
     expect(correr([{ ...base, estado: "entregado" }], { verDinero: false })).toEqual([]);

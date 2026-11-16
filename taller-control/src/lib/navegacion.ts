@@ -15,6 +15,7 @@ export type Icono =
   | "citas"
   | "clientes"
   | "reportes"
+  | "caja"
   | "compras"
   | "nuevo-ingreso"
   | "pago"
@@ -36,27 +37,26 @@ export type Destino = {
   llega?: string;
 };
 
-const pronto = (clave: string) => `/pronto/${clave}`;
-
 const SECCIONES: (Destino & { roles: readonly Rol[] })[] = [
   { clave: "panel", nombre: "Panel", corto: "Panel", href: "/", icono: "panel", roles: ["gerencia", "administrador", "asesor", "tecnico", "almacen", "vendedor_redes", "confirmador"] },
   { clave: "ordenes", nombre: "Órdenes", corto: "Órdenes", href: "/ordenes", icono: "ordenes", roles: ["gerencia", "administrador", "asesor", "almacen"] },
   { clave: "mis-trabajos", nombre: "Mis trabajos", corto: "Trabajos", href: "/mis-trabajos", icono: "ordenes", roles: ["tecnico"] },
   { clave: "citas", nombre: "Citas", corto: "Citas", href: "/citas", icono: "citas", roles: ["gerencia", "administrador", "asesor", "vendedor_redes", "confirmador"] },
   { clave: "clientes", nombre: "Clientes", corto: "Clientes", href: "/clientes", icono: "clientes", roles: ["gerencia", "administrador", "asesor", "vendedor_redes"] },
-  { clave: "compras", nombre: "Compras", corto: "Compras", href: pronto("compras"), icono: "compras", llega: "Fase 3", roles: ["almacen"] },
-  { clave: "reportes", nombre: "Reportes", corto: "Reportes", href: pronto("reportes"), icono: "reportes", llega: "Fase 5", roles: ["gerencia"] },
+  { clave: "caja", nombre: "Caja", corto: "Caja", href: "/cobros", icono: "caja", roles: ["gerencia", "administrador", "asesor"] },
+  { clave: "compras", nombre: "Compras", corto: "Compras", href: "/compras", icono: "compras", roles: ["almacen"] },
+  { clave: "reportes", nombre: "Reportes", corto: "Reportes", href: "/reportes", icono: "reportes", roles: ["gerencia"] },
 ];
 
 const ACCIONES: (Destino & { roles: readonly Rol[] })[] = [
   { clave: "nuevo-ingreso", nombre: "Nuevo ingreso", corto: "Ingreso", href: "/ordenes/nueva", icono: "nuevo-ingreso", roles: ["gerencia", "administrador", "asesor"] },
-  { clave: "registrar-pago", nombre: "Registrar pago", corto: "Pago", href: pronto("registrar-pago"), icono: "pago", llega: "Fase 4", roles: ["gerencia", "administrador", "asesor"] },
+  { clave: "registrar-pago", nombre: "Registrar pago", corto: "Pago", href: "/cobros?nuevo=1", icono: "pago", roles: ["gerencia", "administrador", "asesor"] },
   { clave: "agendar-cita", nombre: "Agendar cita", corto: "Cita", href: "/citas?agendar=1", icono: "agendar", roles: ["asesor", "vendedor_redes"] },
   { clave: "confirmar-citas", nombre: "Confirmar citas", corto: "Confirmar", href: "/citas", icono: "confirmar", roles: ["confirmador"] },
   { clave: "reportar-avance", nombre: "Reportar avance", corto: "Avance", href: "/mis-trabajos", icono: "avance", roles: ["tecnico"] },
   { clave: "subir-fotos", nombre: "Subir fotos", corto: "Fotos", href: "/mis-trabajos", icono: "fotos", roles: ["tecnico"] },
-  { clave: "registrar-compra", nombre: "Registrar compra", corto: "Compra", href: pronto("registrar-compra"), icono: "compras", llega: "Fase 3", roles: ["almacen"] },
-  { clave: "entregar-repuesto", nombre: "Entregar repuesto", corto: "Repuesto", href: pronto("entregar-repuesto"), icono: "repuesto", llega: "Fase 3", roles: ["almacen"] },
+  { clave: "registrar-compra", nombre: "Registrar compra", corto: "Compra", href: "/compras/nueva", icono: "compras", roles: ["almacen"] },
+  { clave: "entregar-repuesto", nombre: "Entregar repuesto", corto: "Repuesto", href: "/compras?ver=stock", icono: "repuesto", roles: ["almacen"] },
 ];
 
 const GESTION: Destino[] = [
