@@ -1,0 +1,157 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { celularAEmail, normalizarCelular } from "@/lib/celulares";
+import { esGestor, esRol, rolesAsignables, NOMBRE_ROL, type Rol } from "@/lib/roles";
+import { obtenerContexto } from "@/lib/sesion";
+import { clienteAdmin } from "@/lib/supabase/admin";
+import { clienteServidor } from "@/lib/supabase/servidor";
+
+export type Resultado = { ok?: string; error?: string; errores?: Record<string, string> };
+
+const CLAVE_MINIMA = 8;
+
+async function exigirGestor() {
+  const ctx = await obtenerContexto();
+  if (!esGestor(ctx.roles)) throw new Error("Solo gerencia o administración pueden hacer esto.");
+  return ctx;
+}
+
+const esquemaPersona = z.object({
+  nombre: z.string().trim().min(2, "Escribe el nombre y apellido.").max(80, "Máximo 80 letras."),
+  celular: z.string().transform((v, c) => {
+    const n = normalizarCelular(v);
+    if (!n) c.addIssue({ code: "custom", message: "Celular de 9 dígitos, por ejemplo 987 654 321." });
+    return n ?? "";
+  }),
+  rol: z.string().refine(esRol, "Elige un rol."),
+  clave: z.string().min(CLAVE_MINIMA, `Mínimo ${CLAVE_MINIMA} caracteres.`).max(72, "Máximo 72 caracteres."),
+});
+
+/** Agrega a una persona al taller. Si ya tenía acceso en otro taller, solo se le suma el rol. */
+export async function agregarPersona(_previo: Resultado, form: FormData): Promise<Resultado> {
+  const ctx = await exigirGestor();
+  const datos = esquemaPersona.safeParse(Object.fromEntries(form));
+  if (!datos.success) {
+    const errores: Record<string, string> = {};
+    for (const problema of datos.error.issues) errores[String(problema.path[0])] ??= problema.message;
+    return { errores };
+  }
+  const { nombre, celular, clave } = datos.data;
+  const rol = datos.data.rol as Rol;
+  if (!rolesAsignables(ctx.roles).includes(rol)) {
+    return { errores: { rol: "Tu rol no puede asignar ese rol." } };
+  }
+
+  const admin = clienteAdmin();
+  const supabase = await clienteServidor();
+
+  const { data: existente } = await admin.from("perfiles").select("id, nombre").eq("celular", celular).maybeSingle();
+  let perfilId = existente?.id as string | undefined;
+  let creado = false;
+
+  if (!perfilId) {
+    const { data, error } = await admin.auth.admin.createUser({
+      email: celularAEmail(celular),
+      password: clave,
+      email_confirm: true,
+      app_metadata: { nombre, celular },
+    });
+    if (error || !data.user) return { error: "No se pudo crear el acceso. Intenta otra vez en un momento." };
+    perfilId = data.user.id;
+    creado = true;
+  }
+
+  // La inserción va con la sesión de quien la hace: la base revisa que su rol pueda asignar este rol.
+  const { error } = await supabase.from("miembros").insert({ empresa_id: ctx.taller.id, perfil_id: perfilId, rol });
+  if (error) {
+    if (creado) await admin.auth.admin.deleteUser(perfilId);
+    if (error.code === "23505") return { error: `Esa persona ya tiene el rol ${NOMBRE_ROL[rol]} en este taller.` };
+    return { error: "La base de datos no permitió asignar ese rol." };
+  }
+
+  revalidatePath("/usuarios");
+  return {
+    ok: creado
+      ? `${nombre} ya puede entrar con su celular y la contraseña que le diste.`
+      : `${existente?.nombre} ya tenía acceso en otro taller: se le agregó el rol. Su contraseña no cambió.`,
+  };
+}
+
+/** Deja a la persona con exactamente estos roles en el taller actual. */
+export async function cambiarRoles(perfilId: string, roles: string[]): Promise<Resultado> {
+  const ctx = await exigirGestor();
+  const pedidos = [...new Set(roles)].filter(esRol);
+  if (pedidos.length === 0) return { error: "Elige al menos un rol. Para quitarle el acceso, desactívala." };
+
+  const supabase = await clienteServidor();
+  const { data: actuales, error: errorLeer } = await supabase
+    .from("miembros")
+    .select("id, rol")
+    .eq("empresa_id", ctx.taller.id)
+    .eq("perfil_id", perfilId);
+  if (errorLeer) return { error: "No se pudieron leer los roles actuales." };
+
+  const asignables = rolesAsignables(ctx.roles);
+  const agregar = pedidos.filter((r) => !actuales?.some((a) => a.rol === r));
+  const quitar = (actuales ?? []).filter((a) => !pedidos.includes(a.rol as Rol));
+  if ([...agregar, ...quitar.map((q) => q.rol as Rol)].some((r) => !asignables.includes(r))) {
+    return { error: "Tu rol no puede dar ni quitar el rol de gerencia." };
+  }
+
+  if (agregar.length > 0) {
+    const { error } = await supabase
+      .from("miembros")
+      .insert(agregar.map((rol) => ({ empresa_id: ctx.taller.id, perfil_id: perfilId, rol })));
+    if (error) return { error: "La base de datos no permitió agregar esos roles." };
+  }
+  if (quitar.length > 0) {
+    const { error, count } = await supabase
+      .from("miembros")
+      .delete({ count: "exact" })
+      .in("id", quitar.map((q) => q.id));
+    if (error) {
+      return {
+        error: error.message.includes("gerencia")
+          ? "El taller debe tener al menos una persona con rol gerencia."
+          : "La base de datos no permitió quitar esos roles.",
+      };
+    }
+    if (count !== quitar.length) return { error: "Algunos roles no se pudieron quitar." };
+  }
+
+  revalidatePath("/usuarios");
+  return { ok: "Roles actualizados." };
+}
+
+/** Asigna una contraseña nueva (la persona la olvidó o es su primer ingreso). */
+export async function asignarClave(perfilId: string, clave: string): Promise<Resultado> {
+  await exigirGestor();
+  if (clave.length < CLAVE_MINIMA) return { error: `Mínimo ${CLAVE_MINIMA} caracteres.` };
+  if (clave.length > 72) return { error: "Máximo 72 caracteres." };
+
+  // Primero se pregunta a la base, con la sesión de quien lo pide, si puede gestionar a esta persona.
+  const supabase = await clienteServidor();
+  const { data: puede } = await supabase.rpc("puedo_gestionar_perfil", { p_perfil: perfilId });
+  if (puede !== true) return { error: "No puedes cambiar la contraseña de esta persona." };
+
+  const { error } = await clienteAdmin().auth.admin.updateUserById(perfilId, { password: clave });
+  if (error) return { error: "No se pudo cambiar la contraseña. Intenta otra vez." };
+  return { ok: "Contraseña cambiada. Dásela en persona." };
+}
+
+/** Activa o desactiva el acceso de una persona (en todos los talleres). */
+export async function cambiarAcceso(perfilId: string, activo: boolean): Promise<Resultado> {
+  const ctx = await exigirGestor();
+  if (perfilId === ctx.perfil.id) return { error: "No puedes desactivarte a ti mismo." };
+
+  const supabase = await clienteServidor();
+  const { error, count } = await supabase.from("perfiles").update({ activo }, { count: "exact" }).eq("id", perfilId);
+  if (error || count !== 1) return { error: "No tienes permiso para cambiar el acceso de esta persona." };
+
+  // La base ya le quitó el acceso a los datos; además se bloquea (o desbloquea) su ingreso.
+  await clienteAdmin().auth.admin.updateUserById(perfilId, { ban_duration: activo ? "none" : "876000h" });
+  revalidatePath("/usuarios");
+  return { ok: activo ? "Acceso activado." : "Acceso desactivado." };
+}
