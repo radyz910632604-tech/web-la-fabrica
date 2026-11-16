@@ -13,7 +13,8 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { listarOrdenes } from "@/lib/taller/consultas";
 import { cuentasDeOrdenes } from "@/lib/taller/dinero-consultas";
 import { numeroOrden } from "@/lib/taller/estados";
-import { anularPago } from "./acciones";
+import { ConfirmarMontos } from "@/components/ia/confirmar-montos";
+import { anularPago, confirmarPago } from "./acciones";
 
 export const metadata = { title: "Cobros y deudas" };
 
@@ -49,6 +50,17 @@ export default async function Cobros({ searchParams }: { searchParams: Promise<{
       entregada: c.estado === "entregado",
     }));
   const ahora = new Date();
+  // Pagos que llegaron por WhatsApp: esperan que alguien de caja los revise.
+  const { data: porConfirmar } = await supabase
+    .from("pagos")
+    .select("id, orden_id, monto, tipo, medio, pagado_en, creado_por")
+    .eq("empresa_id", ctx.taller.id)
+    .eq("estado", "por_confirmar")
+    .order("pagado_en", { ascending: false })
+    .limit(50);
+  const quienes = [...new Set((porConfirmar ?? []).map((p) => p.creado_por).filter(Boolean))] as string[];
+  const { data: perfiles } = quienes.length ? await supabase.from("perfiles").select("id, nombre").in("id", quienes) : { data: [] };
+  const nombreDe = new Map((perfiles ?? []).map((p) => [p.id, p.nombre as string]));
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -58,6 +70,42 @@ export default async function Cobros({ searchParams }: { searchParams: Promise<{
         accion={<RegistrarPago ordenes={opciones} abrir={nuevo === "1"} />}
       />
       <SubnavCaja actual="/cobros" roles={ctx.roles} />
+      {porConfirmar?.length ? (
+        <Tarjeta aria-labelledby="t-por-confirmar" className="border border-aviso-borde">
+          <CabeceraTarjeta id="t-por-confirmar" titulo={`Pagos por confirmar (${porConfirmar.length})`} detalle="Llegaron por WhatsApp. No cuentan en el saldo ni en la caja hasta que los confirmes." />
+          <ul className="flex flex-col">
+            {porConfirmar.map((p) => {
+              const o = porId.get(p.orden_id);
+              return (
+                <li key={p.id} className="flex flex-wrap items-center gap-3 border-t border-regla py-3 first:border-t-0">
+                  <div className="min-w-0 flex-1">
+                    <p className="num text-[15px] font-medium">
+                      {formatearSoles(Number(p.monto))} · {MEDIOS[p.medio as MedioPago]} · {TIPO_PAGO_CORTO[p.tipo] ?? p.tipo}
+                    </p>
+                    <p className="text-[13px] text-tinta-3">
+                      {o ? `${numeroOrden(o.numero)} · ${o.placa.replace(/^([A-Z0-9]{3})(\d{3})$/, "$1-$2")}` : "Orden"} · {formatearMomento(new Date(p.pagado_en), ahora)}
+                      {p.creado_por ? ` · lo envió ${nombreDe.get(p.creado_por) ?? "alguien del taller"}` : ""}
+                    </p>
+                  </div>
+                  <ConfirmarMontos
+                    id={p.id}
+                    titulo="Pago por WhatsApp"
+                    accion={confirmarPago}
+                    filas={[
+                      ["Orden", o ? `${numeroOrden(o.numero)} · ${o.cliente ?? ""}` : "—"],
+                      ["Monto", formatearSoles(Number(p.monto))],
+                      ["Medio", MEDIOS[p.medio as MedioPago]],
+                      ["Tipo", TIPO_PAGO_CORTO[p.tipo] ?? p.tipo],
+                    ]}
+                  />
+                  <Anular id={p.id} accion={anularPago} que="pago" />
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 text-sm text-tinta-3">Antes de confirmar, revisa que el dinero llegó (Yape, Plin o la caja). Si no llegó, anúlalo.</p>
+        </Tarjeta>
+      ) : null}
       <div className="grid min-w-0 gap-4 xl:grid-cols-12">
         <Tarjeta aria-labelledby="t-deudas" className="min-w-0 xl:col-span-7">
           <CabeceraTarjeta id="t-deudas" titulo="Deudas" detalle="Lo que falta cobrar, según comprobantes o cotizaciones aprobadas" />

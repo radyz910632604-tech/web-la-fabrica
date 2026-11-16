@@ -6,6 +6,8 @@ import { NextResponse, type NextRequest } from "next/server";
  * a quien no inició sesión. (En Next.js 16 "middleware" se llama "proxy".)
  */
 export async function proxy(request: NextRequest) {
+  // La API interna (n8n) no usa sesión: se autentica con su clave secreta en el encabezado.
+  if (request.nextUrl.pathname.startsWith("/api/interna/")) return NextResponse.next();
   let respuesta = NextResponse.next({ request });
 
   const supabase = createServerClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {

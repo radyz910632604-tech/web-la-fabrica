@@ -59,3 +59,15 @@ export async function anularPago(id: string, motivo: string): Promise<Resultado>
   revalidatePath("/", "layout");
   return { ok: "Pago anulado." };
 }
+
+/** Confirmar un pago que llegó por WhatsApp, después de ver que el dinero llegó. */
+export async function confirmarPago(id: string): Promise<Resultado> {
+  const ctx = await obtenerContexto();
+  if (!tieneAlguno(ctx.roles, CAJA)) return { error: "Tu rol no confirma pagos." };
+  const supabase = await clienteServidor();
+  const { error, count } = await supabase.from("pagos").update({ estado: "confirmado" }, { count: "exact" }).eq("id", id).eq("estado", "por_confirmar");
+  if (error) return { error: error.code === "23514" && !/violates/.test(error.message) ? error.message : "No se pudo confirmar." };
+  if (count !== 1) return { error: "Ese pago ya no está por confirmar." };
+  revalidatePath("/", "layout");
+  return { ok: "Pago confirmado." };
+}

@@ -78,8 +78,8 @@ describe("navegación", () => {
   });
 
   it("solo gerencia y administración ven personal y configuración", () => {
-    expect(claves(gestionPara(["gerencia"]))).toEqual(["usuarios", "configuracion"]);
-    expect(claves(gestionPara(["administrador"]))).toEqual(["usuarios", "configuracion"]);
+    expect(claves(gestionPara(["gerencia"]))).toEqual(["usuarios", "whatsapp", "configuracion"]);
+    expect(claves(gestionPara(["administrador"]))).toEqual(["usuarios", "whatsapp", "configuracion"]);
     for (const rol of ["asesor", "tecnico", "almacen", "vendedor_redes", "confirmador"] as const) {
       expect(gestionPara([rol])).toEqual([]);
     }

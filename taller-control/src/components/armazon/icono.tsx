@@ -9,6 +9,7 @@ import {
   ChartColumn,
   ClipboardList,
   LayoutGrid,
+  MessageCircle,
   Package,
   ReceiptText,
   Receipt,
@@ -41,6 +42,7 @@ const ICONOS = {
   repuesto: Package,
   confirmar: CalendarCheck,
   usuarios: UserCog,
+  whatsapp: MessageCircle,
   configuracion: Settings,
 } satisfies Record<NombreIcono, unknown>;
 

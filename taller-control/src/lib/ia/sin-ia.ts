@@ -82,3 +82,60 @@ export function interpretarSinIa(entrada: string): MensajeInterpretado {
 
   return mensajeVacio("desconocido");
 }
+
+/**
+ * Fecha y hora de Lima desde frases cortas: «mañana 10am», «hoy 4:30 pm»,
+ * «18/11 9:00», «2026-11-20 15:00», «el lunes 11». Devuelve AAAA-MM-DDTHH:MM.
+ * `hoy` es la fecha de Lima en formato AAAA-MM-DD.
+ */
+export function fechaHoraDesdeTexto(texto: string, hoy: string): string | null {
+  const t = texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const base = new Date(`${hoy}T12:00:00-05:00`);
+  const sumar = (dias: number) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date(base.getTime() + dias * 86400000));
+  let dia: string | null = null;
+  const iso = /(\d{4})-(\d{2})-(\d{2})/.exec(t);
+  const dm = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/.exec(t);
+  if (iso) dia = `${iso[1]}-${iso[2]}-${iso[3]}`;
+  else if (dm) {
+    const anio = dm[3] ? (dm[3].length === 2 ? `20${dm[3]}` : dm[3]) : hoy.slice(0, 4);
+    dia = `${anio}-${dm[2].padStart(2, "0")}-${dm[1].padStart(2, "0")}`;
+  } else if (/\bpasado manana\b/.test(t)) dia = sumar(2);
+  else if (/\bmanana\b/.test(t)) dia = sumar(1);
+  else if (/\bhoy\b/.test(t)) dia = hoy;
+  else {
+    const dias = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+    const k = dias.findIndex((d) => new RegExp(`\\b${d}\\b`).test(t));
+    if (k >= 0) {
+      const actual = base.getUTCDay();
+      dia = sumar(((k - actual + 7) % 7) || 7);
+    }
+  }
+  const sinFecha = t.replace(/(\d{4})-(\d{2})-(\d{2})/, " ").replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/, " ");
+  const h = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.\s?m\.|p\.\s?m\.|de la manana|de la tarde|de la noche)?\b/.exec(sinFecha.replace(/\b(?:a las|las|alas)\b/g, " "));
+  if (!dia || !h) return null;
+  let hora = Number(h[1]);
+  const min = h[2] ?? "00";
+  const sufijo = h[3] ?? "";
+  if (/p|tarde|noche/.test(sufijo) && hora < 12) hora += 12;
+  if (/a\.?\s?m|manana/.test(sufijo) && hora === 12) hora = 0;
+  if (!sufijo && hora >= 1 && hora <= 6) hora += 12; // «a las 4» en un taller es de la tarde
+  if (hora > 23 || Number(min) > 59) return null;
+  return `${dia}T${String(hora).padStart(2, "0")}:${min}`;
+}
+
+/** Ítems de cotización desde «pastillas 180, mano de obra 60, 2 filtros 35». */
+export function itemsDesdeTexto(texto: string): { descripcion: string; tipo: "servicio" | "repuesto"; cantidad: number; precio_con_igv: number }[] {
+  return texto
+    .replace(/^.*?\bcotiza\w*\s*/i, "")
+    .replace(PLACA, " ")
+    .split(/[,;\n]+/)
+    .map((parte) => {
+      const m = /^\s*(?:(\d+)\s*(?:x|×)?\s+)?(.+?)\s*(?:s\/\.?\s*)?(\d+(?:[.,]\d{1,2})?)\s*(?:soles)?\s*$/i.exec(parte.trim());
+      if (!m) return null;
+      const descripcion = m[2].replace(/\s+(a|en|por)$/i, "").trim();
+      if (descripcion.length < 2) return null;
+      const tipo: "servicio" | "repuesto" = /mano de obra|servicio|cambio|instalaci|revisi|diagn|alinea|balance|limpieza/i.test(descripcion) ? "servicio" : "repuesto";
+      return { descripcion, tipo, cantidad: m[1] ? Number(m[1]) : 1, precio_con_igv: Number(m[3].replace(",", ".")) };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+}
