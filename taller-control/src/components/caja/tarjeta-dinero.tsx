@@ -174,26 +174,29 @@ export function TarjetaDinero({
 }
 
 /** Repuestos comprados para la orden (gestores y almacén). */
-export function TarjetaRepuestos({ d, ordenId, registra }: { d: Pick<DineroOrden, "repuestos" | "comprasSinIgv">; ordenId: string; registra: boolean }) {
+export function TarjetaRepuestos({ d, ordenId, registra, delInventario }: { d: Pick<DineroOrden, "repuestos" | "comprasSinIgv">; ordenId: string; registra: boolean; delInventario?: React.ReactNode }) {
   return (
     <Tarjeta aria-labelledby="t-repuestos">
       <CabeceraTarjeta
         id="t-repuestos"
-        titulo="Repuestos comprados"
-        detalle={d.repuestos.length ? `${formatearSoles(d.comprasSinIgv)} sin IGV` : undefined}
+        titulo="Repuestos"
+        detalle={d.repuestos.length ? `${formatearSoles(d.comprasSinIgv)} de costo, sin IGV` : undefined}
         accion={
           registra ? (
-            <Boton asChild variante="secundario" tamano="chico">
-              <Link href={`/compras/nueva?orden=${ordenId}`}>
-                <PackagePlus />
-                Compra
-              </Link>
-            </Boton>
+            <div className="flex flex-wrap justify-end gap-2">
+              {delInventario}
+              <Boton asChild variante="secundario" tamano="chico">
+                <Link href={`/compras/nueva?orden=${ordenId}`}>
+                  <PackagePlus />
+                  Compra
+                </Link>
+              </Boton>
+            </div>
           ) : undefined
         }
       />
       {d.repuestos.length === 0 ? (
-        <p className="text-sm text-tinta-2">No hay compras asignadas a esta orden.</p>
+        <p className="text-sm text-tinta-2">Todavía no hay repuestos comprados ni sacados del inventario para esta orden.</p>
       ) : (
         <ul className="flex flex-col">
           {d.repuestos.map((r, i) => (
@@ -201,6 +204,7 @@ export function TarjetaRepuestos({ d, ordenId, registra }: { d: Pick<DineroOrden
               <span className="min-w-0">
                 {r.cantidad !== 1 ? `${r.cantidad} × ` : ""}
                 {r.descripcion}
+                {r.deInventario ? <span className="ml-2 text-[13px] text-tinta-3">del inventario</span> : null}
               </span>
               <span className="num shrink-0 text-tinta-2">{formatearSoles(r.sinIgv)}</span>
             </li>

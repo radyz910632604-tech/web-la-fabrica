@@ -436,6 +436,61 @@ if (!hayCajas && process.env.SUPABASE_ANON_KEY) {
   console.log("Taller Norte: una caja cerrada (con arqueo), una caja abierta con abonos y una nota de crédito.");
 }
 
+// 7. Inventario de Taller Norte (solo si todavía no hay repuestos).
+// Se hace con la sesión de almacén: una compra con sus líneas al inventario,
+// salidas a órdenes abiertas y un ajuste por merma.
+const { count: hayRepuestos } = await db.from("repuestos").select("id", { count: "exact", head: true }).eq("empresa_id", norte);
+if (!hayRepuestos && process.env.SUPABASE_ANON_KEY) {
+  const pedro = createClient(url, process.env.SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+  const { error: eLogin } = await pedro.auth.signInWithPassword({ email: celularAEmail(normalizarCelular("900000005")), password: clave });
+  await falla("entrar como almacén", eLogin);
+  // [código, nombre, marca, unidad, mínimo, costo sin IGV, precio al cliente con IGV, cantidad comprada]
+  const CATALOGO = [
+    ["FIL-ACE-TY01", "Filtro de aceite Toyota", "Toyota", "unidad", 5, 18, 35, 20],
+    ["FIL-ACE-HY02", "Filtro de aceite Hyundai y Kia", "Mobis", "unidad", 5, 16, 32, 15],
+    ["FIL-AIR-TY01", "Filtro de aire Toyota Yaris", "Toyota", "unidad", 3, 28, 55, 6],
+    ["ACE-5W30-GL", "Aceite sintético 5W-30", "Castrol", "galon", 4, 95, 165, 12],
+    ["ACE-10W40-GL", "Aceite semisintético 10W-40", "Mobil", "galon", 4, 68, 120, 10],
+    ["ATF-DIII-LT", "Aceite de transmisión ATF Dexron III", "Valvoline", "litro", 8, 22, 42, 24],
+    ["CVT-NS3-LT", "Fluido CVT NS-3", "Nissan", "litro", 6, 48, 85, 8],
+    ["PAST-DEL-YR", "Pastillas de freno delanteras Yaris", "Bosch", "juego", 2, 85, 160, 4],
+    ["LIQ-FRE-DOT4", "Líquido de frenos DOT 4 (500 ml)", "Bosch", "unidad", 4, 18, 35, 10],
+    ["REF-ROJO-GL", "Refrigerante rojo", "Prestone", "galon", 3, 32, 60, 6],
+    ["BUJ-IRI-NGK", "Bujía iridium", "NGK", "unidad", 8, 32, 65, 16],
+    ["GAS-R134A-KG", "Gas refrigerante R-134a", "Dupont", "kilo", 3, 38, 90, 4],
+    ["FIL-GNV-01", "Filtro de GNV fase gaseosa", "Landi Renzo", "unidad", 4, 25, 60, 8],
+    ["RED-GLP-TOM", "Kit reductor GLP", "Tomasetto", "kit", 1, 420, 780, 1],
+  ];
+  const ids = {};
+  for (const [codigo, nombre, marca, unidad, minimo, , precio] of CATALOGO) {
+    const { data, error } = await pedro.from("repuestos").insert({ empresa_id: norte, codigo, nombre, marca, unidad, stock_minimo: minimo, precio_venta_sin_igv: Math.round((precio / 1.18) * 10000) / 10000 }).select("id").single();
+    await falla("repuesto " + codigo, error);
+    ids[codigo] = data.id;
+  }
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const lineas = CATALOGO.map(([codigo, nombre, , , , costo, , cant]) => ({ descripcion: nombre, cantidad: cant, precio_sin_igv: costo, sin_igv: r2(costo * cant), igv: r2(costo * cant * 0.18), total: r2(costo * cant * 1.18), repuesto: ids[codigo] }));
+  const sin = r2(lineas.reduce((a, l) => a + l.sin_igv, 0)), igv = r2(lineas.reduce((a, l) => a + l.igv, 0));
+  const hace20 = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date(Date.now() - 20 * 86400000));
+  await falla("compra al inventario", (await pedro.rpc("registrar_compra", {
+    p_empresa: norte,
+    p_proveedor: { ruc: "20000000055", razon_social: "Distribuidora de Lubricantes (ejemplo) SAC" },
+    p_compra: { tipo: "factura", serie: "F001", numero: "3301", fecha: hace20, moneda: "PEN", tipo_cambio: 1, tasa_igv: 0.18, sin_igv: sin, igv, total: r2(sin + igv), origen: "manual" },
+    p_items: lineas,
+  })).error);
+  // Salidas a las órdenes abiertas
+  const { data: abiertas } = await db.from("ordenes_trabajo").select("id").eq("empresa_id", norte).in("estado", ["en_taller", "en_proceso", "esperando_repuesto", "listo"]).order("creado_en").limit(6);
+  const salidas = [["FIL-ACE-TY01", 1], ["ACE-5W30-GL", 1], ["FIL-ACE-HY02", 1], ["ACE-10W40-GL", 1], ["CVT-NS3-LT", 4], ["PAST-DEL-YR", 1], ["GAS-R134A-KG", 2], ["BUJ-IRI-NGK", 4], ["ACE-5W30-GL", 1], ["FIL-ACE-TY01", 1]];
+  for (const [k, [codigo, cant]] of salidas.entries()) {
+    const orden = abiertas?.[k % (abiertas.length || 1)]?.id;
+    if (!orden) break;
+    await falla("salida " + codigo, (await pedro.from("movimientos_inventario").insert({ empresa_id: norte, repuesto_id: ids[codigo], tipo: "salida", cantidad: -cant, orden_id: orden })).error);
+  }
+  await falla("ajuste", (await pedro.from("movimientos_inventario").insert({ empresa_id: norte, repuesto_id: ids["LIQ-FRE-DOT4"], tipo: "ajuste", cantidad: -1, nota: "Envase roto en el almacén" })).error);
+  await falla("salida del kit", (await pedro.from("movimientos_inventario").insert({ empresa_id: norte, repuesto_id: ids["RED-GLP-TOM"], tipo: "salida", cantidad: -1, orden_id: abiertas?.[0]?.id })).error);
+  await pedro.auth.signOut();
+  console.log(`Taller Norte: ${CATALOGO.length} repuestos en inventario, una compra, ${salidas.length + 1} salidas y un ajuste.`);
+}
+
 console.log("Listo. Personas de ejemplo (celular · rol):");
 for (const p of PERSONAS) {
   const roles = [...new Set(Object.values(p.roles).flat())].join(", ");

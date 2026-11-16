@@ -1,5 +1,6 @@
 import {
   Banknote,
+  Boxes,
   CalendarCheck,
   CalendarDays,
   CalendarPlus,
@@ -31,6 +32,7 @@ const ICONOS = {
   "caja-dia": Vault,
   comprobante: Receipt,
   compras: ReceiptText,
+  inventario: Boxes,
   "nuevo-ingreso": CarFront,
   pago: Banknote,
   agendar: CalendarPlus,

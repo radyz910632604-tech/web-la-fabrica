@@ -14,7 +14,8 @@ import { registrarCompra, type Resultado } from "../acciones";
 
 type Opcion = { id: string; etiqueta: string };
 type Proveedor = { id: string; ruc: string | null; razonSocial: string };
-type Linea = { clave: number; descripcion: string; cantidad: string; precio: string; orden: string };
+type Linea = { clave: number; descripcion: string; cantidad: string; precio: string; orden: string; repuesto: string };
+type RepuestoOpcion = { id: string; codigo: string; nombre: string };
 
 const TIPOS = [
   ["factura", "Factura"],
@@ -24,9 +25,17 @@ const TIPOS = [
   ["sin_comprobante", "Sin comprobante"],
 ] as const;
 
-const lineaVacia = (clave: number, orden = ""): Linea => ({ clave, descripcion: "", cantidad: "1", precio: "", orden });
+const lineaVacia = (clave: number, orden = ""): Linea => ({ clave, descripcion: "", cantidad: "1", precio: "", orden, repuesto: "" });
+const simple = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInicial }: { proveedores: Proveedor[]; ordenes: Opcion[]; hoy: string; tasaIgv: number; ordenInicial?: string }) {
+/** Si la descripción del proveedor coincide con un repuesto del inventario, se sugiere. */
+function sugerirRepuesto(descripcion: string, repuestos: RepuestoOpcion[]): string {
+  const d = simple(descripcion);
+  if (!d) return "";
+  return repuestos.find((r) => simple(r.nombre) === d || d.includes(simple(r.codigo)))?.id ?? "";
+}
+
+export function FormularioCompra({ proveedores, ordenes, repuestos = [], hoy, tasaIgv, ordenInicial }: { proveedores: Proveedor[]; ordenes: Opcion[]; repuestos?: RepuestoOpcion[]; hoy: string; tasaIgv: number; ordenInicial?: string }) {
   const router = useRouter();
   const [proveedorId, setProveedorId] = useState("");
   const [ruc, setRuc] = useState("");
@@ -74,7 +83,7 @@ export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInic
       setOrigen("xml_sunat");
       setLineas(
         c.lineas.length
-          ? c.lineas.map((l) => ({ clave: siguiente.current++, descripcion: l.descripcion, cantidad: String(l.cantidad), precio: String(l.precioUnitarioSinIgv), orden: ordenInicial ?? "" }))
+          ? c.lineas.map((l) => ({ clave: siguiente.current++, descripcion: l.descripcion, cantidad: String(l.cantidad), precio: String(l.precioUnitarioSinIgv), orden: ordenInicial ?? "", repuesto: ordenInicial ? "" : sugerirRepuesto(l.descripcion, repuestos) }))
           : [lineaVacia(siguiente.current++, ordenInicial)],
       );
       setAvisoXml(`Leído del XML: ${c.emisor.nombre}, ${c.serie}-${c.numero}, total ${c.moneda === "USD" ? "US$" : "S/"} ${c.total.toFixed(2)}. Revisa y elige a qué orden va cada repuesto.`);
@@ -95,7 +104,7 @@ export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInic
     tipoCambio: moneda === "USD" ? tipoCambio : "1",
     incluyeIgv,
     origen,
-    lineas: lineas.map(({ descripcion, cantidad, precio, orden }) => ({ descripcion, cantidad, precio, orden })),
+    lineas: lineas.map(({ descripcion, cantidad, precio, orden, repuesto }) => ({ descripcion, cantidad, precio, orden, repuesto: orden ? "" : repuesto })),
   });
 
   return (
@@ -211,13 +220,32 @@ export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInic
                   <label className="sr-only" htmlFor={`destino-${l.clave}`}>
                     Para qué orden es
                   </label>
-                  <Selector id={`destino-${l.clave}`} value={l.orden} onChange={(ev) => cambiarLinea(l.clave, "orden", ev.target.value)} className="h-10 min-w-0 flex-1 text-sm sm:max-w-md">
-                    <option value="">Va al stock del almacén</option>
-                    {ordenes.map((o) => (
-                      <option key={o.id} value={o.id}>
-                        Para {o.etiqueta}
-                      </option>
-                    ))}
+                  <Selector
+                    id={`destino-${l.clave}`}
+                    value={l.orden || (l.repuesto ? `rep:${l.repuesto}` : "")}
+                    onChange={(ev) => {
+                      const v = ev.target.value;
+                      setLineas((ls) => ls.map((x) => (x.clave === l.clave ? { ...x, orden: v.startsWith("rep:") ? "" : v, repuesto: v.startsWith("rep:") ? v.slice(4) : "" } : x)));
+                    }}
+                    className="h-10 min-w-0 flex-1 text-sm sm:max-w-md"
+                  >
+                    <option value="">Va al stock sin código</option>
+                    {repuestos.length ? (
+                      <optgroup label="Al inventario (suma al stock)">
+                        {repuestos.map((r) => (
+                          <option key={r.id} value={`rep:${r.id}`}>
+                            {r.codigo} · {r.nombre}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ) : null}
+                    <optgroup label="Para una orden">
+                      {ordenes.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          Para {o.etiqueta}
+                        </option>
+                      ))}
+                    </optgroup>
                   </Selector>
                   <span className="num ml-auto text-sm text-tinta-2">
                     {simbolo} {montos[i].total.toFixed(2)}
@@ -261,7 +289,7 @@ export function FormularioCompra({ proveedores, ordenes, hoy, tasaIgv, ordenInic
           <Boton type="submit" disabled={enviando} className="w-full">
             {enviando ? "Guardando…" : "Registrar compra"}
           </Boton>
-          <p className="text-sm text-tinta-3">Lo que asignes a una orden cuenta como costo de esa orden para su utilidad.</p>
+          <p className="text-sm text-tinta-3">Lo que asignes a una orden cuenta como costo de esa orden. Lo que va al inventario suma al stock de ese repuesto.</p>
         </Tarjeta>
       </div>
     </form>

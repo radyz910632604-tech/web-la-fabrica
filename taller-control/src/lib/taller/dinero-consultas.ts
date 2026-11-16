@@ -57,7 +57,7 @@ export type DineroOrden = {
   notas: { id: string; comprobanteId: string; serie: string; numero: string; fecha: string; total: number; sinIgv: number; estado: string; motivoCodigo: string; motivo: string | null }[];
   pagos: { id: string; monto: number; tipo: string; medio: string; pagadoEn: string; estado: string; operacion: string | null }[];
   cotizaciones: { id: string; version: number; adicional: boolean; estado: string; total: number; medio: string | null; items: { descripcion: string; tipo: string; cantidad: number; total: number }[] }[];
-  repuestos: { descripcion: string; cantidad: number; sinIgv: number }[];
+  repuestos: { descripcion: string; cantidad: number; sinIgv: number; deInventario?: boolean }[];
   ventaSinIgv: number;
   comprasSinIgv: number;
   manoObra: number | null;
@@ -84,6 +84,13 @@ export async function dineroDeOrden(
     configDinero(empresaId),
     supabase.from("notas_credito").select("id, comprobante_id, serie, numero, fecha_emision, total, subtotal_sin_igv, estado, motivo_codigo, motivo").eq("orden_id", ordenId).order("fecha_emision"),
   ]);
+  // Repuestos sacados del inventario: su costo (promedio al salir) también es de la orden.
+  const { data: salidas } = await supabase
+    .from("movimientos_inventario")
+    .select("cantidad, costo_unitario_sin_igv, repuestos (nombre)")
+    .eq("orden_id", ordenId)
+    .eq("tipo", "salida")
+    .eq("estado", "vigente");
 
   const notas = (notasCrudas ?? []).map((x) => ({
     id: x.id, comprobanteId: x.comprobante_id, serie: x.serie, numero: x.numero, fecha: x.fecha_emision, total: n(x.total), sinIgv: n(x.subtotal_sin_igv), estado: x.estado, motivoCodigo: x.motivo_codigo, motivo: x.motivo,
@@ -102,7 +109,13 @@ export async function dineroDeOrden(
   const repuestos = ((items ?? []) as ItemCrudo[])
     .map((i) => ({ ...i, compra: Array.isArray(i.compras) ? i.compras[0] : i.compras }))
     .filter((i) => i.compra?.estado === "confirmado")
-    .map((i) => ({ descripcion: i.descripcion, cantidad: n(i.cantidad), sinIgv: enSoles(n(i.subtotal_sin_igv), i.compra.moneda, n(i.compra.tipo_cambio)) }));
+    .map((i) => ({ descripcion: i.descripcion, cantidad: n(i.cantidad), sinIgv: enSoles(n(i.subtotal_sin_igv), i.compra.moneda, n(i.compra.tipo_cambio)) }) as DineroOrden["repuestos"][number]);
+  type SalidaCruda = { cantidad: Num; costo_unitario_sin_igv: Num; repuestos: { nombre: string } | { nombre: string }[] | null };
+  for (const x of (salidas ?? []) as SalidaCruda[]) {
+    const rep = Array.isArray(x.repuestos) ? x.repuestos[0] : x.repuestos;
+    const cant = -n(x.cantidad);
+    repuestos.push({ descripcion: rep?.nombre ?? "Repuesto", cantidad: cant, sinIgv: redondear(cant * n(x.costo_unitario_sin_igv)), deInventario: true });
+  }
 
   const ventaSinIgv = redondear(vigentes.reduce((a, c) => a + c.sinIgv, 0) - notasVigentes.reduce((a, x) => a + x.sinIgv, 0));
   const comprasSinIgv = redondear(repuestos.reduce((a, r) => a + r.sinIgv, 0));

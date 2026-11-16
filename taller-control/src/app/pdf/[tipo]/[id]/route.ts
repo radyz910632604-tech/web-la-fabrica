@@ -1,12 +1,13 @@
 import { respuestaPdf } from "@/lib/pdf/documento";
-import { pdfCaja, pdfCierre, pdfComprobante, pdfCompra, pdfCotizacion, pdfEstadoCuenta, pdfOrden, pdfPago, pdfReporte, type ModoIgv } from "@/lib/pdf/documentos";
+import { pdfCaja, pdfCierre, pdfComprobante, pdfCompra, pdfCotizacion, pdfEstadoCuenta, pdfInventario, pdfKardex, pdfOrden, pdfPago, pdfReporte, type ModoIgv } from "@/lib/pdf/documentos";
 import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 
 /**
  * PDF de cualquier documento: /pdf/cotizacion/{id}?igv=con|sin, /pdf/orden/{id},
  * /pdf/pago/{id}, /pdf/cuenta/{orden}, /pdf/comprobante/{id}, /pdf/compra/{id},
- * /pdf/caja/{id}, /pdf/cierre/{AAAA-MM-DD}, /pdf/reporte/{AAAA-MM}?ambito=todos.
+ * /pdf/caja/{id}, /pdf/cierre/{AAAA-MM-DD}, /pdf/reporte/{AAAA-MM}?ambito=todos,
+ * /pdf/kardex/{repuesto}, /pdf/inventario/hoy.
  * Se abre en el navegador; desde ahí se descarga, imprime o comparte.
  */
 export async function GET(peticion: Request, { params }: { params: Promise<{ tipo: string; id: string }> }) {
@@ -16,6 +17,7 @@ export async function GET(peticion: Request, { params }: { params: Promise<{ tip
   const modo: ModoIgv = url.searchParams.get("igv") === "sin" ? "sin" : "con";
   const uuid = /^[0-9a-f-]{36}$/.test(id);
   const caja = tieneAlguno(ctx.roles, CAJA);
+  const inventario = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen"]);
 
   let pdf = null;
   try {
@@ -27,6 +29,8 @@ export async function GET(peticion: Request, { params }: { params: Promise<{ tip
     else if (tipo === "compra" && uuid) pdf = await pdfCompra(ctx, id, modo);
     else if (tipo === "caja" && uuid && caja) pdf = await pdfCaja(ctx, id);
     else if (tipo === "cierre" && /^\d{4}-\d{2}-\d{2}$/.test(id) && caja) pdf = await pdfCierre(ctx, id);
+    else if (tipo === "kardex" && uuid && inventario) pdf = await pdfKardex(ctx, id);
+    else if (tipo === "inventario" && id === "hoy" && inventario) pdf = await pdfInventario(ctx);
     else if (tipo === "reporte" && /^\d{4}-\d{2}$/.test(id)) pdf = await pdfReporte(ctx, id, url.searchParams.get("ambito") === "todos");
   } catch (e) {
     console.error("No se pudo generar el PDF", tipo, e);

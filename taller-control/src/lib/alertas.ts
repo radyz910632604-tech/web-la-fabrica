@@ -14,9 +14,11 @@ export type TipoAlerta =
   | "ingreso_incompleto"
   | "precio_compra_subio"
   | "adicional_sin_aprobacion"
-  | "comprobante_sin_orden";
+  | "comprobante_sin_orden"
+  | "stock_bajo"
+  | "por_confirmar";
 
-export type Alerta = { tipo: TipoAlerta; severidad: "urgente" | "atencion" | "info"; ordenId?: string; mensaje: string };
+export type Alerta = { tipo: TipoAlerta; severidad: "urgente" | "atencion" | "info"; ordenId?: string; href?: string; mensaje: string };
 
 export const NOMBRE_ALERTA: Record<TipoAlerta, string> = {
   repuesto_no_cobrado: "Repuesto no cobrado",
@@ -28,6 +30,8 @@ export const NOMBRE_ALERTA: Record<TipoAlerta, string> = {
   precio_compra_subio: "Repuesto más caro",
   adicional_sin_aprobacion: "Adicional sin aprobación",
   comprobante_sin_orden: "Comprobante sin orden",
+  stock_bajo: "Stock bajo",
+  por_confirmar: "Montos por confirmar",
 };
 
 /**
@@ -70,6 +74,10 @@ export function calcularAlertas(d: {
   margenMinimoPct: number;
   verDinero: boolean;
   verMargen: boolean;
+  /** Repuestos del inventario que llegaron a su stock mínimo. */
+  stockBajo?: { codigo: string; nombre: string; stock: number; minimo: number }[];
+  /** Documentos leídos por IA que esperan que una persona los apruebe. */
+  porConfirmar?: { texto: string; href: string }[];
 }): Alerta[] {
   const alertas: Alerta[] = [];
   const limite = d.ahora.getTime() - d.horasSinCambio * 60 * 60 * 1000;
@@ -126,6 +134,13 @@ export function calcularAlertas(d: {
     for (const c of d.comprobantesSinOrden) {
       alertas.push({ tipo: "comprobante_sin_orden", severidad: "atencion", mensaje: `El comprobante ${c} no tiene orden asignada.` });
     }
+  }
+
+  for (const r of d.stockBajo ?? []) {
+    alertas.push({ tipo: "stock_bajo", severidad: r.stock <= 0 ? "urgente" : "atencion", href: "/inventario?ver=bajo", mensaje: `${r.nombre} (${r.codigo}): ${r.stock <= 0 ? "se acabó" : `quedan ${r.stock}`}, el mínimo es ${r.minimo}.` });
+  }
+  for (const t of d.porConfirmar ?? []) {
+    alertas.push({ tipo: "por_confirmar", severidad: "atencion", href: t.href, mensaje: `${t.texto} fue leído por IA y espera que alguien revise y confirme los montos.` });
   }
 
   const peso = { urgente: 0, atencion: 1, info: 2 };

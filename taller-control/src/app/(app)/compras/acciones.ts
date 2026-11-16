@@ -15,6 +15,7 @@ const linea = z.object({
   cantidad: z.coerce.number().positive("Cantidad mayor que cero."),
   precio: z.coerce.number().min(0, "Precio no válido."),
   orden: z.string(),
+  repuesto: z.string().default(""),
 });
 
 const esquema = z.object({
@@ -28,7 +29,7 @@ const esquema = z.object({
   moneda: z.enum(["PEN", "USD"]),
   tipoCambio: z.coerce.number().positive("Escribe el tipo de cambio."),
   incluyeIgv: z.boolean(),
-  origen: z.enum(["manual", "xml_sunat"]),
+  origen: z.enum(["manual", "xml_sunat", "ia"]),
   lineas: z.array(linea).min(1, "Agrega al menos un repuesto."),
 });
 
@@ -64,6 +65,7 @@ export async function registrarCompra(_previo: Resultado, form: FormData): Promi
       igv: m.igv,
       total: m.total,
       orden: l.orden || null,
+      repuesto: l.orden ? null : l.repuesto || null,
     };
   });
   const total = sumarMontos(items.map((i) => ({ sinIgv: i.sin_igv, igv: i.igv, total: i.total })));
@@ -91,7 +93,7 @@ export async function registrarCompra(_previo: Resultado, form: FormData): Promi
     return { error: "No se pudo registrar la compra." };
   }
   revalidatePath("/", "layout");
-  return { ok: "Compra registrada.", id: data as string };
+  return { ok: d.origen === "ia" ? "Compra registrada: queda por confirmar." : "Compra registrada.", id: data as string };
 }
 
 export async function anularCompra(id: string, motivo: string): Promise<Resultado> {

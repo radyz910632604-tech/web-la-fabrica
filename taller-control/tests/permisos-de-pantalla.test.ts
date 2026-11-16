@@ -113,7 +113,7 @@ describe("Entrega 1B: lo construido ya no apunta a «Próximamente»", () => {
   it("el dinero ya tiene sus pantallas: caja, compras y reportes", () => {
     expect(accionesPara(["asesor"]).find((d) => d.clave === "registrar-pago")?.href).toBe("/cobros?nuevo=1");
     expect(seccionesPara(["administrador"]).find((d) => d.clave === "caja")?.href).toBe("/caja");
-    expect(accionesPara(["almacen"]).map((d) => d.href)).toEqual(["/compras/nueva", "/compras?ver=stock"]);
+    expect(accionesPara(["almacen"]).map((d) => d.href)).toEqual(["/compras/nueva", "/inventario"]);
     expect(seccionesPara(["gerencia"]).find((d) => d.clave === "reportes")?.href).toBe("/reportes");
   });
   it("ningún rol ve botones que lleven a «Próximamente»", () => {

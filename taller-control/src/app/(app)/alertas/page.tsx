@@ -60,13 +60,13 @@ export default async function Alertas() {
                         <span className="block text-[13px] font-medium text-tinta-2">{NOMBRE_ALERTA[a.tipo]}</span>
                         <span className="block text-[15px]">{a.mensaje}</span>
                       </span>
-                      {a.ordenId ? <ChevronRight className="mt-2 size-4 shrink-0 text-tinta-3" aria-hidden /> : null}
+                      {a.ordenId || a.href ? <ChevronRight className="mt-2 size-4 shrink-0 text-tinta-3" aria-hidden /> : null}
                     </>
                   );
                   return (
                     <li key={`${a.tipo}-${a.ordenId ?? i}-${i}`} className="border-t border-regla first:border-t-0">
-                      {a.ordenId ? (
-                        <Link href={`/ordenes/${a.ordenId}`} className="-mx-2 flex items-start gap-3 rounded-xl px-2 py-3 hover:bg-interna">
+                      {a.ordenId || a.href ? (
+                        <Link href={a.href ?? `/ordenes/${a.ordenId}`} className="-mx-2 flex items-start gap-3 rounded-xl px-2 py-3 hover:bg-interna">
                           {contenido}
                         </Link>
                       ) : (

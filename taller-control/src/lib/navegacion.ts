@@ -19,6 +19,7 @@ export type Icono =
   | "caja-dia"
   | "comprobante"
   | "compras"
+  | "inventario"
   | "nuevo-ingreso"
   | "pago"
   | "agendar"
@@ -47,6 +48,7 @@ const SECCIONES: (Destino & { roles: readonly Rol[] })[] = [
   { clave: "clientes", nombre: "Clientes", corto: "Clientes", href: "/clientes", icono: "clientes", roles: ["gerencia", "administrador", "asesor", "vendedor_redes", "recepcion"] },
   { clave: "caja", nombre: "Caja", corto: "Caja", href: "/caja", icono: "caja", roles: ["gerencia", "administrador", "asesor", "recepcion"] },
   { clave: "compras", nombre: "Compras", corto: "Compras", href: "/compras", icono: "compras", roles: ["almacen"] },
+  { clave: "inventario", nombre: "Inventario", corto: "Inventario", href: "/inventario", icono: "inventario", roles: ["gerencia", "administrador", "asesor", "almacen"] },
   { clave: "reportes", nombre: "Reportes", corto: "Reportes", href: "/reportes", icono: "reportes", roles: ["gerencia"] },
 ];
 
@@ -60,7 +62,7 @@ const ACCIONES: (Destino & { roles: readonly Rol[] })[] = [
   { clave: "reportar-avance", nombre: "Reportar avance", corto: "Avance", href: "/mis-trabajos", icono: "avance", roles: ["tecnico"] },
   { clave: "subir-fotos", nombre: "Subir fotos", corto: "Fotos", href: "/mis-trabajos", icono: "fotos", roles: ["tecnico"] },
   { clave: "registrar-compra", nombre: "Registrar compra", corto: "Compra", href: "/compras/nueva", icono: "compras", roles: ["almacen"] },
-  { clave: "entregar-repuesto", nombre: "Entregar repuesto", corto: "Repuesto", href: "/compras?ver=stock", icono: "repuesto", roles: ["almacen"] },
+  { clave: "entregar-repuesto", nombre: "Entregar repuesto", corto: "Repuesto", href: "/inventario", icono: "repuesto", roles: ["almacen"] },
 ];
 
 const GESTION: Destino[] = [

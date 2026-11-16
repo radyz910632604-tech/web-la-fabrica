@@ -10,6 +10,8 @@ import { nombresPersonal } from "../taller/consultas";
 import { dineroDeOrden } from "../taller/dinero-consultas";
 import { COMBUSTIBLES, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "../taller/estados";
 import { mesesHasta, personalDelMes, reporteMensual, sumarFilas } from "../taller/reportes";
+import { cantidadTexto, valorStock } from "../inventario";
+import { kardex, listarRepuestos, repuesto } from "../taller/inventario-consultas";
 import { Documento, fechaCorta, fechaHora, soles, type DatosTaller } from "./documento";
 
 /**
@@ -537,3 +539,75 @@ export async function pdfReporte(ctx: Contexto, mes: string, todos: boolean): Pr
 }
 
 export const ROL_TEXTO = (roles: Rol[]) => roles.map((r) => NOMBRE_ROL[r]).join(", ");
+
+// ---------------------------------------------------------------------------
+// Inventario
+// ---------------------------------------------------------------------------
+export async function pdfKardex(ctx: Contexto, repuestoId: string): Promise<Pdf> {
+  const r = await repuesto(ctx.taller.id, repuestoId);
+  if (!r) return null;
+  const movs = (await kardex(ctx.taller.id, repuestoId)).reverse();
+  const { taller, pie } = await base(ctx);
+  const d = await Documento.crear(taller, "Kardex de repuesto", r.codigo, pie);
+  d.datos([
+    ["Repuesto", r.nombre],
+    ["Marca", r.marca ?? "—"],
+    ["Stock actual", cantidadTexto(r.stock, r.unidad)],
+    ["Stock mínimo", r.stockMinimo ? cantidadTexto(r.stockMinimo, r.unidad) : "Sin mínimo"],
+    ["Costo promedio", `${soles(r.costoPromedio)} sin IGV`],
+    ["Valor en stock", `${soles(valorStock([r]))} sin IGV`],
+  ]);
+  d.seccion("Movimientos", "Costos sin IGV. Los anulados no suman.");
+  d.tabla(
+    [
+      { titulo: "Fecha", ancho: 1.3 },
+      { titulo: "Movimiento", ancho: 2.6 },
+      { titulo: "Cant.", ancho: 0.8, alinear: "der" },
+      { titulo: "Costo c/u", ancho: 1, alinear: "der" },
+      { titulo: "Saldo", ancho: 0.8, alinear: "der" },
+    ],
+    movs.map((m) => {
+      const que =
+        m.tipo === "entrada" ? `Compra ${m.compra ?? ""}` : m.tipo === "salida" ? `Orden ${numeroOrden(m.ordenNumero ?? 0)}` : `Ajuste: ${m.nota ?? ""}`;
+      return [
+        fechaHora(m.creadoEn),
+        m.estado === "anulado" ? `ANULADO · ${que}` : que,
+        `${m.cantidad > 0 ? "+" : ""}${m.cantidad}`,
+        soles(m.costo),
+        m.estado === "anulado" ? "—" : String(m.stockDespues ?? ""),
+      ];
+    }),
+  );
+  if (movs.length === 0) d.nota("Sin movimientos todavía.");
+  return { bytes: await d.bytes(), archivo: `kardex-${r.codigo}.pdf` };
+}
+
+export async function pdfInventario(ctx: Contexto): Promise<Pdf> {
+  const lista = await listarRepuestos(ctx.taller.id);
+  const { taller, pie } = await base(ctx);
+  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
+  const d = await Documento.crear(taller, "Inventario valorizado", fechaCorta(hoy), pie);
+  const bajos = lista.filter((r) => r.bajo);
+  d.datos([
+    ["Repuestos", String(lista.length)],
+    ["Con stock bajo", String(bajos.length)],
+    ["Valor del stock", `${soles(valorStock(lista))} sin IGV`],
+  ]);
+  d.seccion("Repuestos", "Valor = stock × costo promedio, sin IGV.");
+  d.tabla(
+    [
+      { titulo: "Código", ancho: 1.3 },
+      { titulo: "Repuesto", ancho: 2.8 },
+      { titulo: "Stock", ancho: 0.9, alinear: "der" },
+      { titulo: "Mín.", ancho: 0.7, alinear: "der" },
+      { titulo: "Costo prom.", ancho: 1.1, alinear: "der" },
+      { titulo: "Valor", ancho: 1.1, alinear: "der" },
+    ],
+    [
+      ...lista.map((r) => [r.codigo, r.bajo ? `${r.nombre} (BAJO)` : r.nombre, String(r.stock), r.stockMinimo ? String(r.stockMinimo) : "—", soles(r.costoPromedio), soles(valorStock([r]))]),
+      ["", "Total", "", "", "", soles(valorStock(lista))],
+    ],
+    { resaltarUltima: true },
+  );
+  return { bytes: await d.bytes(), archivo: `inventario-${hoy}.pdf` };
+}

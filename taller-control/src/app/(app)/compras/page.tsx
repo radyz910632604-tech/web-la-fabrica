@@ -21,7 +21,7 @@ export const metadata = { title: "Compras" };
 
 const TIPO: Record<string, string> = { factura: "Factura", boleta: "Boleta", nota_venta: "Nota de venta", ticket: "Ticket", sin_comprobante: "Sin comprobante" };
 
-type Item = { id: string; descripcion: string; cantidad: number; total: number; destino: string; orden_id: string | null };
+type Item = { id: string; descripcion: string; cantidad: number; total: number; destino: string; orden_id: string | null; repuesto_id: string | null };
 
 export default async function Compras({ searchParams }: { searchParams: Promise<{ ver?: string; registrada?: string }> }) {
   const ctx = await obtenerContexto();
@@ -34,7 +34,7 @@ export default async function Compras({ searchParams }: { searchParams: Promise<
   const [{ data }, ordenes] = await Promise.all([
     supabase
       .from("compras")
-      .select("id, tipo_comprobante, serie, numero, fecha_emision, moneda, tipo_cambio, subtotal_sin_igv, total, estado, motivo_anulacion, origen_datos, proveedores (razon_social), compra_items (id, descripcion, cantidad, total, destino, orden_id)")
+      .select("id, tipo_comprobante, serie, numero, fecha_emision, moneda, tipo_cambio, subtotal_sin_igv, total, estado, motivo_anulacion, origen_datos, proveedores (razon_social), compra_items (id, descripcion, cantidad, total, destino, orden_id, repuesto_id)")
       .eq("empresa_id", ctx.taller.id)
       .order("fecha_emision", { ascending: false })
       .order("creado_en", { ascending: false })
@@ -51,7 +51,7 @@ export default async function Compras({ searchParams }: { searchParams: Promise<
   const vigentes = compras.filter((c) => c.estado !== "anulado");
   const delMes = vigentes.filter((c) => c.fecha_emision.slice(0, 7) === hoy.slice(0, 7));
   const totalMes = delMes.reduce((a, c) => a + enSoles(Number(c.total), c.moneda as "PEN" | "USD", Number(c.tipo_cambio)), 0);
-  const enStock = vigentes.flatMap((c) => c.items.filter((i) => i.destino === "stock").map((i) => ({ ...i, proveedor: c.proveedor, fecha: c.fecha_emision })));
+  const enStock = vigentes.filter((c) => c.estado === "confirmado").flatMap((c) => c.items.filter((i) => i.destino === "stock" && !i.repuesto_id).map((i) => ({ ...i, proveedor: c.proveedor, fecha: c.fecha_emision })));
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -153,7 +153,7 @@ export default async function Compras({ searchParams }: { searchParams: Promise<
                                   </span>
                                 ))
                               : null}
-                            {c.items.some((i) => !i.orden_id) ? `${c.items.some((i) => i.orden_id) ? ", " : ""}stock` : ""}
+                            {c.items.some((i) => !i.orden_id) ? `${c.items.some((i) => i.orden_id) ? ", " : ""}${c.items.some((i) => i.repuesto_id) ? "inventario" : "stock"}` : ""}
                           </span>
                         ) : null}
                       </p>

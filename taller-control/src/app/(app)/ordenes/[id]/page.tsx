@@ -15,6 +15,8 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { catalogo, nombresPersonal, personalConRol } from "@/lib/taller/consultas";
 import { configDinero, dineroDeOrden } from "@/lib/taller/dinero-consultas";
 import { COLOR_ESTADO, COMBUSTIBLES, etiquetaOrden, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "@/lib/taller/estados";
+import { listarRepuestos } from "@/lib/taller/inventario-consultas";
+import { SacarDelInventario } from "../../inventario/controles";
 import { AgregarServicio, AsignarTecnico, BotonesEstado, FormAvance, SubirFotos } from "./controles";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -65,12 +67,14 @@ export default async function Orden({ params, searchParams }: { params: Promise<
   const verCompras = verDinero || ctx.roles.includes("almacen");
   const esRecepcion = ctx.roles.includes("recepcion") && !gestiona;
   const verUtilidad = ctx.roles.includes("gerencia");
-  const [dinero, config] = verCompras
+  const mueveInventario = tieneAlguno(ctx.roles, ["gerencia", "administrador", "almacen"]);
+  const [dinero, config, conStock] = verCompras
     ? await Promise.all([
         dineroDeOrden(ctx.taller.id, o.id, { verVentas: verDinero, verUtilidad }, { tecnicoId: o.tecnico_id, entregadoEn: o.entregado_en }),
         configDinero(ctx.taller.id),
+        mueveInventario && o.estado !== "entregado" ? listarRepuestos(ctx.taller.id).then((l) => l.filter((r) => r.stock > 0)) : Promise.resolve([]),
       ])
-    : [null, null];
+    : [null, null, []];
   const ahora = new Date();
   const datosCarro = [
     v?.marca && v?.modelo ? `${v.marca} ${v.modelo}` : (v?.marca ?? v?.modelo),
@@ -213,7 +217,12 @@ export default async function Orden({ params, searchParams }: { params: Promise<
               hoy={diaEnLima(ahora)}
             />
           ) : null}
-          {dinero && (gestiona || ctx.roles.includes("almacen")) ? <TarjetaRepuestos d={dinero} ordenId={o.id} registra={tieneAlguno(ctx.roles, ["gerencia", "administrador", "almacen"])} /> : null}
+          {dinero && (gestiona || ctx.roles.includes("almacen")) ? <TarjetaRepuestos
+              d={dinero}
+              ordenId={o.id}
+              registra={mueveInventario}
+              delInventario={o.estado !== "entregado" ? <SacarDelInventario ordenId={o.id} repuestos={conStock.map((r) => ({ id: r.id, codigo: r.codigo, nombre: r.nombre, stock: r.stock, unidad: r.unidad }))} /> : undefined}
+            /> : null}
           {dinero && config ? <TarjetaUtilidad d={dinero} margenMinimo={config.margenMinimo} /> : null}
 
           <Tarjeta aria-labelledby="t-tecnico">

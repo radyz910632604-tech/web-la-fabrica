@@ -30,7 +30,7 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
   const ids = ordenes.map((o) => o.id);
   const vacio = Promise.resolve({ data: [] as never[] });
 
-  const [fotos, servicios, cots, comps, pagos, items, sinOrden, fijos, costos, notasRes] = await Promise.all([
+  const [fotos, servicios, cots, comps, pagos, items, sinOrden, fijos, costos, notasRes, salidasRes, repuestosRes, porConfirmarRes] = await Promise.all([
     ids.length ? supabase.from("archivos").select("orden_id").eq("tipo", "foto").in("orden_id", ids) : vacio,
     ids.length ? supabase.from("orden_servicios").select("orden_id, es_adicional, servicio_id").in("orden_id", ids) : vacio,
     ids.length && permisos.verDinero ? supabase.from("cotizaciones").select("orden_id, es_adicional, estado, total").in("orden_id", ids) : vacio,
@@ -48,6 +48,13 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
     permisos.verMargen && config.regla === "fijo_por_servicio" ? supabase.from("mano_obra_servicio").select("servicio_id, monto").eq("empresa_id", empresaId) : vacio,
     permisos.verMargen ? costosVigentes(empresaId) : Promise.resolve(new Map<string, number>()),
     ids.length && permisos.verDinero ? supabase.from("notas_credito").select("orden_id, subtotal_sin_igv, total").eq("estado", "confirmado").in("orden_id", ids) : vacio,
+    ids.length ? supabase.from("movimientos_inventario").select("orden_id, cantidad, costo_unitario_sin_igv, repuestos (nombre)").eq("tipo", "salida").eq("estado", "vigente").in("orden_id", ids) : vacio,
+    supabase.from("repuestos").select("codigo, nombre, stock, stock_minimo").eq("empresa_id", empresaId).eq("activo", true).gt("stock_minimo", 0),
+    Promise.all([
+      supabase.from("compras").select("serie, numero, tipo_comprobante, proveedores (razon_social)").eq("empresa_id", empresaId).eq("estado", "por_confirmar"),
+      permisos.verDinero ? supabase.from("comprobantes_venta").select("serie, numero, tipo").eq("empresa_id", empresaId).eq("estado", "por_confirmar") : vacio,
+      permisos.verDinero ? supabase.from("pagos").select("monto, medio").eq("empresa_id", empresaId).eq("estado", "por_confirmar") : vacio,
+    ]),
   ]);
 
   const contar = <T extends { orden_id: string | null }>(filas: T[] | null, filtro: (f: T) => boolean = () => true) => {
@@ -82,6 +89,12 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
       sinIgv: enSoles(n(i.subtotal_sin_igv), c.moneda, n(c.tipo_cambio)),
     };
   });
+
+  // Repuestos sacados del inventario: cuentan como costo de la orden y deben cobrarse.
+  type SalidaCruda = { orden_id: string; cantidad: Num; costo_unitario_sin_igv: Num; repuestos: { nombre: string } | { nombre: string }[] | null };
+  for (const x of (salidasRes.data ?? []) as SalidaCruda[]) {
+    itemsLista.push({ ordenId: x.orden_id, descripcion: uno(x.repuestos)?.nombre ?? "Repuesto", fecha: "", proveedor: "", precio: 0, sinIgv: redondear(-n(x.cantidad) * n(x.costo_unitario_sin_igv)) });
+  }
 
   // Mano de obra por orden (solo para el margen de gerencia).
   const fijoPor = new Map(((fijos.data ?? []) as { servicio_id: string; monto: Num }[]).map((f) => [f.servicio_id, n(f.monto)]));
@@ -130,7 +143,19 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
     };
   });
 
-  const itemsCompra: CompraItemParaAlertas[] = itemsLista.map((i) => ({ proveedor: i.proveedor, descripcion: i.descripcion, precioUnitarioSinIgv: i.precio, fecha: i.fecha }));
+  const stockBajo = ((repuestosRes.data ?? []) as { codigo: string; nombre: string; stock: Num; stock_minimo: Num }[])
+    .filter((r) => n(r.stock) <= n(r.stock_minimo))
+    .map((r) => ({ codigo: r.codigo, nombre: r.nombre, stock: n(r.stock), minimo: n(r.stock_minimo) }));
+  const [comprasPc, ventasPc, pagosPc] = porConfirmarRes;
+  const porConfirmar = [
+    ...((comprasPc.data ?? []) as { serie: string | null; numero: string | null; proveedores: { razon_social: string } | { razon_social: string }[] | null }[]).map(
+      (c) => ({ texto: `La compra ${c.serie ? `${c.serie}-${c.numero} ` : ""}de ${uno(c.proveedores)?.razon_social ?? "un proveedor"}`, href: "/compras?ver=por-confirmar" }),
+    ),
+    ...((ventasPc.data ?? []) as { serie: string; numero: string; tipo: string }[]).map((c) => ({ texto: `La ${c.tipo} ${c.serie}-${c.numero}`, href: "/ventas?ver=por-confirmar" })),
+    ...((pagosPc.data ?? []) as { monto: Num; medio: string }[]).map((p) => ({ texto: `Un pago de S/ ${n(p.monto).toFixed(2)} (${p.medio})`, href: "/cobros?ver=por-confirmar" })),
+  ];
+
+  const itemsCompra: CompraItemParaAlertas[] = itemsLista.filter((i) => i.fecha).map((i) => ({ proveedor: i.proveedor, descripcion: i.descripcion, precioUnitarioSinIgv: i.precio, fecha: i.fecha }));
   return calcularAlertas({
     ahora,
     ordenes: paraAlertas,
@@ -138,6 +163,8 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
     comprobantesSinOrden: ((sinOrden.data ?? []) as { serie: string; numero: string }[]).map((c) => `${c.serie}-${c.numero}`),
     horasSinCambio: config.horasSinCambio,
     margenMinimoPct: config.margenMinimo,
+    stockBajo,
+    porConfirmar,
     verDinero: permisos.verDinero,
     verMargen: permisos.verMargen,
   });
