@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
+const CAJA = ["gerencia", "administrador", "asesor", "recepcion"];
 const ENLACES = [
-  { href: "/cobros", nombre: "Cobros y deudas", roles: ["gerencia", "administrador", "asesor"] },
-  { href: "/ventas", nombre: "Comprobantes", roles: ["gerencia", "administrador", "asesor"] },
+  { href: "/caja", nombre: "Caja del día", roles: CAJA },
+  { href: "/cobros", nombre: "Cobros y deudas", roles: CAJA },
+  { href: "/ventas", nombre: "Comprobantes", roles: CAJA },
   { href: "/compras", nombre: "Compras", roles: ["gerencia", "administrador", "asesor", "almacen"] },
-  { href: "/cierre", nombre: "Cierre del día", roles: ["gerencia", "administrador", "asesor"] },
-  { href: "/alertas", nombre: "Alertas", roles: ["gerencia", "administrador", "asesor", "almacen"] },
+  { href: "/cierre", nombre: "Cierre del día", roles: CAJA },
+  { href: "/alertas", nombre: "Alertas", roles: [...CAJA, "almacen"] },
 ];
 
 /** Pestañas de la caja: cobros, comprobantes, compras, cierre y alertas. */

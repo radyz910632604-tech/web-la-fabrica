@@ -4,9 +4,9 @@ import { Placa } from "@/components/marca/placa";
 import { Anular, RegistrarPago } from "@/components/caja/controles";
 import { SubnavCaja, TituloCaja } from "@/components/caja/subnav";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
-import { MEDIOS, type MedioPago } from "@/lib/dinero";
+import { MEDIOS, TIPO_PAGO_CORTO, type MedioPago } from "@/lib/dinero";
 import { formatearMomento, formatearSoles } from "@/lib/formato";
-import { tieneAlguno } from "@/lib/roles";
+import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { listarOrdenes } from "@/lib/taller/consultas";
@@ -18,7 +18,7 @@ export const metadata = { title: "Cobros y deudas" };
 
 export default async function Cobros({ searchParams }: { searchParams: Promise<{ nuevo?: string }> }) {
   const ctx = await obtenerContexto();
-  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"])) notFound();
+  if (!tieneAlguno(ctx.roles, CAJA)) notFound();
   const { nuevo } = await searchParams;
   const supabase = await clienteServidor();
 
@@ -30,6 +30,7 @@ export default async function Cobros({ searchParams }: { searchParams: Promise<{
   const deudas = cuentas.filter((c) => c.saldo > 0.009 && c.aCobrar > 0).sort((a, b) => Number(b.estado === "entregado") - Number(a.estado === "entregado") || b.saldo - a.saldo);
   const totalDeuda = deudas.reduce((a, c) => a + c.saldo, 0);
   const entregadasConDeuda = deudas.filter((d) => d.estado === "entregado");
+  const aFavor = cuentas.filter((c) => c.saldo < -0.009);
 
   const { data: pagos } = await supabase
     .from("pagos")
@@ -39,10 +40,10 @@ export default async function Cobros({ searchParams }: { searchParams: Promise<{
     .limit(25);
   const porId = new Map(ordenes.map((o) => [o.id, o]));
   const opciones = cuentas
-    .filter((c) => c.estado !== "entregado" || c.saldo > 0.009)
+    .filter((c) => c.estado !== "entregado" || Math.abs(c.saldo) > 0.009)
     .map((c) => ({
       id: c.id,
-      etiqueta: `${numeroOrden(c.numero)} · ${c.placa.replace(/^([A-Z0-9]{3})(\d{3})$/, "$1-$2")}${c.cliente ? ` · ${c.cliente}` : ""}${c.saldo > 0.009 ? ` · debe S/ ${c.saldo.toFixed(2)}` : ""}`,
+      etiqueta: `${numeroOrden(c.numero)} · ${c.placa.replace(/^([A-Z0-9]{3})(\d{3})$/, "$1-$2")}${c.cliente ? ` · ${c.cliente}` : ""}${c.saldo > 0.009 ? ` · debe S/ ${c.saldo.toFixed(2)}` : c.saldo < -0.009 ? ` · a favor S/ ${(-c.saldo).toFixed(2)}` : ""}`,
       saldo: c.saldo,
       entregada: c.estado === "entregado",
     }));
@@ -79,6 +80,25 @@ export default async function Cobros({ searchParams }: { searchParams: Promise<{
               ))}
             </ul>
           )}
+          {aFavor.length ? (
+            <div className="mt-5 border-t border-regla pt-4">
+              <h3 className="text-[15px] font-semibold">Saldo a favor del cliente</h3>
+              <p className="mb-2 text-[13px] text-tinta-3">Pagaron de más o tuvieron nota de crédito. Devuélveles o úsalo en su próxima visita.</p>
+              <ul className="flex flex-col">
+                {aFavor.map((d) => (
+                  <li key={d.id} className="flex flex-wrap items-center gap-3 border-t border-regla py-3 first:border-t-0">
+                    <Placa placa={d.placa} />
+                    <Link href={`/ordenes/${d.id}`} className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-medium hover:underline">{d.cliente ?? numeroOrden(d.numero)}</p>
+                      <p className="num text-[13px] text-tinta-3">{numeroOrden(d.numero)} · pagó {formatearSoles(d.pagado)} de {formatearSoles(d.aCobrar)}</p>
+                    </Link>
+                    <span className="num text-[15px] font-semibold text-positivo">{formatearSoles(-d.saldo)}</span>
+                    <RegistrarPago ordenes={opciones} ordenFija={d.id} texto="Devolver" variante="secundario" />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </Tarjeta>
         <Tarjeta aria-labelledby="t-pagos" className="min-w-0 xl:col-span-5">
           <CabeceraTarjeta id="t-pagos" titulo="Últimos pagos" />
@@ -93,11 +113,11 @@ export default async function Cobros({ searchParams }: { searchParams: Promise<{
                   <li key={p.id} className="flex items-center gap-3 border-t border-regla py-3 first:border-t-0">
                     <div className="min-w-0 flex-1">
                       <p className={`num text-[15px] font-medium ${anulado ? "text-tinta-3 line-through" : ""}`}>
-                        {formatearSoles(Number(p.monto))} · {MEDIOS[p.medio as MedioPago]}
+                        {formatearSoles(p.tipo === "devolucion" ? -Number(p.monto) : Number(p.monto))} · {MEDIOS[p.medio as MedioPago]}
                       </p>
                       <p className="truncate text-[13px] text-tinta-3">
                         {o ? `${numeroOrden(o.numero)} · ` : ""}
-                        {p.tipo === "adelanto" ? "Adelanto" : "Saldo"} · {formatearMomento(new Date(p.pagado_en), ahora)}
+                        {TIPO_PAGO_CORTO[p.tipo]} · {formatearMomento(new Date(p.pagado_en), ahora)}
                         {p.numero_operacion ? ` · Op. ${p.numero_operacion}` : ""}
                         {anulado ? ` · Anulado: ${p.motivo_anulacion}` : ""}
                       </p>

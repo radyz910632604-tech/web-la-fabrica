@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { desdeTotal } from "@/lib/dinero";
+import { desdeSinIgv, desdeTotal, redondear } from "@/lib/dinero";
 import { tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
@@ -21,19 +21,25 @@ const lineas = z
   )
   .min(1, "Agrega al menos una línea.");
 
-/** Nueva cotización (versión automática). Los precios se escriben con IGV, como los ve el cliente. */
-export async function crearCotizacion(ordenId: string, adicional: boolean, datos: unknown): Promise<Resultado> {
+/**
+ * Nueva cotización (versión automática).
+ * - conIgv: si la operación lleva IGV (18 %). Sin IGV, el total es el precio.
+ * - preciosConIgv: si los precios escritos ya incluyen el IGV.
+ */
+export async function crearCotizacion(ordenId: string, adicional: boolean, datos: unknown, opciones: { conIgv: boolean; preciosConIgv: boolean } = { conIgv: true, preciosConIgv: true }): Promise<Resultado> {
   const ctx = await obtenerContexto();
   if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"])) return { error: "Tu rol no crea cotizaciones." };
   const r = lineas.safeParse(datos);
   if (!r.success) return { error: r.error.issues[0]?.message ?? "Revisa las líneas." };
   const { tasaIgv } = await configDinero(ctx.taller.id);
+  const tasa = opciones.conIgv ? tasaIgv : 0;
   const items = r.data.map((l) => {
-    const m = desdeTotal(l.cantidad * l.precio, tasaIgv);
-    return { tipo: l.tipo, descripcion: l.descripcion, cantidad: l.cantidad, precio: l.precio, sin_igv: m.sinIgv, igv: m.igv, total: m.total };
+    const bruto = l.cantidad * l.precio;
+    const m = !opciones.conIgv ? desdeTotal(bruto, 0) : opciones.preciosConIgv ? desdeTotal(bruto, tasa) : desdeSinIgv(bruto, tasa);
+    return { tipo: l.tipo, descripcion: l.descripcion, cantidad: l.cantidad, precio: redondear(m.total / l.cantidad), sin_igv: m.sinIgv, igv: m.igv, total: m.total };
   });
   const supabase = await clienteServidor();
-  const { error } = await supabase.rpc("crear_cotizacion", { p_orden: ordenId, p_adicional: adicional, p_items: items });
+  const { error } = await supabase.rpc("crear_cotizacion", { p_orden: ordenId, p_adicional: adicional, p_items: items, p_con_igv: opciones.conIgv });
   if (error) return { error: "No se pudo crear la cotización." };
   revalidatePath(`/ordenes/${ordenId}`);
   return { ok: "Cotización creada." };

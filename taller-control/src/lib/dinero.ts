@@ -67,8 +67,10 @@ export function manoObra(
  * Lo que debe pagar el cliente: el total de sus comprobantes; si todavía no
  * hay comprobante, el de las cotizaciones aprobadas. Saldo negativo = a favor.
  */
-export function saldo(datos: { totalComprobantes: number; totalCotizacionesAprobadas: number; pagado: number }) {
-  const aCobrar = datos.totalComprobantes > 0 ? datos.totalComprobantes : datos.totalCotizacionesAprobadas;
+export function saldo(datos: { totalComprobantes: number; totalCotizacionesAprobadas: number; pagado: number; conComprobante?: boolean }) {
+  // Con comprobante (aunque una nota de crédito lo deje en cero) manda el comprobante.
+  const conComprobante = datos.conComprobante ?? datos.totalComprobantes > 0;
+  const aCobrar = conComprobante ? datos.totalComprobantes : datos.totalCotizacionesAprobadas;
   return { aCobrar: redondear(aCobrar), pagado: redondear(datos.pagado), saldo: redondear(aCobrar - datos.pagado) };
 }
 
@@ -92,11 +94,45 @@ export function comisiones(reglas: ReglaComision[], eventos: EventoComision[]): 
 }
 
 export type MedioPago = "efectivo" | "yape" | "plin" | "tarjeta" | "transferencia";
+export type TipoPago = "adelanto" | "abono" | "saldo" | "devolucion";
+export const TIPO_PAGO_CORTO: Record<string, string> = { adelanto: "Adelanto", abono: "Abono", saldo: "Saldo", devolucion: "Devolución" };
+export const TIPOS_PAGO: Record<TipoPago, string> = { adelanto: "Adelanto", abono: "Abono (pago a cuenta)", saldo: "Saldo (pago final)", devolucion: "Devolución al cliente" };
+
+/** Lo que suma un pago a lo pagado: la devolución resta. */
+export function montoNeto(p: { tipo: string; monto: number }): number {
+  return p.tipo === "devolucion" ? -p.monto : p.monto;
+}
+
+/** Motivos de nota de crédito (catálogo 09 de SUNAT, los de uso común). */
+export const MOTIVOS_NOTA: Record<string, string> = {
+  "01": "Anulación de la operación",
+  "02": "Anulación por error en el RUC",
+  "03": "Corrección por error en la descripción",
+  "04": "Descuento global",
+  "05": "Descuento por ítem",
+  "06": "Devolución total",
+  "07": "Devolución por ítem",
+  "09": "Disminución en el valor",
+  "10": "Otros conceptos",
+  "13": "Ajuste en montos o fechas de pago",
+};
+
+/**
+ * Efectivo que debería haber en la caja: lo inicial, más lo cobrado en efectivo
+ * (menos devoluciones), más ingresos, menos gastos. Igual que cerrar_caja().
+ */
+export function efectivoEsperado(d: { montoInicial: number; pagos: { tipo: string; medio: string; monto: number }[]; movimientos: { tipo: "ingreso" | "egreso"; medio: string; monto: number }[] }) {
+  const cobros = d.pagos.filter((p) => p.medio === "efectivo").reduce((a, p) => a + montoNeto(p), 0);
+  const ingresos = d.movimientos.filter((m) => m.medio === "efectivo" && m.tipo === "ingreso").reduce((a, m) => a + m.monto, 0);
+  const egresos = d.movimientos.filter((m) => m.medio === "efectivo" && m.tipo === "egreso").reduce((a, m) => a + m.monto, 0);
+  return { cobros: redondear(cobros), ingresos: redondear(ingresos), egresos: redondear(egresos), esperado: redondear(d.montoInicial + cobros + ingresos - egresos) };
+}
 export const MEDIOS: Record<MedioPago, string> = { efectivo: "Efectivo", yape: "Yape", plin: "Plin", tarjeta: "Tarjeta", transferencia: "Transferencia" };
 
 export type Cierre = {
   boletas: Montos & { cantidad: number };
   facturas: Montos & { cantidad: number };
+  notas: Montos & { cantidad: number };
   compras: Montos & { cantidad: number };
   cobros: Record<MedioPago, number> & { total: number };
   utilidadEstimada: number;
@@ -107,7 +143,9 @@ export type Cierre = {
 export function cierreDiario(d: {
   comprobantes: { tipo: "boleta" | "factura"; sinIgv: number; igv: number; total: number }[];
   compras: { sinIgv: number; igv: number; total: number }[];
+  /** Pagos del día; una devolución va con monto negativo. */
   pagos: { medio: MedioPago; monto: number }[];
+  notasCredito?: { sinIgv: number; igv: number; total: number }[];
   manoObraDelDia: number;
   entregadasSinComprobante: string[];
   entregadasConSaldo: { orden: string; saldo: number }[];
@@ -116,13 +154,14 @@ export function cierreDiario(d: {
   const resumir = (lista: { sinIgv: number; igv: number; total: number }[]) => ({ ...sumarMontos(lista), cantidad: lista.length });
   const boletas = resumir(d.comprobantes.filter((c) => c.tipo === "boleta"));
   const facturas = resumir(d.comprobantes.filter((c) => c.tipo === "factura"));
+  const notas = resumir(d.notasCredito ?? []);
   const compras = resumir(d.compras);
   const cobros = { efectivo: 0, yape: 0, plin: 0, tarjeta: 0, transferencia: 0, total: 0 };
   for (const p of d.pagos) {
     cobros[p.medio] = redondear(cobros[p.medio] + p.monto);
     cobros.total = redondear(cobros.total + p.monto);
   }
-  const vendidoConIgv = redondear(boletas.total + facturas.total);
+  const vendidoConIgv = redondear(boletas.total + facturas.total - notas.total);
   const descuadres: string[] = [];
   if (Math.abs(vendidoConIgv - cobros.total) >= 0.01) {
     const dif = redondear(cobros.total - vendidoConIgv);
@@ -138,9 +177,10 @@ export function cierreDiario(d: {
   return {
     boletas,
     facturas,
+    notas,
     compras,
     cobros,
-    utilidadEstimada: redondear(boletas.sinIgv + facturas.sinIgv - compras.sinIgv - d.manoObraDelDia),
+    utilidadEstimada: redondear(boletas.sinIgv + facturas.sinIgv - notas.sinIgv - compras.sinIgv - d.manoObraDelDia),
     descuadres,
   };
 }

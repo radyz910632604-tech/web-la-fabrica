@@ -25,7 +25,7 @@ type Fila = {
 
 export default async function Clientes({ searchParams }: { searchParams: Promise<{ q?: string; ver?: string }> }) {
   const ctx = await obtenerContexto();
-  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes", "confirmador"])) notFound();
+  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes", "confirmador", "recepcion"])) notFound();
   const { q = "", ver = "todos" } = await searchParams;
   const supabase = await clienteServidor();
 

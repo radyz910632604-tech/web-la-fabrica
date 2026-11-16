@@ -1,6 +1,6 @@
 import "server-only";
 import { clienteServidor } from "../supabase/servidor";
-import { enSoles, manoObra, redondear, saldo as calcularSaldo, utilidad as calcularUtilidad } from "../dinero";
+import { enSoles, manoObra, montoNeto, redondear, saldo as calcularSaldo, utilidad as calcularUtilidad } from "../dinero";
 import { limitesDiaLima } from "./consultas";
 
 /**
@@ -54,6 +54,7 @@ export type DineroOrden = {
   verVentas: boolean;
   verUtilidad: boolean;
   comprobantes: { id: string; tipo: string; serie: string; numero: string; fecha: string; total: number; sinIgv: number; estado: string; detalle: string | null }[];
+  notas: { id: string; comprobanteId: string; serie: string; numero: string; fecha: string; total: number; sinIgv: number; estado: string; motivoCodigo: string; motivo: string | null }[];
   pagos: { id: string; monto: number; tipo: string; medio: string; pagadoEn: string; estado: string; operacion: string | null }[];
   cotizaciones: { id: string; version: number; adicional: boolean; estado: string; total: number; medio: string | null; items: { descripcion: string; tipo: string; cantidad: number; total: number }[] }[];
   repuestos: { descripcion: string; cantidad: number; sinIgv: number }[];
@@ -75,14 +76,19 @@ export async function dineroDeOrden(
   orden: { tecnicoId: string | null; entregadoEn: string | null },
 ): Promise<DineroOrden> {
   const supabase = await clienteServidor();
-  const [{ data: comps }, { data: pagos }, { data: cots }, { data: items }, config] = await Promise.all([
+  const [{ data: comps }, { data: pagos }, { data: cots }, { data: items }, config, { data: notasCrudas }] = await Promise.all([
     supabase.from("comprobantes_venta").select("id, tipo, serie, numero, fecha_emision, total, subtotal_sin_igv, estado, detalle").eq("orden_id", ordenId).order("fecha_emision"),
     supabase.from("pagos").select("id, monto, tipo, medio, pagado_en, estado, numero_operacion").eq("orden_id", ordenId).order("pagado_en"),
     supabase.from("cotizaciones").select("id, version, es_adicional, estado, total, aprobada_por_medio, cotizacion_items (descripcion, tipo, cantidad, total)").eq("orden_id", ordenId).order("version"),
     supabase.from("compra_items").select("descripcion, cantidad, subtotal_sin_igv, compras!inner (estado, moneda, tipo_cambio)").eq("orden_id", ordenId),
     configDinero(empresaId),
+    supabase.from("notas_credito").select("id, comprobante_id, serie, numero, fecha_emision, total, subtotal_sin_igv, estado, motivo_codigo, motivo").eq("orden_id", ordenId).order("fecha_emision"),
   ]);
 
+  const notas = (notasCrudas ?? []).map((x) => ({
+    id: x.id, comprobanteId: x.comprobante_id, serie: x.serie, numero: x.numero, fecha: x.fecha_emision, total: n(x.total), sinIgv: n(x.subtotal_sin_igv), estado: x.estado, motivoCodigo: x.motivo_codigo, motivo: x.motivo,
+  }));
+  const notasVigentes = notas.filter((x) => x.estado === "confirmado");
   const comprobantes = (comps ?? []).map((c) => ({
     id: c.id, tipo: c.tipo, serie: c.serie, numero: c.numero, fecha: c.fecha_emision, total: n(c.total), sinIgv: n(c.subtotal_sin_igv), estado: c.estado, detalle: c.detalle,
   }));
@@ -98,12 +104,13 @@ export async function dineroDeOrden(
     .filter((i) => i.compra?.estado === "confirmado")
     .map((i) => ({ descripcion: i.descripcion, cantidad: n(i.cantidad), sinIgv: enSoles(n(i.subtotal_sin_igv), i.compra.moneda, n(i.compra.tipo_cambio)) }));
 
-  const ventaSinIgv = redondear(vigentes.reduce((a, c) => a + c.sinIgv, 0));
+  const ventaSinIgv = redondear(vigentes.reduce((a, c) => a + c.sinIgv, 0) - notasVigentes.reduce((a, x) => a + x.sinIgv, 0));
   const comprasSinIgv = redondear(repuestos.reduce((a, r) => a + r.sinIgv, 0));
   const s = calcularSaldo({
-    totalComprobantes: redondear(vigentes.reduce((a, c) => a + c.total, 0)),
+    totalComprobantes: redondear(vigentes.reduce((a, c) => a + c.total, 0) - notasVigentes.reduce((a, x) => a + x.total, 0)),
     totalCotizacionesAprobadas: redondear(cotizaciones.filter((c) => c.estado === "aprobada").reduce((a, c) => a + c.total, 0)),
-    pagado: redondear(pagosLista.filter((p) => p.estado === "confirmado").reduce((a, p) => a + p.monto, 0)),
+    pagado: redondear(pagosLista.filter((p) => p.estado === "confirmado").reduce((a, p) => a + montoNeto(p), 0)),
+    conComprobante: vigentes.length > 0,
   });
 
   let mo: number | null = null;
@@ -120,6 +127,7 @@ export async function dineroDeOrden(
     verVentas: permisos.verVentas,
     verUtilidad: permisos.verUtilidad,
     comprobantes,
+    notas,
     pagos: pagosLista,
     cotizaciones,
     repuestos,
@@ -172,7 +180,7 @@ export type ResumenMesDinero = { ventas: number; ventasConIgv: number; compras: 
  */
 export async function totalesPeriodo(empresaId: string, desdeDia: string, hastaDia: string, fraccionMes: number, verSueldos: boolean): Promise<ResumenMesDinero> {
   const supabase = await clienteServidor();
-  const [{ data: ventas }, { data: compras }, { count }, costos, tecnicos] = await Promise.all([
+  const [{ data: ventas }, { data: compras }, { count }, costos, tecnicos, { data: notas }] = await Promise.all([
     supabase.from("comprobantes_venta").select("subtotal_sin_igv, total").eq("empresa_id", empresaId).eq("estado", "confirmado").gte("fecha_emision", desdeDia).lt("fecha_emision", hastaDia),
     supabase.from("compras").select("subtotal_sin_igv, moneda, tipo_cambio").eq("empresa_id", empresaId).eq("estado", "confirmado").gte("fecha_emision", desdeDia).lt("fecha_emision", hastaDia),
     supabase
@@ -184,9 +192,11 @@ export async function totalesPeriodo(empresaId: string, desdeDia: string, hastaD
       .lt("entregado_en", limitesDiaLima(hastaDia).desde.toISOString()),
     verSueldos ? costosVigentes(empresaId, hastaDia) : Promise.resolve(new Map<string, number>()),
     verSueldos ? supabase.from("miembros").select("perfil_id").eq("empresa_id", empresaId).eq("rol", "tecnico").eq("activo", true) : Promise.resolve({ data: [] }),
+    supabase.from("notas_credito").select("subtotal_sin_igv, total").eq("empresa_id", empresaId).eq("estado", "confirmado").gte("fecha_emision", desdeDia).lt("fecha_emision", hastaDia),
   ]);
-  const ventasSin = redondear((ventas ?? []).reduce((a, v) => a + n(v.subtotal_sin_igv), 0));
-  const ventasCon = redondear((ventas ?? []).reduce((a, v) => a + n(v.total), 0));
+  // Ventas netas: comprobantes menos sus notas de crédito.
+  const ventasSin = redondear((ventas ?? []).reduce((a, v) => a + n(v.subtotal_sin_igv), 0) - (notas ?? []).reduce((a, x) => a + n(x.subtotal_sin_igv), 0));
+  const ventasCon = redondear((ventas ?? []).reduce((a, v) => a + n(v.total), 0) - (notas ?? []).reduce((a, x) => a + n(x.total), 0));
   const comprasSin = redondear((compras ?? []).reduce((a, c) => a + enSoles(n(c.subtotal_sin_igv), c.moneda as "PEN" | "USD", n(c.tipo_cambio)), 0));
   const mo = redondear(((tecnicos.data ?? []) as { perfil_id: string }[]).reduce((a, t) => a + (costos.get(t.perfil_id) ?? 0), 0) * fraccionMes);
   return { ventas: ventasSin, ventasConIgv: ventasCon, compras: comprasSin, manoObra: mo, utilidad: redondear(ventasSin - comprasSin - mo), entregados: count ?? 0 };
@@ -209,10 +219,11 @@ export async function cuentasDeOrdenes(empresaId: string, ordenes: { id: string;
   if (ordenes.length === 0) return [];
   const supabase = await clienteServidor();
   const ids = ordenes.map((o) => o.id);
-  const [{ data: comps }, { data: cots }, { data: pagos }] = await Promise.all([
+  const [{ data: comps }, { data: cots }, { data: pagos }, { data: notas }] = await Promise.all([
     supabase.from("comprobantes_venta").select("orden_id, total").eq("empresa_id", empresaId).eq("estado", "confirmado").in("orden_id", ids),
     supabase.from("cotizaciones").select("orden_id, total").eq("empresa_id", empresaId).eq("estado", "aprobada").in("orden_id", ids),
-    supabase.from("pagos").select("orden_id, monto").eq("empresa_id", empresaId).eq("estado", "confirmado").in("orden_id", ids),
+    supabase.from("pagos").select("orden_id, monto, tipo").eq("empresa_id", empresaId).eq("estado", "confirmado").in("orden_id", ids),
+    supabase.from("notas_credito").select("orden_id, total").eq("empresa_id", empresaId).eq("estado", "confirmado").in("orden_id", ids),
   ]);
   const sumar = (filas: { orden_id: string | null; [k: string]: unknown }[] | null, campo: string) => {
     const m = new Map<string, number>();
@@ -221,9 +232,15 @@ export async function cuentasDeOrdenes(empresaId: string, ordenes: { id: string;
   };
   const porComp = sumar(comps, "total");
   const porCot = sumar(cots, "total");
-  const porPago = sumar(pagos, "monto");
+  const porPago = sumar((pagos ?? []).map((p) => ({ orden_id: p.orden_id, monto: montoNeto({ tipo: p.tipo, monto: n(p.monto) }) })), "monto");
+  const porNota = sumar(notas, "total");
   return ordenes.map((o) => {
-    const s = calcularSaldo({ totalComprobantes: porComp.get(o.id) ?? 0, totalCotizacionesAprobadas: porCot.get(o.id) ?? 0, pagado: porPago.get(o.id) ?? 0 });
+    const s = calcularSaldo({
+      totalComprobantes: redondear((porComp.get(o.id) ?? 0) - (porNota.get(o.id) ?? 0)),
+      totalCotizacionesAprobadas: porCot.get(o.id) ?? 0,
+      pagado: porPago.get(o.id) ?? 0,
+      conComprobante: porComp.has(o.id),
+    });
     return { ...o, ...s, tieneComprobante: porComp.has(o.id) };
   });
 }

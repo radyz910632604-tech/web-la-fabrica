@@ -8,7 +8,7 @@ import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
 import { TarjetaDinero, TarjetaRepuestos, TarjetaUtilidad } from "@/components/caja/tarjeta-dinero";
 import { diaEnLima, formatearMomento } from "@/lib/formato";
-import { tieneAlguno } from "@/lib/roles";
+import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { catalogo, nombresPersonal, personalConRol } from "@/lib/taller/consultas";
@@ -60,11 +60,13 @@ export default async function Orden({ params, searchParams }: { params: Promise<
   const gestiona = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]);
   const esTecnicoAsignado = ctx.roles.includes("tecnico") && o.tecnico_id === ctx.perfil.id;
   const puedeTrabajar = gestiona || esTecnicoAsignado;
-  const verCompras = gestiona || ctx.roles.includes("almacen");
+  const verDinero = tieneAlguno(ctx.roles, CAJA);
+  const verCompras = verDinero || ctx.roles.includes("almacen");
+  const esRecepcion = ctx.roles.includes("recepcion") && !gestiona;
   const verUtilidad = ctx.roles.includes("gerencia");
   const [dinero, config] = verCompras
     ? await Promise.all([
-        dineroDeOrden(ctx.taller.id, o.id, { verVentas: gestiona, verUtilidad }, { tecnicoId: o.tecnico_id, entregadoEn: o.entregado_en }),
+        dineroDeOrden(ctx.taller.id, o.id, { verVentas: verDinero, verUtilidad }, { tecnicoId: o.tecnico_id, entregadoEn: o.entregado_en }),
         configDinero(ctx.taller.id),
       ])
     : [null, null];
@@ -107,6 +109,11 @@ export default async function Orden({ params, searchParams }: { params: Promise<
             <Tarjeta aria-labelledby="t-estado">
               <CabeceraTarjeta id="t-estado" titulo="Cambiar estado" detalle="Un toque. Si quieres, deja una nota." />
               <BotonesEstado ordenId={o.id} estado={estado} esTecnico={!gestiona} />
+            </Tarjeta>
+          ) : esRecepcion && estado === "listo" ? (
+            <Tarjeta aria-labelledby="t-estado">
+              <CabeceraTarjeta id="t-estado" titulo="Entrega al cliente" detalle="El carro está listo. Cobra el saldo y entrégalo." />
+              <BotonesEstado ordenId={o.id} estado={estado} esTecnico={false} soloEntregar />
             </Tarjeta>
           ) : null}
 
@@ -193,8 +200,9 @@ export default async function Orden({ params, searchParams }: { params: Promise<
             </Tarjeta>
           ) : null}
 
-          {dinero && gestiona ? (
+          {dinero && verDinero ? (
             <TarjetaDinero
+              puedeCotizar={gestiona}
               d={dinero}
               ordenId={o.id}
               etiqueta={etiquetaOrden({ numero: o.numero, placa: v?.placa ?? "", cliente: c?.nombre })}
@@ -203,7 +211,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
               hoy={diaEnLima(ahora)}
             />
           ) : null}
-          {dinero ? <TarjetaRepuestos d={dinero} ordenId={o.id} registra={tieneAlguno(ctx.roles, ["gerencia", "administrador", "almacen"])} /> : null}
+          {dinero && (gestiona || ctx.roles.includes("almacen")) ? <TarjetaRepuestos d={dinero} ordenId={o.id} registra={tieneAlguno(ctx.roles, ["gerencia", "administrador", "almacen"])} /> : null}
           {dinero && config ? <TarjetaUtilidad d={dinero} margenMinimo={config.margenMinimo} /> : null}
 
           <Tarjeta aria-labelledby="t-tecnico">

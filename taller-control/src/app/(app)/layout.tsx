@@ -19,7 +19,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
           talleres={ctx.talleres.map(({ id, nombre }) => ({ id, nombre }))}
           tallerId={ctx.taller.id}
           secciones={secciones}
-          verAlertas={tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen"])}
+          verAlertas={tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen", "recepcion"])}
         />
         <div className="mt-6 flex gap-6">
           <BarraLateral acciones={acciones} gestion={gestion} />

@@ -112,16 +112,34 @@ describe("Entrega 1B: lo construido ya no apunta a «Próximamente»", () => {
   });
   it("el dinero ya tiene sus pantallas: caja, compras y reportes", () => {
     expect(accionesPara(["asesor"]).find((d) => d.clave === "registrar-pago")?.href).toBe("/cobros?nuevo=1");
-    expect(seccionesPara(["administrador"]).find((d) => d.clave === "caja")?.href).toBe("/cobros");
+    expect(seccionesPara(["administrador"]).find((d) => d.clave === "caja")?.href).toBe("/caja");
     expect(accionesPara(["almacen"]).map((d) => d.href)).toEqual(["/compras/nueva", "/compras?ver=stock"]);
     expect(seccionesPara(["gerencia"]).find((d) => d.clave === "reportes")?.href).toBe("/reportes");
   });
   it("ningún rol ve botones que lleven a «Próximamente»", () => {
-    for (const rol of ["gerencia", "administrador", "asesor", "tecnico", "almacen", "vendedor_redes", "confirmador"] as const) {
+    for (const rol of ROLES) {
       for (const d of todos(rol)) expect(d.href.startsWith("/pronto")).toBe(false);
     }
   });
   it("el técnico, el vendedor y el confirmador no ven la caja", () => {
     for (const rol of ["tecnico", "vendedor_redes", "confirmador"] as const) expect(todos(rol).some((d) => d.clave === "caja" || d.clave === "registrar-pago")).toBe(false);
+  });
+});
+
+describe("recepción y caja", () => {
+  const todos = [...seccionesPara(["recepcion"]), ...accionesPara(["recepcion"])].map((d) => d.clave);
+  it("abre y cierra la caja, cobra y registra comprobantes", () => {
+    expect(todos).toEqual(expect.arrayContaining(["panel", "ordenes", "clientes", "caja", "registrar-pago", "caja-del-dia", "registrar-comprobante"]));
+  });
+  it("no registra ingresos, no compra y no ve reportes", () => {
+    for (const clave of ["nuevo-ingreso", "compras", "registrar-compra", "reportes", "usuarios"]) expect(todos).not.toContain(clave);
+    expect(gestionPara(["recepcion"])).toEqual([]);
+  });
+  it("en el panel ve el taller y las ventas, pero no la utilidad ni las compras", () => {
+    const v = vistaPanel(["recepcion"], { adminVeUtilidad: true });
+    expect(v.destacada).toBe("taller");
+    expect(v.indicadores).toEqual(["ventas", "entregados"]);
+    expect(v.acciones).toEqual({ nuevoIngreso: false, registrarPago: true });
+    expect(v.grafico).toBe(false);
   });
 });

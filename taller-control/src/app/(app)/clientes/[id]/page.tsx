@@ -30,7 +30,7 @@ export default async function Cliente({ params }: { params: Promise<{ id: string
 
   const [{ data: vehiculos }, ordenes] = await Promise.all([
     supabase.from("vehiculos").select("id, placa, marca, modelo, anio").eq("cliente_id", id).order("placa"),
-    tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen"]) ? listarOrdenes(ctx.taller.id, { clienteId: id, orden: "ingreso" }) : Promise.resolve([]),
+    tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen", "recepcion"]) ? listarOrdenes(ctx.taller.id, { clienteId: id, orden: "ingreso" }) : Promise.resolve([]),
   ]);
   const puedeEditar = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes"]);
   const puedeIngresar = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]);

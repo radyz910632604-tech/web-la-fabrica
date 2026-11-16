@@ -14,7 +14,7 @@ export async function cambiarEstado(ordenId: string, estado: string, nota: strin
   if (!e.success) return { error: "Estado no válido." };
   const supabase = await clienteServidor();
   const { error } = await supabase.rpc("cambiar_estado_orden", { p_orden: ordenId, p_estado: e.data, p_nota: nota.trim() || null });
-  if (error) return { error: error.message.includes("asesor") ? "La entrega al cliente la registra el asesor." : "No puedes cambiar el estado de esta orden." };
+  if (error) return { error: error.message.includes("asesor") ? "La entrega al cliente la registra el asesor o recepción." : error.message.includes("Recepción") ? error.message : "No puedes cambiar el estado de esta orden." };
   revalidatePath(`/ordenes/${ordenId}`);
   revalidatePath("/", "layout");
   return { ok: "Estado actualizado." };

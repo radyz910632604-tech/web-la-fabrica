@@ -38,6 +38,7 @@ export function RegistrarPago({
   const [orden, setOrden] = useState(ordenFija ?? "");
   const [medio, setMedio] = useState("");
   const elegida = ordenes.find((o) => o.id === orden);
+  const [tipo, setTipo] = useState(() => (elegida && elegida.saldo < -0.009 ? "devolucion" : elegida?.entregada ? "saldo" : "adelanto"));
   const [estado, accion, enviando] = useActionState<Resultado, FormData>(async (previo, form) => {
     const r = await registrarPago(previo, form);
     if (r.ok) setAbierta(false);
@@ -59,7 +60,11 @@ export function RegistrarPago({
           ) : (
             <Campo etiqueta="Orden" error={e.orden}>
               {(p) => (
-                <Selector {...p} name="orden" value={orden} onChange={(ev) => setOrden(ev.target.value)} required>
+                <Selector {...p} name="orden" value={orden} onChange={(ev) => {
+                    const nueva = ordenes.find((o) => o.id === ev.target.value);
+                    setOrden(ev.target.value);
+                    setTipo(nueva && nueva.saldo < -0.009 ? "devolucion" : nueva?.entregada ? "saldo" : "adelanto");
+                  }} required>
                   <option value="" disabled>
                     Elige la orden
                   </option>
@@ -72,24 +77,41 @@ export function RegistrarPago({
               )}
             </Campo>
           )}
-          <Campo etiqueta="Monto" error={e.monto} ayuda={elegida && elegida.saldo > 0 ? `Saldo pendiente: S/ ${elegida.saldo.toFixed(2)}` : undefined}>
+          <Campo etiqueta="Tipo" ayuda={tipo === "abono" ? "Pago a cuenta: el cliente va pagando en partes y el saldo baja con cada abono." : tipo === "devolucion" ? "Dinero que se le devuelve al cliente (pagó de más o hubo nota de crédito)." : undefined}>
             {(p) => (
-              <div className="relative">
-                <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-tinta-3">S/</span>
-                <Entrada {...p} name="monto" type="number" inputMode="decimal" step="0.01" min="0.01" defaultValue={elegida && elegida.saldo > 0 ? elegida.saldo.toFixed(2) : ""} key={orden} className="num pl-11" required />
-              </div>
-            )}
-          </Campo>
-          <Campo etiqueta="Tipo">
-            {(p) => (
-              <Selector {...p} name="tipo" defaultValue={elegida?.entregada ? "saldo" : "adelanto"} key={`t-${orden}`}>
-                <option value="adelanto">Adelanto</option>
+              <Selector {...p} name="tipo" value={tipo} onChange={(ev) => setTipo(ev.target.value)}>
+                <option value="adelanto">Adelanto (antes de terminar)</option>
+                <option value="abono">Abono (pago a cuenta, en partes)</option>
                 <option value="saldo">Saldo (pago final)</option>
+                {elegida && elegida.saldo < -0.009 ? <option value="devolucion">Devolución al cliente</option> : null}
               </Selector>
             )}
           </Campo>
+          <Campo
+            etiqueta={tipo === "devolucion" ? "Monto a devolver" : "Monto"}
+            error={e.monto}
+            ayuda={elegida && elegida.saldo > 0.009 ? `Saldo pendiente: S/ ${elegida.saldo.toFixed(2)}` : elegida && elegida.saldo < -0.009 ? `A favor del cliente: S/ ${(-elegida.saldo).toFixed(2)}` : undefined}
+          >
+            {(p) => (
+              <div className="relative">
+                <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-tinta-3">S/</span>
+                <Entrada
+                  {...p}
+                  name="monto"
+                  type="number"
+                  inputMode="decimal"
+                  step="0.01"
+                  min="0.01"
+                  defaultValue={elegida ? (tipo === "devolucion" ? (-elegida.saldo).toFixed(2) : elegida.saldo > 0 && tipo !== "abono" ? elegida.saldo.toFixed(2) : "") : ""}
+                  key={`${orden}-${tipo}`}
+                  className="num pl-11"
+                  required
+                />
+              </div>
+            )}
+          </Campo>
           <fieldset>
-            <legend className="mb-2 text-sm font-medium">¿Cómo pagó?</legend>
+            <legend className="mb-2 text-sm font-medium">{tipo === "devolucion" ? "¿Cómo se le devuelve?" : "¿Cómo pagó?"}</legend>
             <input type="hidden" name="medio" value={medio} />
             <div className="flex flex-wrap gap-2">
               {MEDIOS.map(([v, n]) => (
@@ -114,7 +136,7 @@ export function RegistrarPago({
           </Campo>
           {estado.error ? <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">{estado.error}</p> : null}
           <Boton type="submit" disabled={enviando} className="w-full">
-            {enviando ? "Guardando…" : "Registrar pago"}
+            {enviando ? "Guardando…" : tipo === "devolucion" ? "Registrar devolución" : "Registrar pago"}
           </Boton>
         </form>
       </ContenidoVentana>

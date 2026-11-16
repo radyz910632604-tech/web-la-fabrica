@@ -28,7 +28,7 @@ export default async function Vehiculo({ params }: { params: Promise<{ placa: st
   if (!v) notFound();
   const ordenes = await listarOrdenes(ctx.taller.id, { vehiculoId: v.id, orden: "ingreso" });
   const cliente = Array.isArray(v.clientes) ? v.clientes[0] : v.clientes;
-  const verCliente = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes"]);
+  const verCliente = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes", "recepcion"]);
   const garantias = ordenes.filter((o) => o.garantia).length;
 
   const datos: [string, string][] = [

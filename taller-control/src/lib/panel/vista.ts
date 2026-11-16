@@ -24,9 +24,9 @@ export type VistaPanel = {
 export function vistaPanel(roles: readonly Rol[], opciones: { adminVeUtilidad: boolean }): VistaPanel {
   const gestion = tieneAlguno(roles, ["gerencia", "administrador"]);
   const verUtilidad = roles.includes("gerencia") || (roles.includes("administrador") && opciones.adminVeUtilidad);
-  const verVentas = tieneAlguno(roles, ["gerencia", "administrador", "asesor"]);
+  const verVentas = tieneAlguno(roles, ["gerencia", "administrador", "asesor", "recepcion"]);
   const verCompras = tieneAlguno(roles, ["gerencia", "administrador", "asesor", "almacen"]);
-  const verTaller = tieneAlguno(roles, ["gerencia", "administrador", "asesor", "almacen"]);
+  const verTaller = tieneAlguno(roles, ["gerencia", "administrador", "asesor", "almacen", "recepcion"]);
   const verEntregados = verTaller || roles.includes("tecnico");
 
   const indicadores: Indicador[] = [];
@@ -42,7 +42,7 @@ export function vistaPanel(roles: readonly Rol[], opciones: { adminVeUtilidad: b
     destacada,
     acciones: {
       nuevoIngreso: gestion || roles.includes("asesor"),
-      registrarPago: gestion || roles.includes("asesor"),
+      registrarPago: gestion || tieneAlguno(roles, ["asesor", "recepcion"]),
     },
     indicadores,
     // El gráfico de ventas contra costos deja ver la utilidad.

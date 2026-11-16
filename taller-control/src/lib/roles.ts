@@ -8,6 +8,7 @@ export const ROLES = [
   "gerencia",
   "administrador",
   "asesor",
+  "recepcion",
   "tecnico",
   "almacen",
   "vendedor_redes",
@@ -20,6 +21,7 @@ export const NOMBRE_ROL: Record<Rol, string> = {
   gerencia: "Gerencia",
   administrador: "Administración",
   asesor: "Asesor de servicio",
+  recepcion: "Recepción y caja",
   tecnico: "Técnico",
   almacen: "Almacén",
   vendedor_redes: "Ventas por redes",
@@ -33,6 +35,9 @@ export function esRol(valor: string): valor is Rol {
 export function tieneAlguno(roles: readonly Rol[], buscados: readonly Rol[]): boolean {
   return roles.some((rol) => buscados.includes(rol));
 }
+
+/** Quienes manejan la caja: cobran, registran comprobantes y cierran el día. */
+export const CAJA: readonly Rol[] = ["gerencia", "administrador", "asesor", "recepcion"];
 
 /** Gerencia o administración: crean usuarios, asignan roles, configuran. */
 export function esGestor(roles: readonly Rol[]): boolean {

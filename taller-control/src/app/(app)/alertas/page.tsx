@@ -4,7 +4,7 @@ import { ChevronRight, CircleCheck } from "lucide-react";
 import { SubnavCaja, TituloCaja } from "@/components/caja/subnav";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { NOMBRE_ALERTA, type Alerta } from "@/lib/alertas";
-import { tieneAlguno } from "@/lib/roles";
+import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { alertasDelTaller } from "@/lib/taller/alertas-consultas";
 import { cn } from "@/lib/utils";
@@ -19,9 +19,9 @@ const GRUPOS: { severidad: Alerta["severidad"]; titulo: string; detalle: string;
 
 export default async function Alertas() {
   const ctx = await obtenerContexto();
-  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen"])) notFound();
+  if (!tieneAlguno(ctx.roles, [...CAJA, "almacen"])) notFound();
   const alertas = await alertasDelTaller(ctx.taller.id, {
-    verDinero: tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]),
+    verDinero: tieneAlguno(ctx.roles, CAJA),
     verMargen: ctx.roles.includes("gerencia"),
   });
   const urgentes = alertas.filter((a) => a.severidad === "urgente").length;

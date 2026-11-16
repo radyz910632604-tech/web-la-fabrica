@@ -19,10 +19,10 @@ const PESTANAS: { clave: string; nombre: string; estados: EstadoOrden[] }[] = [
 
 export default async function Ordenes({ searchParams }: { searchParams: Promise<{ ver?: string; q?: string }> }) {
   const ctx = await obtenerContexto();
-  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen"])) notFound();
+  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen", "recepcion"])) notFound();
   const { ver = "taller", q = "" } = await searchParams;
   const pestana = PESTANAS.find((p) => p.clave === ver) ?? PESTANAS[0];
-  const verCliente = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]);
+  const verCliente = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "recepcion"]);
 
   const todas = await listarOrdenes(ctx.taller.id, {
     estados: pestana.estados,

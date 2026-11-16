@@ -12,7 +12,7 @@ const GUIAS: Record<Rol, { para: string; pasos: string[] }> = {
       "El panel muestra los carros en el taller, los listos y los que esperan repuesto. Cambia de taller arriba a la izquierda.",
       "En Personal y roles agregas a tu equipo con su celular y le das uno o varios roles. Puedes quitarle el acceso en cualquier momento.",
       "En Configuración ajustas la garantía, la tolerancia de citas, el IGV, la meta del mes y si administración puede ver la utilidad.",
-      "Los montos (ventas, compras, utilidad) son de ejemplo hasta la Fase 3.",
+      "En Reportes ves ventas, compras, utilidad y comisiones mes a mes, y los descargas en Excel o PDF.",
     ],
   },
   administrador: {
@@ -30,6 +30,16 @@ const GUIAS: Record<Rol, { para: string; pasos: string[] }> = {
       "En Órdenes ves todo lo que está en el taller por estado. Toca una orden para cambiar su estado o agregar un trabajo adicional.",
       "Cuando el cliente recoge su carro, abre la orden y toca «Entregar al cliente».",
       "En Citas confirmas, reagendas o registras el ingreso de quien llegó por redes.",
+    ],
+  },
+  recepcion: {
+    para: "Cobrar, entregar el carro y cuadrar la caja.",
+    pasos: [
+      "Al empezar el día, en Caja toca «Abrir caja» y escribe con cuánto sencillo empiezas.",
+      "Cada pago que registres (adelanto, abono o saldo) entra solo a la caja abierta. Gastos menores y retiros también se anotan ahí.",
+      "Registra la boleta o factura que entregaste y, si hay un descuento o devolución, su nota de crédito.",
+      "Cuando el cliente recoge su carro listo, abre la orden y toca «Entregar al cliente».",
+      "Al terminar, «Cerrar caja»: cuenta el efectivo y el sistema te dice si sobra o falta. Descarga el PDF del cierre.",
     ],
   },
   tecnico: {

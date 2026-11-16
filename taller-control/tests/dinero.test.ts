@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calcularAlertas, type OrdenParaAlertas } from "@/lib/alertas";
-import { cierreDiario, comisiones, desdeSinIgv, desdeTotal, enSoles, manoObra, montosLinea, saldo, sumarMontos, utilidad } from "@/lib/dinero";
+import { cierreDiario, comisiones, desdeSinIgv, desdeTotal, efectivoEsperado, enSoles, manoObra, montoNeto, montosLinea, saldo, sumarMontos, utilidad } from "@/lib/dinero";
 
 describe("IGV (18 %, configurable)", () => {
   it("desglosa un total con IGV", () => {
@@ -59,6 +59,14 @@ describe("saldo de la orden", () => {
   });
   it("sin comprobante, se cobra lo de la cotización aprobada", () => {
     expect(saldo({ totalComprobantes: 0, totalCotizacionesAprobadas: 280, pagado: 280 }).saldo).toBe(0);
+  });
+  it("una nota de crédito que anula todo deja el saldo en cero (no vuelve a la cotización)", () => {
+    expect(saldo({ totalComprobantes: 0, totalCotizacionesAprobadas: 300, pagado: 0, conComprobante: true }).aCobrar).toBe(0);
+  });
+  it("abonos en partes y una devolución", () => {
+    const pagos = [{ tipo: "abono", monto: 100 }, { tipo: "abono", monto: 150 }, { tipo: "devolucion", monto: 30 }];
+    const pagado = pagos.reduce((a, p) => a + montoNeto(p), 0);
+    expect(saldo({ totalComprobantes: 300, totalCotizacionesAprobadas: 0, pagado }).saldo).toBe(80);
   });
   it("si pagó de más, el saldo es negativo (a favor del cliente)", () => {
     expect(saldo({ totalComprobantes: 100, totalCotizacionesAprobadas: 0, pagado: 120 }).saldo).toBe(-20);
@@ -121,6 +129,39 @@ describe("cierre diario", () => {
       entregadasConSaldo: [],
       comprobantesSinOrden: [],
     });
+    expect(c.descuadres).toEqual([]);
+  });
+});
+
+describe("caja de recepción", () => {
+  it("efectivo esperado = inicial + cobros en efectivo − devoluciones + ingresos − gastos", () => {
+    const r = efectivoEsperado({
+      montoInicial: 100,
+      pagos: [
+        { tipo: "abono", medio: "efectivo", monto: 100 },
+        { tipo: "abono", medio: "yape", monto: 150 },
+        { tipo: "devolucion", medio: "efectivo", monto: 10 },
+      ],
+      movimientos: [{ tipo: "egreso", medio: "efectivo", monto: 20 }, { tipo: "ingreso", medio: "efectivo", monto: 50 }],
+    });
+    expect(r).toEqual({ cobros: 90, ingresos: 50, egresos: 20, esperado: 220 });
+  });
+});
+
+describe("cierre con notas de crédito", () => {
+  it("la nota de crédito resta de lo vendido y de la utilidad", () => {
+    const c = cierreDiario({
+      comprobantes: [{ tipo: "boleta", sinIgv: 254.24, igv: 45.76, total: 300 }],
+      notasCredito: [{ sinIgv: 42.37, igv: 7.63, total: 50 }],
+      compras: [],
+      pagos: [{ medio: "efectivo", monto: 250 }],
+      manoObraDelDia: 0,
+      entregadasSinComprobante: [],
+      entregadasConSaldo: [],
+      comprobantesSinOrden: [],
+    });
+    expect(c.notas).toEqual({ sinIgv: 42.37, igv: 7.63, total: 50, cantidad: 1 });
+    expect(c.utilidadEstimada).toBe(211.87);
     expect(c.descuadres).toEqual([]);
   });
 });

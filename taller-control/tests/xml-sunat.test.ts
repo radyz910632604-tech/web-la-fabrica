@@ -65,3 +65,33 @@ describe("XML de SUNAT", () => {
     expect(() => leerXmlSunat("<html></html>")).toThrow("no es una factura");
   });
 });
+
+const NOTA = `<?xml version="1.0" encoding="UTF-8"?>
+<CreditNote xmlns="urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2" xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+  <cbc:ID>BC01-00000007</cbc:ID>
+  <cbc:IssueDate>2026-11-16</cbc:IssueDate>
+  <cbc:DocumentCurrencyCode>PEN</cbc:DocumentCurrencyCode>
+  <cac:DiscrepancyResponse><cbc:ReferenceID>B001-00000050</cbc:ReferenceID><cbc:ResponseCode>04</cbc:ResponseCode><cbc:Description>DESCUENTO POR DEMORA</cbc:Description></cac:DiscrepancyResponse>
+  <cac:BillingReference><cac:InvoiceDocumentReference><cbc:ID>B001-00000050</cbc:ID><cbc:DocumentTypeCode>03</cbc:DocumentTypeCode></cac:InvoiceDocumentReference></cac:BillingReference>
+  <cac:AccountingSupplierParty><cac:Party><cac:PartyIdentification><cbc:ID schemeID="6">20000000099</cbc:ID></cac:PartyIdentification><cac:PartyLegalEntity><cbc:RegistrationName>TALLER DE PRUEBA S.A.C.</cbc:RegistrationName></cac:PartyLegalEntity></cac:Party></cac:AccountingSupplierParty>
+  <cac:TaxTotal><cbc:TaxAmount currencyID="PEN">7.63</cbc:TaxAmount></cac:TaxTotal>
+  <cac:LegalMonetaryTotal><cbc:LineExtensionAmount currencyID="PEN">42.37</cbc:LineExtensionAmount><cbc:PayableAmount currencyID="PEN">50.00</cbc:PayableAmount></cac:LegalMonetaryTotal>
+  <cac:CreditNoteLine><cbc:ID>1</cbc:ID><cbc:CreditedQuantity unitCode="NIU">1</cbc:CreditedQuantity><cbc:LineExtensionAmount currencyID="PEN">42.37</cbc:LineExtensionAmount><cac:Item><cbc:Description>DESCUENTO</cbc:Description></cac:Item><cac:Price><cbc:PriceAmount currencyID="PEN">42.37</cbc:PriceAmount></cac:Price></cac:CreditNoteLine>
+</CreditNote>`;
+
+describe("nota de crédito de SUNAT", () => {
+  it("lee la nota, el comprobante que rebaja y el motivo", () => {
+    expect(leerXmlSunat(NOTA)).toMatchObject({
+      tipo: "nota_credito",
+      serie: "BC01",
+      numero: "7",
+      referencia: { serie: "B001", numero: "50" },
+      motivoCodigo: "04",
+      motivo: "DESCUENTO POR DEMORA",
+      sinIgv: 42.37,
+      igv: 7.63,
+      total: 50,
+      lineas: [{ descripcion: "DESCUENTO", cantidad: 1, precioUnitarioSinIgv: 42.37, sinIgv: 42.37 }],
+    });
+  });
+});

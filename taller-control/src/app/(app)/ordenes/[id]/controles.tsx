@@ -15,11 +15,11 @@ function Mensaje({ r }: { r: Resultado }) {
   return null;
 }
 
-export function BotonesEstado({ ordenId, estado, esTecnico }: { ordenId: string; estado: EstadoOrden; esTecnico: boolean }) {
+export function BotonesEstado({ ordenId, estado, esTecnico, soloEntregar = false }: { ordenId: string; estado: EstadoOrden; esTecnico: boolean; soloEntregar?: boolean }) {
   const [nota, setNota] = useState("");
   const [r, setR] = useState<Resultado>({});
   const [pendiente, iniciar] = useTransition();
-  const pasos = siguientesEstados(estado, esTecnico);
+  const pasos = siguientesEstados(estado, esTecnico).filter((p) => !soloEntregar || p.estado === "entregado");
 
   if (pasos.length === 0) {
     return <p className="text-[15px] text-tinta-2">{estado === "entregado" ? "Esta orden ya se entregó al cliente." : "No hay cambios disponibles."}</p>;

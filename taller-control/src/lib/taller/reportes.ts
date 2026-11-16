@@ -71,14 +71,16 @@ export async function personalDelMes(empresaId: string, mes: string): Promise<Fi
     supabase.from("citas").select("vendedor_id, orden_id").eq("empresa_id", empresaId).eq("estado", "llego").not("orden_id", "is", null).gte("fecha_hora", desde.toISOString()).lt("fecha_hora", hasta.toISOString()),
   ]);
   const idsOrden = [...new Set([...(entregadas ?? []).map((o) => o.id), ...(citas ?? []).map((c) => c.orden_id as string)])];
-  const [{ data: ventas }, { data: pagos }] = idsOrden.length
+  const [{ data: ventas }, { data: pagos }, { data: notas }] = idsOrden.length
     ? await Promise.all([
         supabase.from("comprobantes_venta").select("orden_id, subtotal_sin_igv").eq("estado", "confirmado").in("orden_id", idsOrden),
-        supabase.from("pagos").select("orden_id").eq("estado", "confirmado").in("orden_id", idsOrden),
+        supabase.from("pagos").select("orden_id").eq("estado", "confirmado").neq("tipo", "devolucion").in("orden_id", idsOrden),
+        supabase.from("notas_credito").select("orden_id, subtotal_sin_igv").eq("estado", "confirmado").in("orden_id", idsOrden),
       ])
-    : [{ data: [] }, { data: [] }];
+    : [{ data: [] }, { data: [] }, { data: [] }];
   const ventaPor = new Map<string, number>();
   for (const v of ventas ?? []) if (v.orden_id) ventaPor.set(v.orden_id, redondear((ventaPor.get(v.orden_id) ?? 0) + n(v.subtotal_sin_igv)));
+  for (const x of notas ?? []) if (x.orden_id) ventaPor.set(x.orden_id, redondear((ventaPor.get(x.orden_id) ?? 0) - n(x.subtotal_sin_igv)));
   const pagadas = new Set((pagos ?? []).map((p) => p.orden_id));
 
   const eventos = [

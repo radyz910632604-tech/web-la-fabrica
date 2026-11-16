@@ -17,8 +17,8 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<{
   const { q = "" } = await searchParams;
   const texto = q.trim().slice(0, 60);
   const supabase = await clienteServidor();
-  const verClientes = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes", "confirmador"]);
-  const verOrdenes = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen", "tecnico"]);
+  const verClientes = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes", "confirmador", "recepcion"]);
+  const verOrdenes = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen", "tecnico", "recepcion"]);
 
   let vehiculos: { id: string; placa: string; marca: string | null; modelo: string | null }[] = [];
   let clientes: { id: string; nombre: string; celular: string }[] = [];
@@ -103,7 +103,7 @@ export default async function Buscar({ searchParams }: { searchParams: Promise<{
       {ordenes.length > 0 ? (
         <Tarjeta aria-labelledby="r-ordenes">
           <CabeceraTarjeta id="r-ordenes" titulo="Órdenes" />
-          <ListaOrdenes ordenes={ordenes} verCliente={tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"])} vacio="" />
+          <ListaOrdenes ordenes={ordenes} verCliente={tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "recepcion"])} vacio="" />
         </Tarjeta>
       ) : null}
     </div>

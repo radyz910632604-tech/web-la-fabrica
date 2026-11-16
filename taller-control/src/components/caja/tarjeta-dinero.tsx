@@ -7,7 +7,7 @@ import { Anular, RegistrarPago } from "@/components/caja/controles";
 import { NuevaCotizacion, RespuestaCotizacion } from "@/components/caja/cotizaciones";
 import { Boton } from "@/components/ui/boton";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
-import { MEDIOS, type MedioPago } from "@/lib/dinero";
+import { MEDIOS, MOTIVOS_NOTA, TIPO_PAGO_CORTO, type MedioPago } from "@/lib/dinero";
 import { formatearMomento, formatearSoles } from "@/lib/formato";
 import type { DineroOrden } from "@/lib/taller/dinero-consultas";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,9 @@ export function TarjetaDinero({
   entregada,
   servicios,
   hoy,
+  puedeCotizar = true,
 }: {
+  puedeCotizar?: boolean;
   d: DineroOrden;
   ordenId: string;
   etiqueta: string;
@@ -69,7 +71,7 @@ export function TarjetaDinero({
       {d.aCobrar === 0 ? <p className="mt-2 text-sm text-tinta-3">El monto a cobrar sale del comprobante o, si aún no hay, de la cotización aprobada.</p> : null}
 
       <div className="mt-4 flex flex-col gap-4">
-        <Seccion titulo="Cotizaciones" accion={!entregada ? <NuevaCotizacion ordenId={ordenId} servicios={servicios} hayAprobada={d.cotizaciones.some((c) => c.estado === "aprobada")} /> : undefined}>
+        <Seccion titulo="Cotizaciones" accion={!entregada && puedeCotizar ? <NuevaCotizacion ordenId={ordenId} servicios={servicios} hayAprobada={d.cotizaciones.some((c) => c.estado === "aprobada")} /> : undefined}>
           {d.cotizaciones.length === 0 ? (
             <p className="text-sm text-tinta-2">Sin cotización todavía.</p>
           ) : (
@@ -102,9 +104,11 @@ export function TarjetaDinero({
                       ))}
                     </ul>
                   </details>
-                  <div className="mt-2">
-                    <RespuestaCotizacion id={c.id} ordenId={ordenId} estado={c.estado} />
-                  </div>
+                  {puedeCotizar ? (
+                    <div className="mt-2">
+                      <RespuestaCotizacion id={c.id} ordenId={ordenId} estado={c.estado} />
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -126,6 +130,15 @@ export function TarjetaDinero({
                   {c.estado !== "anulado" ? <Anular id={c.id} accion={anularComprobante} que="comprobante" /> : null}
                 </li>
               ))}
+              {d.notas.map((x) => (
+                <li key={x.id} className="flex items-center gap-3 py-1.5">
+                  <p className={cn("min-w-0 flex-1 text-[15px]", x.estado === "anulado" && "text-tinta-3 line-through")}>
+                    Nota de crédito {x.serie}-{x.numero}
+                    <span className="text-[13px] text-tinta-3"> · {MOTIVOS_NOTA[x.motivoCodigo]}</span>
+                  </p>
+                  <span className="num text-[15px] text-negativo">−{formatearSoles(x.total)}</span>
+                </li>
+              ))}
             </ul>
           )}
         </Seccion>
@@ -138,10 +151,10 @@ export function TarjetaDinero({
               {d.pagos.map((p) => (
                 <li key={p.id} className="flex items-center gap-3 py-1.5">
                   <p className={cn("min-w-0 flex-1 text-[15px]", p.estado === "anulado" && "text-tinta-3 line-through")}>
-                    {p.tipo === "adelanto" ? "Adelanto" : "Saldo"} · {MEDIOS[p.medio as MedioPago]}
+                    {TIPO_PAGO_CORTO[p.tipo]} · {MEDIOS[p.medio as MedioPago]}
                     <span className="text-[13px] text-tinta-3"> · {formatearMomento(new Date(p.pagadoEn), ahora)}</span>
                   </p>
-                  <span className="num text-[15px]">{formatearSoles(p.monto)}</span>
+                  <span className={cn("num text-[15px]", p.tipo === "devolucion" && "text-negativo")}>{formatearSoles(p.tipo === "devolucion" ? -p.monto : p.monto)}</span>
                   {p.estado !== "anulado" ? <Anular id={p.id} accion={anularPago} que="pago" /> : null}
                 </li>
               ))}

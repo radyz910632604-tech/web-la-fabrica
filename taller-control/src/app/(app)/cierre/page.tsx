@@ -4,7 +4,7 @@ import { SubnavCaja, TituloCaja } from "@/components/caja/subnav";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { MEDIOS, type MedioPago } from "@/lib/dinero";
 import { diaEnLima, formatearSoles } from "@/lib/formato";
-import { tieneAlguno } from "@/lib/roles";
+import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { cierreDelDia } from "@/lib/taller/cierre-consultas";
@@ -25,7 +25,7 @@ function Fila({ nombre, valor, fuerte, tenue }: { nombre: string; valor: number;
 
 export default async function Cierre({ searchParams }: { searchParams: Promise<{ dia?: string }> }) {
   const ctx = await obtenerContexto();
-  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"])) notFound();
+  if (!tieneAlguno(ctx.roles, CAJA)) notFound();
   const hoy = diaEnLima(new Date());
   const { dia: pedido } = await searchParams;
   const dia = pedido && /^\d{4}-\d{2}-\d{2}$/.test(pedido) && pedido <= hoy ? pedido : hoy;
@@ -36,7 +36,7 @@ export default async function Cierre({ searchParams }: { searchParams: Promise<{
     supabase.from("cierres_diarios").select("cerrado_por, cerrado_en, observaciones").eq("empresa_id", ctx.taller.id).eq("fecha", dia).maybeSingle(),
     nombresPersonal(ctx.taller.id),
   ]);
-  const vendido = c.boletas.total + c.facturas.total;
+  const vendido = c.boletas.total + c.facturas.total - c.notas.total;
   const fecha = new Intl.DateTimeFormat("es-PE", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${dia}T12:00:00Z`));
 
   return (
@@ -71,7 +71,8 @@ export default async function Cierre({ searchParams }: { searchParams: Promise<{
             <Fila nombre="  sin IGV" valor={c.boletas.sinIgv} tenue />
             <Fila nombre={`Facturas (${c.facturas.cantidad})`} valor={c.facturas.total} />
             <Fila nombre="  sin IGV" valor={c.facturas.sinIgv} tenue />
-            <Fila nombre="IGV de ventas" valor={c.boletas.igv + c.facturas.igv} tenue />
+            {c.notas.cantidad ? <Fila nombre={`Notas de crédito (${c.notas.cantidad})`} valor={-c.notas.total} /> : null}
+            <Fila nombre="IGV de ventas" valor={c.boletas.igv + c.facturas.igv - c.notas.igv} tenue />
             <Fila nombre="Total vendido" valor={vendido} fuerte />
           </dl>
         </Tarjeta>
@@ -91,7 +92,7 @@ export default async function Cierre({ searchParams }: { searchParams: Promise<{
             <Fila nombre="  sin IGV" valor={c.compras.sinIgv} tenue />
             {verUtilidad ? (
               <>
-                <Fila nombre="Ventas sin IGV" valor={c.boletas.sinIgv + c.facturas.sinIgv} />
+                <Fila nombre="Ventas sin IGV" valor={c.boletas.sinIgv + c.facturas.sinIgv - c.notas.sinIgv} />
                 <Fila nombre="Mano de obra del día" valor={-c.manoObra} tenue />
                 <Fila nombre="Utilidad estimada" valor={c.utilidadEstimada} fuerte />
               </>

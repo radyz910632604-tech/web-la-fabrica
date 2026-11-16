@@ -16,11 +16,15 @@ const nueva = (clave: number, tipo: Linea["tipo"] = "servicio", descripcion = ""
 export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: string; servicios: string[]; hayAprobada: boolean }) {
   const [abierta, setAbierta] = useState(false);
   const [adicional, setAdicional] = useState(hayAprobada);
+  const [conIgv, setConIgv] = useState(true);
+  const [preciosConIgv, setPreciosConIgv] = useState(true);
   const siguiente = useRef(servicios.length + 1);
   const [lineas, setLineas] = useState<Linea[]>(() => (servicios.length ? servicios.map((s, i) => nueva(i, "servicio", s)) : [nueva(0)]));
   const [r, setR] = useState<Resultado>({});
   const [pendiente, iniciar] = useTransition();
-  const total = lineas.reduce((a, l) => a + (Number(l.cantidad) || 0) * (Number(l.precio) || 0), 0);
+  const bruto = lineas.reduce((a, l) => a + (Number(l.cantidad) || 0) * (Number(l.precio) || 0), 0);
+  const total = conIgv && !preciosConIgv ? bruto * 1.18 : bruto;
+  const sinIgv = conIgv ? total / 1.18 : total;
   const cambiar = (clave: number, campo: keyof Linea, valor: string) => setLineas((ls) => ls.map((l) => (l.clave === clave ? { ...l, [campo]: valor } : l)));
 
   return (
@@ -31,7 +35,7 @@ export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: 
           Nueva cotización
         </Boton>
       </DisparadorVentana>
-      <ContenidoVentana titulo="Nueva cotización" descripcion="Precios como los ve el cliente, con IGV incluido.">
+      <ContenidoVentana titulo="Nueva cotización" descripcion="Servicios y repuestos. Elige si lleva IGV (18 %) y cómo escribes los precios.">
         <div className="flex flex-col gap-3">
           <ul className="flex flex-col gap-3">
             {lineas.map((l, i) => (
@@ -42,7 +46,7 @@ export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: 
                 </Selector>
                 <Campo etiqueta="Descripción">{(p) => <Entrada {...p} value={l.descripcion} onChange={(ev) => cambiar(l.clave, "descripcion", ev.target.value)} />}</Campo>
                 <Campo etiqueta="Cant.">{(p) => <Entrada {...p} type="number" min="0.01" step="0.01" inputMode="decimal" value={l.cantidad} onChange={(ev) => cambiar(l.clave, "cantidad", ev.target.value)} className="num px-3" />}</Campo>
-                <Campo etiqueta="Precio c/u">{(p) => <Entrada {...p} type="number" min="0" step="0.01" inputMode="decimal" value={l.precio} onChange={(ev) => cambiar(l.clave, "precio", ev.target.value)} className="num px-3" />}</Campo>
+                <Campo etiqueta={conIgv ? (preciosConIgv ? "Precio c/u con IGV" : "Precio c/u sin IGV") : "Precio c/u"}>{(p) => <Entrada {...p} type="number" min="0" step="0.01" inputMode="decimal" value={l.precio} onChange={(ev) => cambiar(l.clave, "precio", ev.target.value)} className="num px-3" />}</Campo>
                 <button
                   type="button"
                   aria-label={`Quitar línea ${i + 1}`}
@@ -65,14 +69,53 @@ export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: 
               Repuesto
             </Boton>
           </div>
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="IGV">
+            {(
+              [
+                [true, "Con IGV (18 %)", "Boleta o factura"],
+                [false, "Sin IGV", "Operación sin IGV"],
+              ] as const
+            ).map(([v, t, d]) => (
+              <button
+                key={t}
+                type="button"
+                aria-pressed={conIgv === v}
+                onClick={() => setConIgv(v)}
+                className={`presionable cursor-pointer rounded-2xl border px-4 py-2.5 text-left ${conIgv === v ? "border-primario ring-2 ring-primario/15" : "border-borde hover:bg-interna"}`}
+              >
+                <span className="block text-[15px] font-medium">{t}</span>
+                <span className="block text-[13px] text-tinta-2">{d}</span>
+              </button>
+            ))}
+          </div>
+          {conIgv ? (
+            <label className="flex cursor-pointer items-center gap-2.5 text-[15px]">
+              <Casilla checked={preciosConIgv} onCheckedChange={(v) => setPreciosConIgv(v === true)} />
+              Los precios que escribo ya incluyen IGV
+            </label>
+          ) : null}
           <label className="flex cursor-pointer items-center gap-2.5 text-[15px]">
             <Casilla checked={adicional} onCheckedChange={(v) => setAdicional(v === true)} />
             Es un trabajo adicional (lo encontrado al revisar)
           </label>
-          <p className="num flex justify-between border-t border-regla pt-3 text-lg font-semibold">
-            <span>Total</span>
-            {formatearSoles(total)}
-          </p>
+          <dl className="num flex flex-col gap-1 border-t border-regla pt-3 text-[15px]">
+            {conIgv ? (
+              <>
+                <div className="flex justify-between text-tinta-2">
+                  <dt>Sin IGV</dt>
+                  <dd>{formatearSoles(sinIgv)}</dd>
+                </div>
+                <div className="flex justify-between text-tinta-2">
+                  <dt>IGV 18 %</dt>
+                  <dd>{formatearSoles(total - sinIgv)}</dd>
+                </div>
+              </>
+            ) : null}
+            <div className="flex justify-between text-lg font-semibold">
+              <dt>Total</dt>
+              <dd>{formatearSoles(total)}</dd>
+            </div>
+          </dl>
           {r.error ? <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">{r.error}</p> : null}
           <Boton
             disabled={pendiente}
@@ -82,6 +125,7 @@ export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: 
                   ordenId,
                   adicional,
                   lineas.map(({ tipo, descripcion, cantidad, precio }) => ({ tipo, descripcion, cantidad, precio })),
+                  { conIgv, preciosConIgv },
                 );
                 setR(res);
                 if (res.ok) setAbierta(false);
