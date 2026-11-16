@@ -540,6 +540,28 @@ if (!hayEncuestas) {
   console.log(`Taller Norte: ${encuestas.length} encuestas, ${recordatorios.length} recordatorios de mantenimiento y ${mensajes.length} mensajes de WhatsApp de ejemplo.`);
 }
 
+// 9. Gastos del taller de ejemplo (solo si no hay): para ver la utilidad neta en Reportes.
+{
+  const norte = empresas["Taller Norte"];
+  const { count } = await db.from("gastos").select("id", { count: "exact", head: true }).eq("empresa_id", norte);
+  if (!count) {
+    const hoyLima = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
+    const mesActual = hoyLima.slice(0, 7);
+    const [a, m] = mesActual.split("-").map(Number);
+    const mesAnterior = new Date(Date.UTC(a, m - 2, 1)).toISOString().slice(0, 7);
+    const gastos = [mesAnterior, mesActual].flatMap((mes) => [
+      { fecha: `${mes}-01`, categoria: "alquiler", descripcion: "Alquiler del local", monto: 3500, medio: "transferencia" },
+      { fecha: `${mes}-05`, categoria: "luz", descripcion: "Recibo de luz", monto: mes === mesActual ? 640 : 610, medio: "transferencia" },
+      { fecha: `${mes}-05`, categoria: "agua", descripcion: "Recibo de agua", monto: 120, medio: "transferencia" },
+      { fecha: `${mes}-08`, categoria: "internet_telefono", descripcion: "Internet y celulares", monto: 180, medio: "tarjeta" },
+      { fecha: `${mes}-10`, categoria: "publicidad", descripcion: "Anuncios en Facebook", monto: 400, medio: "tarjeta" },
+      { fecha: `${mes}-12`, categoria: "limpieza", descripcion: "Productos de limpieza", monto: 85, medio: "efectivo" },
+    ]).filter((g) => g.fecha <= hoyLima);
+    await falla("gastos", (await db.from("gastos").insert(gastos.map((g) => ({ ...g, empresa_id: norte })))).error);
+    console.log(`Taller Norte: ${gastos.length} gastos del taller de ejemplo.`);
+  }
+}
+
 console.log("Listo. Personas de ejemplo (celular · rol):");
 for (const p of PERSONAS) {
   const roles = [...new Set(Object.values(p.roles).flat())].join(", ");

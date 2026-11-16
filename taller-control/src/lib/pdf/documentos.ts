@@ -671,7 +671,9 @@ export async function pdfReporte(ctx: Contexto, mes: string, todos: boolean): Pr
   d.datos([
     ["Ventas sin IGV", soles(actual.ventas)],
     ["Ventas con IGV", soles(actual.ventasConIgv)],
-    ["Utilidad", `${soles(actual.utilidad)}${actual.margen !== null ? ` (margen ${(actual.margen * 100).toFixed(1)} %)` : ""}`],
+    ["Utilidad bruta", `${soles(actual.utilidad)}${actual.margen !== null ? ` (margen ${(actual.margen * 100).toFixed(1)} %)` : ""}`],
+    ["Gastos del taller y personal", soles(actual.gastos + actual.personal)],
+    ["Utilidad neta", `${soles(actual.utilidadNeta)}${actual.margenNeto !== null ? ` (margen ${(actual.margenNeto * 100).toFixed(1)} %)` : ""}`],
     ["Carros entregados", String(actual.entregados)],
   ]);
   if (actual.parcial) d.parrafo("El mes está en curso: los montos van hasta hoy.", { tam: 8.5, color: "tenue" });
@@ -680,12 +682,13 @@ export async function pdfReporte(ctx: Contexto, mes: string, todos: boolean): Pr
     { titulo: "Ventas", ancho: 1.3, alinear: "der" as const },
     { titulo: "Compras", ancho: 1.3, alinear: "der" as const },
     { titulo: "Mano de obra", ancho: 1.3, alinear: "der" as const },
-    { titulo: "Utilidad", ancho: 1.3, alinear: "der" as const },
-    { titulo: "Margen", ancho: 0.9, alinear: "der" as const },
-    { titulo: "Entreg.", ancho: 0.8, alinear: "der" as const },
+    { titulo: "U. bruta", ancho: 1.3, alinear: "der" as const },
+    { titulo: "Gastos y pers.", ancho: 1.3, alinear: "der" as const },
+    { titulo: "U. neta", ancho: 1.3, alinear: "der" as const },
+    { titulo: "Entreg.", ancho: 0.7, alinear: "der" as const },
   ];
-  const fila = (t: string, f: (typeof conjunto)[number]) => [t, soles(f.ventas), soles(f.compras), soles(f.manoObra), soles(f.utilidad), f.margen === null ? "-" : `${(f.margen * 100).toFixed(1)} %`, String(f.entregados)];
-  d.seccion("Mes a mes", "Montos sin IGV · utilidad = ventas − compras − mano de obra");
+  const fila = (t: string, f: (typeof conjunto)[number]) => [t, importe(f.ventas), importe(f.compras), importe(f.manoObra), importe(f.utilidad), importe(f.gastos + f.personal), importe(f.utilidadNeta), String(f.entregados)];
+  d.seccion("Mes a mes", "Soles sin IGV · neta = bruta − gastos del taller − sueldos del resto del personal − comisiones");
   d.tabla(COLS, [...conjunto].reverse().map((f) => fila(nombreMes(f.mes), f)));
   if (alcance.length > 1) {
     d.seccion("Por taller", nombreMes(mes));

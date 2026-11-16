@@ -7,6 +7,7 @@ import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { diaEnLima, formatearSoles, nombreMes } from "@/lib/formato";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
+import { gananciasDelMes } from "@/lib/taller/ganancias";
 import { mesesHasta, personalDelMes, reporteMensual, sumarFilas, type FilaMes } from "@/lib/taller/reportes";
 import { cn } from "@/lib/utils";
 import { ElegirMes } from "./controles";
@@ -33,11 +34,11 @@ function Kpi({ nombre, valor, detalle, negativo }: { nombre: string; valor: stri
 function TablaMeses({ filas, primera }: { filas: FilaMes[]; primera: (f: FilaMes) => string }) {
   return (
     <div className="-mx-2 overflow-x-auto px-2">
-      <table className="num w-full min-w-[720px] text-[15px]">
+      <table className="num w-full min-w-[980px] text-[15px]">
         <thead>
           <tr className="text-left text-[13px] text-tinta-3">
             <th className="py-2 pr-3 font-normal">&nbsp;</th>
-            {["Ventas", "Compras", "Mano de obra", "Utilidad", "Margen", "Entregados"].map((t) => (
+            {["Ventas", "Compras", "Mano de obra", "Utilidad bruta", "Gastos y personal", "Utilidad neta", "Margen neto", "Entregados"].map((t) => (
               <th key={t} className="px-3 py-2 text-right font-normal">
                 {t}
               </th>
@@ -54,8 +55,10 @@ function TablaMeses({ filas, primera }: { filas: FilaMes[]; primera: (f: FilaMes
               <td className="px-3 py-2.5 text-right">{formatearSoles(f.ventas)}</td>
               <td className="px-3 py-2.5 text-right text-tinta-2">{formatearSoles(f.compras)}</td>
               <td className="px-3 py-2.5 text-right text-tinta-2">{formatearSoles(f.manoObra)}</td>
-              <td className={cn("px-3 py-2.5 text-right font-medium", f.utilidad < 0 && "text-negativo")}>{formatearSoles(f.utilidad)}</td>
-              <td className="px-3 py-2.5 text-right">{pct(f.margen)}</td>
+              <td className={cn("px-3 py-2.5 text-right", f.utilidad < 0 && "text-negativo")}>{formatearSoles(f.utilidad)}</td>
+              <td className="px-3 py-2.5 text-right text-tinta-2">{formatearSoles(f.gastos + f.personal)}</td>
+              <td className={cn("px-3 py-2.5 text-right font-medium", f.utilidadNeta < 0 && "text-negativo")}>{formatearSoles(f.utilidadNeta)}</td>
+              <td className="px-3 py-2.5 text-right">{pct(f.margenNeto)}</td>
               <td className="px-3 py-2.5 text-right">{f.entregados}</td>
             </tr>
           ))}
@@ -81,12 +84,11 @@ export default async function Reportes({ searchParams }: { searchParams: Promise
     alcance.map(async (t) => ({ taller: t, filas: await reporteMensual(t.id, meses, hoy, true), personal: await personalDelMes(t.id, mes) })),
   );
   const filasConjunto = meses.map((m, i) => sumarFilas(porTaller.map((p) => p.filas[i]), m));
+  const ganancias = (await Promise.all(alcance.map((t) => gananciasDelMes(t.id, mes)))).flat();
   const actual = filasConjunto[filasConjunto.length - 1];
   const anterior = filasConjunto[filasConjunto.length - 2];
   const variacion = anterior && anterior.ventas > 0 ? (actual.ventas - anterior.ventas) / anterior.ventas : null;
   const personal = porTaller.flatMap((p) => p.personal.map((x) => ({ ...x, taller: p.taller.nombre })));
-  const totalCostos = personal.reduce((a, p) => a + p.costo, 0);
-  const totalComisiones = personal.reduce((a, p) => a + p.comision, 0);
   const excel = `/reportes/excel?mes=${mes}${conjunto ? "&ambito=todos" : ""}`;
   // Encuestas de satisfacción del mes (por la fecha de respuesta).
   const supabase = await clienteServidor();
@@ -150,13 +152,110 @@ export default async function Reportes({ searchParams }: { searchParams: Promise
           valor={formatearSoles(actual.ventas)}
           detalle={variacion === null ? "Sin mes anterior para comparar" : `${variacion >= 0 ? "+" : ""}${(variacion * 100).toFixed(1)} % frente a ${etiquetaMes(anterior.mes).toLowerCase()}`}
         />
-        <Kpi nombre="Utilidad" valor={formatearSoles(actual.utilidad)} detalle={`Margen ${pct(actual.margen)}`} negativo={actual.utilidad < 0} />
-        <Kpi nombre="Carros entregados" valor={String(actual.entregados)} detalle={actual.ticket ? `Ticket promedio ${formatearSoles(actual.ticket)} con IGV` : undefined} />
-        <Kpi nombre="Personal" valor={formatearSoles(totalCostos + totalComisiones)} detalle={`Sueldos ${formatearSoles(totalCostos)} + comisiones ${formatearSoles(totalComisiones)}`} />
+        <Kpi nombre="Utilidad bruta" valor={formatearSoles(actual.utilidad)} detalle={`Ventas − repuestos − mano de obra · margen ${pct(actual.margen)}`} negativo={actual.utilidad < 0} />
+        <Kpi nombre="Gastos y personal" valor={formatearSoles(actual.gastos + actual.personal)} detalle={`Gastos del taller ${formatearSoles(actual.gastos)} · personal ${formatearSoles(actual.personal)}`} />
+        <Kpi nombre="Utilidad neta" valor={formatearSoles(actual.utilidadNeta)} detalle={`Lo que realmente gana el taller · margen ${pct(actual.margenNeto)}`} negativo={actual.utilidadNeta < 0} />
+      </div>
+
+      <div className="grid min-w-0 gap-4 xl:grid-cols-12">
+        <Tarjeta aria-labelledby="t-cuenta" className="xl:col-span-5">
+          <CabeceraTarjeta id="t-cuenta" titulo="Cuenta del mes" detalle={`${etiquetaMes(mes)} · de la venta a la utilidad neta`} />
+          <dl className="num flex flex-col text-[15px]">
+            {(
+              [
+                ["Ventas", actual.ventas, "fuerte"],
+                ["− Repuestos y compras", -actual.compras, ""],
+                ["− Mano de obra técnica", -actual.manoObra, ""],
+                ["Utilidad bruta", actual.utilidad, "fuerte"],
+                ["− Gastos del taller", -actual.gastos, ""],
+                ["− Sueldos del resto del personal", -(actual.personal - actual.comisiones), ""],
+                ["− Comisiones", -actual.comisiones, ""],
+                ["Utilidad neta", actual.utilidadNeta, "total"],
+              ] as [string, number, string][]
+            ).map(([nombre, valor, clase]) => (
+              <div key={nombre} className={cn("flex items-baseline justify-between gap-3 border-t border-regla py-2 first:border-t-0", clase === "total" && "mt-1 rounded-2xl border-t-0 bg-interna px-3 py-3")}>
+                <dt className={cn(clase ? "font-medium" : "text-tinta-2")}>{nombre}</dt>
+                <dd className={cn("whitespace-nowrap", clase === "total" ? "text-[19px] font-semibold" : clase ? "font-medium" : "text-tinta-2", valor < 0 && clase && "text-negativo")}>{formatearSoles(valor)}</dd>
+              </div>
+            ))}
+          </dl>
+          {!conjunto ? (
+            <p className="mt-3 text-sm text-tinta-3">
+              Los gastos se registran en <Link href="/gastos" className="font-medium text-tinta underline-offset-4 hover:underline">Caja → Gastos del taller</Link>; los sueldos y comisiones, en Configuración.
+            </p>
+          ) : null}
+        </Tarjeta>
+
+        <Tarjeta aria-labelledby="t-carros" className="min-w-0 xl:col-span-7">
+          <CabeceraTarjeta id="t-carros" titulo="Ganancia por carro" detalle={`${ganancias.length} ${ganancias.length === 1 ? "carro entregado" : "carros entregados"} en ${etiquetaMes(mes).toLowerCase()} · sin IGV`} />
+          {ganancias.length ? (
+            <ul className="num -mx-1 flex max-h-[520px] flex-col overflow-auto px-1 md:hidden">
+              {ganancias.map((g) => (
+                <li key={g.id} className="border-t border-regla py-2.5 first:border-t-0">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <Link href={`/ordenes/${g.id}`} className="font-medium underline-offset-4 hover:underline">
+                      {g.placa.replace(/^([A-Z0-9]{3})(\d{3})$/, "$1-$2")}
+                    </Link>
+                    <span className={cn("font-medium whitespace-nowrap", g.utilidad < 0 && "text-negativo")}>
+                      {formatearSoles(g.utilidad)}
+                      <span className="ml-1 text-[12px] font-normal text-tinta-3">{pct(g.margen)}</span>
+                    </span>
+                  </div>
+                  <p className="truncate text-[12px] text-tinta-3">
+                    {g.cliente ?? "—"} · {g.documento}
+                  </p>
+                  <p className="text-[13px] text-tinta-2">
+                    Venta <span className={cn(g.venta === 0 && "text-negativo")}>{formatearSoles(g.venta)}</span> · repuestos {formatearSoles(g.repuestos)} · mano de obra {formatearSoles(g.manoObra)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {ganancias.length ? (
+            <div className="-mx-2 hidden max-h-[420px] overflow-auto px-2 md:block">
+              <table className="num w-full min-w-[620px] text-[14px]">
+                <thead className="sticky top-0 bg-tarjeta">
+                  <tr className="text-left text-[13px] text-tinta-3">
+                    <th className="py-2 pr-3 font-normal">Carro</th>
+                    {["Venta", "Repuestos", "Mano de obra", "Utilidad"].map((t) => (
+                      <th key={t} className="px-2 py-2 text-right font-normal">
+                        {t}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {ganancias.map((g) => (
+                    <tr key={g.id} className="border-t border-regla align-top">
+                      <th scope="row" className="py-2 pr-3 text-left font-normal">
+                        <Link href={`/ordenes/${g.id}`} className="font-medium underline-offset-4 hover:underline">
+                          {g.placa.replace(/^([A-Z0-9]{3})(\d{3})$/, "$1-$2")}
+                        </Link>
+                        <span className="block text-[12px] text-tinta-3">
+                          {g.cliente ?? "—"} · {g.documento}
+                        </span>
+                      </th>
+                      <td className={cn("px-2 py-2 text-right", g.venta === 0 && "text-negativo")}>{formatearSoles(g.venta)}</td>
+                      <td className="px-2 py-2 text-right text-tinta-2">{formatearSoles(g.repuestos)}</td>
+                      <td className="px-2 py-2 text-right text-tinta-2">{formatearSoles(g.manoObra)}</td>
+                      <td className={cn("px-2 py-2 text-right font-medium", g.utilidad < 0 && "text-negativo")}>
+                        {formatearSoles(g.utilidad)}
+                        <span className="block text-[12px] font-normal text-tinta-3">{pct(g.margen)}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-control px-4 py-5 text-center text-[15px] text-tinta-2">Todavía no hay carros entregados en {etiquetaMes(mes).toLowerCase()}.</p>
+          )}
+          {ganancias.some((g) => g.venta === 0) ? <p className="mt-3 text-sm text-negativo">Los que salen con venta S/ 0.00 no tienen recibo, boleta ni factura: emítelo en la orden para que cuente.</p> : null}
+        </Tarjeta>
       </div>
 
       <Tarjeta aria-labelledby="t-meses">
-        <CabeceraTarjeta id="t-meses" titulo="Mes a mes" detalle="Utilidad = ventas − compras − mano de obra del personal técnico" />
+        <CabeceraTarjeta id="t-meses" titulo="Mes a mes" detalle="Utilidad bruta = ventas − compras − mano de obra técnica. Utilidad neta = bruta − gastos del taller − sueldos del resto del personal − comisiones." />
         <TablaMeses filas={[...filasConjunto].reverse()} primera={(f) => etiquetaMes(f.mes)} />
       </Tarjeta>
 

@@ -8,6 +8,7 @@ const ENLACES = [
   { href: "/ventas", nombre: "Comprobantes", roles: CAJA },
   { href: "/compras", nombre: "Compras", roles: ["gerencia", "administrador", "asesor", "almacen"] },
   { href: "/cierre", nombre: "Cierre del día", roles: CAJA },
+  { href: "/gastos", nombre: "Gastos del taller", roles: ["gerencia", "administrador"] },
   { href: "/alertas", nombre: "Alertas", roles: [...CAJA, "almacen"] },
 ];
 

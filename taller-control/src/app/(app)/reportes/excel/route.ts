@@ -17,14 +17,18 @@ function hoja(libro: ExcelJS.Workbook, nombre: string, columnas: { titulo: strin
   return h;
 }
 
-const filaMes = (etiqueta: string, f: FilaMes) => [etiqueta, f.ventas, f.compras, f.manoObra, f.utilidad, f.margen ?? null, f.entregados, f.ventasConIgv];
+const filaMes = (etiqueta: string, f: FilaMes) => [etiqueta, f.ventas, f.compras, f.manoObra, f.utilidad, f.margen ?? null, f.gastos, f.personal, f.utilidadNeta, f.margenNeto ?? null, f.entregados, f.ventasConIgv];
 const COLUMNAS_MES = [
   { titulo: "", ancho: 22 },
   { titulo: "Ventas sin IGV", ancho: 16, formato: SOLES },
   { titulo: "Compras sin IGV", ancho: 16, formato: SOLES },
   { titulo: "Mano de obra", ancho: 15, formato: SOLES },
-  { titulo: "Utilidad", ancho: 15, formato: SOLES },
-  { titulo: "Margen", ancho: 10, formato: PORCENTAJE },
+  { titulo: "Utilidad bruta", ancho: 15, formato: SOLES },
+  { titulo: "Margen bruto", ancho: 12, formato: PORCENTAJE },
+  { titulo: "Gastos del taller", ancho: 16, formato: SOLES },
+  { titulo: "Personal (sueldos y comisiones)", ancho: 18, formato: SOLES },
+  { titulo: "Utilidad neta", ancho: 15, formato: SOLES },
+  { titulo: "Margen neto", ancho: 12, formato: PORCENTAJE },
   { titulo: "Carros entregados", ancho: 17 },
   { titulo: "Ventas con IGV", ancho: 16, formato: SOLES },
 ];

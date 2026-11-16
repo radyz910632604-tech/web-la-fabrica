@@ -7,7 +7,7 @@ import { costosVigentes, limitesMes, totalesPeriodo, type ResumenMesDinero } fro
 type Num = number | string | null;
 const n = (v: Num) => Number(v ?? 0);
 
-export type FilaMes = ResumenMesDinero & { mes: string; margen: number | null; ticket: number | null; parcial: boolean };
+export type FilaMes = ResumenMesDinero & { mes: string; margen: number | null; margenNeto: number | null; ticket: number | null; parcial: boolean; comisiones: number };
 
 /** Los últimos `cuantos` meses de Lima terminando en `mes` ("2026-11"), del más antiguo al más nuevo. */
 export function mesesHasta(mes: string, cuantos: number): string[] {
@@ -28,8 +28,15 @@ export async function reporteMensual(empresaId: string, meses: string[], hoy: st
       const diasMes = new Date(Date.UTC(a, m, 0)).getUTCDate();
       const fin = parcial ? new Date(Date.UTC(a, m - 1, Number(hoy.slice(8, 10)) + 1)).toISOString().slice(0, 10) : hastaDia;
       const fraccion = parcial ? Number(hoy.slice(8, 10)) / diasMes : 1;
-      const t = await totalesPeriodo(empresaId, desdeDia, fin, fraccion, verSueldos);
-      return { ...t, mes, parcial, margen: t.ventas > 0 ? t.utilidad / t.ventas : null, ticket: t.entregados > 0 ? redondear(t.ventasConIgv / t.entregados) : null };
+      const [t, personal] = await Promise.all([totalesPeriodo(empresaId, desdeDia, fin, fraccion, verSueldos), verSueldos ? personalDelMes(empresaId, mes) : Promise.resolve([])]);
+      // Las comisiones también son costo del personal: se restan de la utilidad neta.
+      const comisiones = redondear(personal.reduce((a, p) => a + p.comision, 0));
+      const utilidadNeta = redondear(t.utilidadNeta - comisiones);
+      return {
+        ...t, mes, parcial, comisiones, personal: redondear(t.personal + comisiones), utilidadNeta,
+        margen: t.ventas > 0 ? t.utilidad / t.ventas : null, margenNeto: t.ventas > 0 ? utilidadNeta / t.ventas : null,
+        ticket: t.entregados > 0 ? redondear(t.ventasConIgv / t.entregados) : null,
+      };
     }),
   );
 }
@@ -39,8 +46,14 @@ export function sumarFilas(filas: FilaMes[], mes: string): FilaMes {
   const ventas = s("ventas");
   const entregados = s("entregados");
   const utilidad = s("utilidad");
+  const utilidadNeta = s("utilidadNeta");
   return {
     mes,
+    gastos: s("gastos"),
+    personal: s("personal"),
+    utilidadNeta,
+    comisiones: redondear(filas.reduce((a, f) => a + f.comisiones, 0)),
+    margenNeto: ventas > 0 ? utilidadNeta / ventas : null,
     parcial: filas.some((f) => f.parcial),
     ventas,
     ventasConIgv: s("ventasConIgv"),

@@ -194,7 +194,21 @@ export async function manoObraDeOrden(
   return manoObra("prorrateo_mensual", { costoMensualTecnico: costo, ordenesEntregadasMes: count ?? 0 });
 }
 
-export type ResumenMesDinero = { ventas: number; ventasConIgv: number; compras: number; manoObra: number; utilidad: number; entregados: number };
+export type ResumenMesDinero = {
+  ventas: number;
+  ventasConIgv: number;
+  compras: number;
+  manoObra: number;
+  /** Utilidad bruta: ventas − compras − mano de obra técnica. */
+  utilidad: number;
+  entregados: number;
+  /** Gastos del taller (alquiler, luz, agua…) del periodo. */
+  gastos: number;
+  /** Sueldos del personal que no es técnico (prorrateados) y comisiones. */
+  personal: number;
+  /** Utilidad neta: bruta − gastos − personal. */
+  utilidadNeta: number;
+};
 
 /**
  * Totales de un periodo: ventas y compras sin IGV (confirmadas, no anuladas) y
@@ -202,7 +216,7 @@ export type ResumenMesDinero = { ventas: number; ventasConIgv: number; compras: 
  */
 export async function totalesPeriodo(empresaId: string, desdeDia: string, hastaDia: string, fraccionMes: number, verSueldos: boolean): Promise<ResumenMesDinero> {
   const supabase = await clienteServidor();
-  const [{ data: ventas }, { data: compras }, { count }, costos, tecnicos, { data: notas }] = await Promise.all([
+  const [{ data: ventas }, { data: compras }, { count }, costos, tecnicos, { data: notas }, { data: gastos }, { data: miembros }] = await Promise.all([
     supabase.from("comprobantes_venta").select("subtotal_sin_igv, total").eq("empresa_id", empresaId).eq("estado", "confirmado").gte("fecha_emision", desdeDia).lt("fecha_emision", hastaDia),
     supabase.from("compras").select("subtotal_sin_igv, moneda, tipo_cambio").eq("empresa_id", empresaId).eq("estado", "confirmado").gte("fecha_emision", desdeDia).lt("fecha_emision", hastaDia),
     supabase
@@ -215,6 +229,8 @@ export async function totalesPeriodo(empresaId: string, desdeDia: string, hastaD
     verSueldos ? costosVigentes(empresaId, hastaDia) : Promise.resolve(new Map<string, number>()),
     verSueldos ? supabase.from("miembros").select("perfil_id").eq("empresa_id", empresaId).eq("rol", "tecnico").eq("activo", true) : Promise.resolve({ data: [] }),
     supabase.from("notas_credito").select("subtotal_sin_igv, total").eq("empresa_id", empresaId).eq("estado", "confirmado").gte("fecha_emision", desdeDia).lt("fecha_emision", hastaDia),
+    supabase.from("gastos").select("monto").eq("empresa_id", empresaId).eq("estado", "confirmado").gte("fecha", desdeDia).lt("fecha", hastaDia),
+    verSueldos ? supabase.from("miembros").select("perfil_id, rol").eq("empresa_id", empresaId).eq("activo", true) : Promise.resolve({ data: [] }),
   ]);
   // Ventas netas: comprobantes menos sus notas de crédito, más los recibos de venta
   // de órdenes que no tienen boleta ni factura (así no se cuentan dos veces).
@@ -223,7 +239,16 @@ export async function totalesPeriodo(empresaId: string, desdeDia: string, hastaD
   const ventasCon = redondear((ventas ?? []).reduce((a, v) => a + n(v.total), 0) - (notas ?? []).reduce((a, x) => a + n(x.total), 0) + recibos.total);
   const comprasSin = redondear((compras ?? []).reduce((a, c) => a + enSoles(n(c.subtotal_sin_igv), c.moneda as "PEN" | "USD", n(c.tipo_cambio)), 0));
   const mo = redondear(((tecnicos.data ?? []) as { perfil_id: string }[]).reduce((a, t) => a + (costos.get(t.perfil_id) ?? 0), 0) * fraccionMes);
-  return { ventas: ventasSin, ventasConIgv: ventasCon, compras: comprasSin, manoObra: mo, utilidad: redondear(ventasSin - comprasSin - mo), entregados: count ?? 0 };
+  // Sueldos de quienes no son técnicos (los técnicos ya están en la mano de obra).
+  const idsTecnicos = new Set(((tecnicos.data ?? []) as { perfil_id: string }[]).map((t) => t.perfil_id));
+  const resto = new Set(((miembros ?? []) as { perfil_id: string }[]).map((m) => m.perfil_id).filter((id) => !idsTecnicos.has(id)));
+  const sueldosResto = redondear([...resto].reduce((a, id) => a + (costos.get(id) ?? 0), 0) * fraccionMes);
+  const gastosTotal = redondear((gastos ?? []).reduce((a, g) => a + n(g.monto), 0));
+  const utilidad = redondear(ventasSin - comprasSin - mo);
+  return {
+    ventas: ventasSin, ventasConIgv: ventasCon, compras: comprasSin, manoObra: mo, utilidad, entregados: count ?? 0,
+    gastos: gastosTotal, personal: sueldosResto, utilidadNeta: redondear(utilidad - gastosTotal - sueldosResto),
+  };
 }
 
 /** Recibos de venta del periodo cuyas órdenes no tienen boleta ni factura confirmada. */

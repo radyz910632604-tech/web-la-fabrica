@@ -61,7 +61,7 @@ export default async function Panel() {
       .gte("entregado_en", desde.toISOString())
       .lt("entregado_en", hasta.toISOString());
 
-  const sinMontos: ResumenMesDinero = { ventas: 0, ventasConIgv: 0, compras: 0, manoObra: 0, utilidad: 0, entregados: 0 };
+  const sinMontos: ResumenMesDinero = { ventas: 0, ventasConIgv: 0, compras: 0, manoObra: 0, utilidad: 0, entregados: 0, gastos: 0, personal: 0, utilidadNeta: 0 };
   const [enTaller, recientes, citasHoy, entregadosMes, entregadosAntes, { data: metaReal }, dineroMes, dineroAntes, historico] = await Promise.all([
     vista.tabla === "citas" ? Promise.resolve([] as FilaOrden[]) : listarOrdenes(ctx.taller.id, { estados: [...ACTIVOS], orden: "ingreso" }),
     vista.tabla === "citas" ? Promise.resolve([] as FilaOrden[]) : listarOrdenes(ctx.taller.id, { limite: 40 }),
