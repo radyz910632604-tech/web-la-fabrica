@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
+import { useActionState, useTransition, type ReactNode } from "react";
 import { Switch } from "radix-ui";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada } from "@/components/ui/campo";
 import { Tarjeta } from "@/components/ui/tarjeta";
 import {
+  agregarServicioCatalogo,
+  cambiarServicioCatalogo,
   crearTaller,
   guardarMeta,
   guardarPermisosAdmin,
@@ -185,5 +187,73 @@ export function FormNuevoTaller() {
       </Campo>
       <Pie estado={estado} enviando={enviando} texto="Crear taller" />
     </form>
+  );
+}
+
+const NOMBRE_CATEGORIA: Record<string, string> = {
+  transmision: "Transmisión",
+  gnv_glp: "GNV y GLP",
+  aire_acondicionado: "Aire acondicionado",
+  frenos: "Frenos",
+  aceite: "Aceite",
+  otro: "Otros",
+};
+
+export function FormServicios({ servicios }: { servicios: { id: string; nombre: string; categoria: string; activo: boolean }[] }) {
+  const [estado, accion, enviando] = useActionState(agregarServicioCatalogo, {});
+  const [pendiente, iniciar] = useTransition();
+  const e = estado.errores ?? {};
+  return (
+    <div>
+      <ul className="flex flex-wrap gap-2">
+        {servicios.map((s) => (
+          <li key={s.id}>
+            <button
+              type="button"
+              disabled={pendiente}
+              onClick={() => iniciar(async () => void (await cambiarServicioCatalogo(s.id, !s.activo)))}
+              aria-pressed={s.activo}
+              title={s.activo ? "Toca para ocultarlo al registrar ingresos" : "Toca para volver a mostrarlo"}
+              className={
+                s.activo
+                  ? "presionable min-h-11 cursor-pointer rounded-full border border-borde bg-tarjeta px-4 text-[14px] hover:bg-interna"
+                  : "presionable min-h-11 cursor-pointer rounded-full border border-dashed border-control px-4 text-[14px] text-tinta-3 line-through"
+              }
+            >
+              {s.nombre}
+              <span className="sr-only"> ({NOMBRE_CATEGORIA[s.categoria]}{s.activo ? "" : ", oculto"})</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-sm text-tinta-2">Toca un servicio para ocultarlo o volver a mostrarlo. Los ocultos no aparecen al registrar ingresos.</p>
+      <form action={accion} className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <Campo etiqueta="Nuevo servicio" error={e.nombre}>
+          {(p) => <Entrada {...p} name="nombre" placeholder="Por ejemplo: Cambio de bujías" required />}
+        </Campo>
+        <Campo etiqueta="Tipo">
+          {(p) => (
+            <select
+              {...p}
+              name="categoria"
+              defaultValue="otro"
+              className="h-12 w-full rounded-2xl border border-borde bg-tarjeta px-4 text-[15px] text-tinta outline-none focus-visible:border-tinta"
+            >
+              {Object.entries(NOMBRE_CATEGORIA).map(([v, n]) => (
+                <option key={v} value={v}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          )}
+        </Campo>
+        <Campo etiqueta="Garantía (días)" error={e.dias_garantia} ayuda="Vacío = la general">
+          {(p) => <Entrada {...p} name="dias_garantia" type="number" inputMode="numeric" min={0} className="num" />}
+        </Campo>
+        <div className="sm:col-span-3">
+          <Pie estado={estado} enviando={enviando} texto="Agregar servicio" />
+        </div>
+      </form>
+    </div>
   );
 }

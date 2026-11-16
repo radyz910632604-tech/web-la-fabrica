@@ -3,7 +3,8 @@ import { diaEnLima, nombreMes } from "@/lib/formato";
 import { esGestor } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
-import { FormMeta, FormNuevoTaller, FormPermisosAdmin, FormReglas, FormTaller, Seccion } from "./formularios";
+import { catalogo } from "@/lib/taller/consultas";
+import { FormMeta, FormNuevoTaller, FormPermisosAdmin, FormReglas, FormServicios, FormTaller, Seccion } from "./formularios";
 
 export const metadata = { title: "Configuración del taller" };
 
@@ -13,10 +14,11 @@ export default async function Configuracion() {
 
   const supabase = await clienteServidor();
   const [anio, mes] = diaEnLima(new Date()).split("-").map(Number);
-  const [{ data: taller }, { data: config }, { data: meta }] = await Promise.all([
+  const [{ data: taller }, { data: config }, { data: meta }, servicios] = await Promise.all([
     supabase.from("empresas").select("nombre, razon_social, ruc, direccion, telefono").eq("id", ctx.taller.id).single(),
     supabase.from("configuracion_empresa").select("*").eq("empresa_id", ctx.taller.id).single(),
     supabase.from("metas_ventas").select("meta_sin_igv").eq("empresa_id", ctx.taller.id).eq("anio", anio).eq("mes", mes).maybeSingle(),
+    catalogo(ctx.taller.id, false),
   ]);
   if (!taller || !config) notFound();
 
@@ -48,6 +50,10 @@ export default async function Configuracion() {
             hora_cierre: String(config.hora_cierre).slice(0, 5),
           }}
         />
+      </Seccion>
+
+      <Seccion titulo="Servicios del taller" descripcion="Los que aparecen para tocar al registrar un ingreso. Cada uno puede tener su propio plazo de garantía.">
+        <FormServicios servicios={servicios} />
       </Seccion>
 
       <Seccion titulo={`Meta de ventas de ${nombreMes(new Date())}`} descripcion="Sin IGV. Se ve como barra de avance en el panel.">

@@ -125,3 +125,31 @@ export async function crearTaller(_previo: Resultado, form: FormData): Promise<R
   revalidatePath("/", "layout");
   return { ok: `Listo. Ahora estás en ${datos.data.nombre}; agrega a su personal en Personal y roles.` };
 }
+
+const CATEGORIAS = ["transmision", "gnv_glp", "aire_acondicionado", "frenos", "aceite", "otro"] as const;
+
+export async function agregarServicioCatalogo(_previo: Resultado, form: FormData): Promise<Resultado> {
+  const ctx = await exigirGestor();
+  const datos = z
+    .object({
+      nombre: z.string().trim().min(2, "Escribe el nombre del servicio.").max(120, "Máximo 120 caracteres."),
+      categoria: z.enum(CATEGORIAS),
+      dias_garantia: z.preprocess((v) => (v === "" ? null : v), z.coerce.number().int().min(0, "Mínimo 0.").max(1095, "Máximo 1095.").nullable()),
+    })
+    .safeParse(Object.fromEntries(form));
+  if (!datos.success) return { errores: erroresDe(datos.error) };
+  const supabase = await clienteServidor();
+  const { error } = await supabase.from("catalogo_servicios").insert({ empresa_id: ctx.taller.id, ...datos.data });
+  if (error) return error.code === "23505" ? { errores: { nombre: "Ese servicio ya existe." } } : { error: "No se pudo agregar." };
+  revalidatePath("/configuracion");
+  return { ok: `«${datos.data.nombre}» agregado.` };
+}
+
+export async function cambiarServicioCatalogo(id: string, activo: boolean): Promise<Resultado> {
+  await exigirGestor();
+  const supabase = await clienteServidor();
+  const { error, count } = await supabase.from("catalogo_servicios").update({ activo }, { count: "exact" }).eq("id", id);
+  if (error || count !== 1) return { error: "No se pudo cambiar." };
+  revalidatePath("/configuracion");
+  return { ok: activo ? "Servicio activado." : "Servicio ocultado." };
+}
