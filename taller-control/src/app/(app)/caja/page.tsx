@@ -4,6 +4,7 @@ import { FileDown } from "lucide-react";
 import { Anular, RegistrarPago } from "@/components/caja/controles";
 import { SubnavCaja, TituloCaja } from "@/components/caja/subnav";
 import { Boton } from "@/components/ui/boton";
+import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { MEDIOS, type MedioPago } from "@/lib/dinero";
 import { diaEnLima, formatearMomento, formatearSoles } from "@/lib/formato";
@@ -137,7 +138,7 @@ export default async function CajaDelDia() {
           </dl>
         </Tarjeta>
         <Tarjeta aria-labelledby="t-movs" className="md:col-span-2 xl:col-span-5">
-          <CabeceraTarjeta id="t-movs" titulo="Movimientos" detalle={`${d.movimientos.length} en esta caja`} />
+          <CabeceraTarjeta id="t-movs" titulo="Movimientos" detalle={`${d.movimientos.length} en esta caja`} accion={<EnlacePdf href={`/pdf/caja/${abierta.id}`} />} />
           {d.movimientos.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-control px-4 py-5 text-center text-[15px] text-tinta-2">Todavía no hay movimientos. Los pagos que registres aparecen aquí.</p>
           ) : (

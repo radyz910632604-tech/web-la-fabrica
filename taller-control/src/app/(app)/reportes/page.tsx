@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Download } from "lucide-react";
 import { Boton } from "@/components/ui/boton";
+import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { diaEnLima, formatearSoles, nombreMes } from "@/lib/formato";
 import { obtenerContexto } from "@/lib/sesion";
@@ -99,6 +100,7 @@ export default async function Reportes({ searchParams }: { searchParams: Promise
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <ElegirMes mes={mes} meses={[...ultimos].reverse().map((m) => ({ valor: m, nombre: etiquetaMes(m) }))} ambito={conjunto ? "todos" : ""} />
+          <EnlacePdf href={`/pdf/reporte/${mes}${conjunto ? "?ambito=todos" : ""}`} texto="PDF" boton className="h-12 px-5" />
           <Boton asChild>
             <a href={excel} download>
               <Download />

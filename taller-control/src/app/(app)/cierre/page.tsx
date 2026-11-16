@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { CircleCheck, TriangleExclamationPoint } from "lucide-react";
 import { SubnavCaja, TituloCaja } from "@/components/caja/subnav";
+import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { MEDIOS, type MedioPago } from "@/lib/dinero";
 import { diaEnLima, formatearSoles } from "@/lib/formato";
@@ -47,6 +48,7 @@ export default async function Cierre({ searchParams }: { searchParams: Promise<{
         accion={
           <div className="flex flex-wrap items-center gap-3">
             <ElegirDia dia={dia} hoy={hoy} />
+            <EnlacePdf href={`/pdf/cierre/${dia}`} texto="PDF" boton />
             {cerrado ? null : <CerrarDia dia={dia} descuadres={c.descuadres.length} />}
           </div>
         }

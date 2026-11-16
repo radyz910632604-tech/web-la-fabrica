@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Anular } from "@/components/caja/controles";
 import { SubnavCaja, TituloCaja } from "@/components/caja/subnav";
+import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { diaEnLima, formatearSoles } from "@/lib/formato";
 import { CAJA, tieneAlguno } from "@/lib/roles";
@@ -96,6 +97,7 @@ export default async function Ventas({ searchParams }: { searchParams: Promise<{
                         const disponible = Math.round((Number(c.total) - usadas) * 100) / 100;
                         return (
                           <div className="flex items-center gap-1">
+                            <EnlacePdf href={`/pdf/comprobante/${c.id}`} />
                             {disponible > 0.009 ? <RegistrarNota comprobante={c.id} etiqueta={`${c.serie}-${c.numero}`} disponible={disponible} hoy={hoy} /> : null}
                             <Anular id={c.id} accion={anularComprobante} que="comprobante" />
                           </div>

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarCheck, Phone } from "lucide-react";
 import { Placa } from "@/components/marca/placa";
 import { GarantiaChip } from "@/components/taller/lista-ordenes";
+import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { Estado } from "@/components/ui/estado";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
@@ -91,6 +92,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
           <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.025em] md:text-[32px]">{numeroOrden(o.numero)}</h1>
           <Estado color={COLOR_ESTADO[estado]} texto={NOMBRE_ESTADO[estado]} className="rounded-full bg-tarjeta px-3 py-1.5 text-[15px] shadow-reposo" />
           {o.es_reingreso_garantia ? <GarantiaChip /> : null}
+          <EnlacePdf href={`/pdf/orden/${o.id}`} texto="Orden de trabajo" boton className="md:ml-auto" />
         </div>
         <p className="text-[15px] text-tinta-2 md:text-base">
           {datosCarro.join(" · ") || "Carro sin datos"} · Ingresó {formatearMomento(new Date(o.ingresado_en), ahora).toLowerCase()}

@@ -6,6 +6,7 @@ import { RegistrarComprobante } from "@/app/(app)/ventas/formulario";
 import { Anular, RegistrarPago } from "@/components/caja/controles";
 import { NuevaCotizacion, RespuestaCotizacion } from "@/components/caja/cotizaciones";
 import { Boton } from "@/components/ui/boton";
+import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { MEDIOS, MOTIVOS_NOTA, TIPO_PAGO_CORTO, type MedioPago } from "@/lib/dinero";
 import { formatearMomento, formatearSoles } from "@/lib/formato";
@@ -55,7 +56,7 @@ export function TarjetaDinero({
   const opcion = [{ id: ordenId, etiqueta, saldo: d.saldo, entregada }];
   return (
     <Tarjeta aria-labelledby="t-dinero">
-      <CabeceraTarjeta id="t-dinero" titulo="Dinero" detalle="Cotización, comprobante y pagos" />
+      <CabeceraTarjeta id="t-dinero" titulo="Dinero" detalle="Cotización, comprobante y pagos" accion={<EnlacePdf href={`/pdf/cuenta/${ordenId}`} texto="Estado de cuenta" />} />
       <dl className="num grid grid-cols-1 gap-2 sm:grid-cols-3">
         {[
           ["A cobrar", d.aCobrar, ""],
@@ -86,6 +87,10 @@ export function TarjetaDinero({
                       {c.estado === "aprobada" && c.medio ? ` ${MEDIO_APROBACION[c.medio]}` : ""}
                     </span>
                     <span className="num ml-auto text-[15px] font-semibold">{formatearSoles(c.total)}</span>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    <EnlacePdf href={`/pdf/cotizacion/${c.id}?igv=con`} texto="PDF con IGV" />
+                    <EnlacePdf href={`/pdf/cotizacion/${c.id}?igv=sin`} texto="PDF sin IGV" />
                   </div>
                   <details className="mt-1 text-sm text-tinta-2">
                     <summary className="cursor-pointer text-[13px] text-tinta-3">
@@ -127,6 +132,7 @@ export function TarjetaDinero({
                     <span className="text-[13px] text-tinta-3"> · {c.fecha.split("-").reverse().join("/")}</span>
                   </p>
                   <span className="num text-[15px]">{formatearSoles(c.total)}</span>
+                  <EnlacePdf href={`/pdf/comprobante/${c.id}`} />
                   {c.estado !== "anulado" ? <Anular id={c.id} accion={anularComprobante} que="comprobante" /> : null}
                 </li>
               ))}
@@ -155,6 +161,7 @@ export function TarjetaDinero({
                     <span className="text-[13px] text-tinta-3"> · {formatearMomento(new Date(p.pagadoEn), ahora)}</span>
                   </p>
                   <span className={cn("num text-[15px]", p.tipo === "devolucion" && "text-negativo")}>{formatearSoles(p.tipo === "devolucion" ? -p.monto : p.monto)}</span>
+                  <EnlacePdf href={`/pdf/pago/${p.id}`} texto="Recibo" />
                   {p.estado !== "anulado" ? <Anular id={p.id} accion={anularPago} que="pago" /> : null}
                 </li>
               ))}

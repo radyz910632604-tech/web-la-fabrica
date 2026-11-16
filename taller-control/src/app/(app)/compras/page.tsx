@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { Anular } from "@/components/caja/controles";
 import { SubnavCaja, TituloCaja } from "@/components/caja/subnav";
 import { Boton } from "@/components/ui/boton";
+import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { enSoles } from "@/lib/dinero";
 import { diaEnLima, formatearSoles } from "@/lib/formato";
@@ -157,6 +158,7 @@ export default async function Compras({ searchParams }: { searchParams: Promise<
                         ) : null}
                       </p>
                     </div>
+                    <EnlacePdf href={`/pdf/compra/${c.id}`} />
                     {!anulado && registra ? <Anular id={c.id} accion={anularCompra} que="compra" /> : null}
                   </li>
                 );

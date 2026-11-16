@@ -45,6 +45,7 @@ const PERSONAS = [
   { nombre: "Milagros Vega", celular: "900000007", roles: { "Taller Norte": ["confirmador"] } },
   { nombre: "Diego Paredes", celular: "900000008", roles: { "Taller Sur": ["asesor"] } },
   { nombre: "Ernesto Lara", celular: "900000010", roles: { "Taller Norte": ["tecnico"] } },
+  { nombre: "Sandra Ríos", celular: "900000009", roles: { "Taller Norte": ["recepcion"] } },
 ];
 
 async function falla(paso, error) {
@@ -67,6 +68,10 @@ for (const nombre of TALLERES) {
   await falla(`crear ${nombre}`, errorCrear);
   empresas[nombre] = data.id;
 }
+
+// Datos ficticios del taller para la cabecera de los PDF (solo si están vacíos).
+await db.from("empresas").update({ razon_social: "Taller Norte E.I.R.L. (ejemplo)", ruc: "20000000099", direccion: "Av. de Ejemplo 123, Los Olivos, Lima", telefono: "01 000 0000" }).eq("id", empresas["Taller Norte"]).is("ruc", null);
+await db.from("empresas").update({ razon_social: "Taller Sur S.A.C. (ejemplo)", ruc: "20000000088", direccion: "Jr. de Ejemplo 456, Surco, Lima", telefono: "01 000 0001" }).eq("id", empresas["Taller Sur"]).is("ruc", null);
 
 // 2. Personas y roles
 const { data: lista, error: errorLista } = await db.auth.admin.listUsers({ perPage: 1000 });
@@ -389,6 +394,46 @@ if (!hayDinero) {
   const m = desglose(95);
   await db.from("comprobantes_venta").insert({ empresa_id: norte, tipo: "boleta", serie: "B001", numero: String(++boleta), fecha_emision: diaLimaDe(new Date().toISOString()), tasa_igv: TASA, subtotal_sin_igv: m.sin, igv: m.igv, total: m.total, detalle: "Lavado de motor" });
   console.log("Taller Norte: compras, comprobantes, pagos, cotizaciones, sueldos y comisiones de ejemplo.");
+}
+
+// 6. Caja de recepción y una nota de crédito (solo si todavía no hay cajas).
+// Se hace con la sesión de la recepcionista, como en la app.
+const { count: hayCajas } = await db.from("cajas").select("id", { count: "exact", head: true }).eq("empresa_id", norte);
+if (!hayCajas && process.env.SUPABASE_ANON_KEY) {
+  const sandra = createClient(url, process.env.SUPABASE_ANON_KEY, { auth: { persistSession: false } });
+  const { error: eLogin } = await sandra.auth.signInWithPassword({ email: celularAEmail(normalizarCelular("900000009")), password: clave });
+  await falla("entrar como recepción", eLogin);
+  const { data: abiertasConCot } = await db.from("cotizaciones").select("orden_id, total, ordenes_trabajo!inner (estado)").eq("empresa_id", norte).eq("estado", "aprobada").neq("ordenes_trabajo.estado", "entregado").limit(6);
+  const ordenesCaja = (abiertasConCot ?? []).map((c) => c.orden_id);
+  const pagar = async (orden, monto, tipo, medio) => falla("pago en caja", (await sandra.from("pagos").insert({ empresa_id: norte, orden_id: orden, monto, tipo, medio })).error);
+
+  // Caja anterior: abierta, dos abonos, cerrada con S/ 2 de faltante.
+  const { data: c1, error: e1 } = await sandra.from("cajas").insert({ empresa_id: norte, monto_inicial: 150 }).select("id").single();
+  await falla("abrir caja", e1);
+  if (ordenesCaja[0]) await pagar(ordenesCaja[0], 100, "abono", "efectivo");
+  if (ordenesCaja[1]) await pagar(ordenesCaja[1], 80, "abono", "yape");
+  await falla("gasto", (await sandra.from("movimientos_caja").insert({ empresa_id: norte, caja_id: c1.id, tipo: "egreso", concepto: "Agua y útiles de limpieza", monto: 18 })).error);
+  await falla("cerrar caja", (await sandra.rpc("cerrar_caja", { p_caja: c1.id, p_contado: 230, p_observaciones: "Faltó S/ 2 de sencillo." })).error);
+
+  // Caja de ahora: abierta con sencillo, abonos, un saldo y un gasto.
+  const { data: c2, error: e2 } = await sandra.from("cajas").insert({ empresa_id: norte, monto_inicial: 200 }).select("id").single();
+  await falla("abrir caja de hoy", e2);
+  if (ordenesCaja[2]) await pagar(ordenesCaja[2], 150, "abono", "efectivo");
+  if (ordenesCaja[3]) await pagar(ordenesCaja[3], 120, "abono", "plin");
+  if (ordenesCaja[4]) await pagar(ordenesCaja[4], 60, "abono", "tarjeta");
+  await falla("gasto de hoy", (await sandra.from("movimientos_caja").insert({ empresa_id: norte, caja_id: c2.id, tipo: "egreso", concepto: "Movilidad para recoger repuesto", monto: 15 })).error);
+
+  // Nota de crédito por un descuento en una boleta ya pagada: queda saldo a favor.
+  const { data: boleta } = await db.from("comprobantes_venta").select("id, total, orden_id").eq("empresa_id", norte).eq("tipo", "boleta").not("orden_id", "is", null).order("fecha_emision", { ascending: false }).range(3, 3).single();
+  if (boleta) {
+    const total = 30, sin = Math.round((total / 1.18) * 100) / 100;
+    await falla("nota de crédito", (await sandra.from("notas_credito").insert({
+      empresa_id: norte, comprobante_id: boleta.id, serie: "BC01", numero: "21", fecha_emision: new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date()),
+      motivo_codigo: "04", motivo: "Descuento por demora en la entrega", tasa_igv: 0.18, subtotal_sin_igv: sin, igv: Math.round((total - sin) * 100) / 100, total,
+    })).error);
+  }
+  await sandra.auth.signOut();
+  console.log("Taller Norte: una caja cerrada (con arqueo), una caja abierta con abonos y una nota de crédito.");
 }
 
 console.log("Listo. Personas de ejemplo (celular · rol):");

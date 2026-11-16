@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Placa } from "@/components/marca/placa";
 import { Anular, RegistrarPago } from "@/components/caja/controles";
 import { SubnavCaja, TituloCaja } from "@/components/caja/subnav";
+import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { MEDIOS, TIPO_PAGO_CORTO, type MedioPago } from "@/lib/dinero";
 import { formatearMomento, formatearSoles } from "@/lib/formato";
@@ -122,6 +123,7 @@ export default async function Cobros({ searchParams }: { searchParams: Promise<{
                         {anulado ? ` · Anulado: ${p.motivo_anulacion}` : ""}
                       </p>
                     </div>
+                    <EnlacePdf href={`/pdf/pago/${p.id}`} texto="Recibo" />
                     {!anulado ? <Anular id={p.id} accion={anularPago} que="pago" /> : null}
                   </li>
                 );
