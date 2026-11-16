@@ -28,5 +28,6 @@ export async function POST(peticion: Request) {
   const r = esquema.safeParse(cuerpo);
   if (!r.success) return Response.json({ error: "Datos incompletos.", detalle: r.error.issues.slice(0, 3).map((i) => i.path.join(".")) }, { status: 400 });
   const salida = await procesarMensaje(r.data);
-  return Response.json(salida);
+  // «para»: a qué número responder (n8n lo usa tal cual).
+  return Response.json({ ...salida, para: r.data.celular.replace(/^\+/, "") });
 }

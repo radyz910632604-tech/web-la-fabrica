@@ -24,6 +24,8 @@ RUN addgroup -S taller && adduser -S taller -G taller
 COPY --from=construccion --chown=taller:taller /app/.next/standalone ./
 COPY --from=construccion --chown=taller:taller /app/.next/static ./.next/static
 COPY --from=construccion --chown=taller:taller /app/public ./public
+# Instrucciones de la IA (texto plano, se pueden revisar en n8n/prompts/).
+COPY --from=construccion --chown=taller:taller /app/n8n/prompts ./n8n/prompts
 USER taller
 EXPOSE 3000
 CMD ["node", "server.js"]
