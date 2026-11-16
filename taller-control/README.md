@@ -96,6 +96,8 @@ El Taller Norte trae 14 carros en el taller, 90 entregas recientes, citas de hoy
 | `npm run datos:ejemplo` | Carga los datos ficticios (incluye dinero de ejemplo) |
 | `npm run respaldo` | Respaldo de la base local; con `-- --nube`, de la base en la nube ([guía](docs/respaldo.md)) |
 
+Guías de cada entrega en `docs/`; la última es [WhatsApp, IA, avisos e inventario](docs/fase-2-6-entrega.md).
+
 ## Carpetas
 
 ```
@@ -106,7 +108,10 @@ supabase/           migraciones (tablas y permisos), configuración y pruebas de
 scripts/            datos de ejemplo y respaldo
 tests/              pruebas automáticas
 docs/               plan, modelo de datos, entregas y despliegue
+n8n/                flujos de WhatsApp y avisos para importar, plantillas de Meta y prompts de IA
 ```
+
+WhatsApp, IA y avisos se configuran con variables de entorno (todas explicadas en `.env.example`) y con los flujos de [n8n/README.md](n8n/README.md). Sin esas llaves la app funciona igual: se registra a mano.
 
 ## Seguridad en una línea
 

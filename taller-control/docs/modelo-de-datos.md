@@ -187,39 +187,42 @@ Fase en la que se crea cada tabla: **F1** base · **F2** WhatsApp · **F3** dine
 **`cierres_diarios`** — una foto del día cuando alguien lo cierra.
 - `fecha` (única por empresa), `ventas_boletas`, `ventas_facturas`, `compras`, `cobros_por_medio` (efectivo, Yape, Plin, tarjeta, transferencia), `utilidad_estimada`, `descuadres` (lista de lo que no cuadra), `observaciones`, `cerrado_por`, `cerrado_en`.
 
-### 3.11 Clientes: seguimiento (F4)
+### 3.11 Clientes: seguimiento (F4) — así quedó
 
-**`recordatorios_mantenimiento`** — `vehiculo_id`, `cliente_id`, `servicio_id`, `tipo` (`fecha` o `kilometraje`), `fecha_objetivo`, `km_objetivo`, `estado` (`programado`, `enviado`, `cumplido`, `cancelado`), `enviado_en`, `orden_origen_id`.
-- Para el kilometraje se estima cuántos km por día recorre el carro según sus visitas anteriores.
-- Solo se envía si el cliente tiene `acepta_mensajes = sí`. Esto lo revisa la base de datos, no solo la pantalla.
+**`recordatorios_mantenimiento`** — `vehiculo_id`, `cliente_id`, `orden_id`, `servicio`, `fecha_objetivo`, `km_objetivo`, `estado` (`pendiente`, `enviado`, `cancelado`).
+- Se crean solos al entregar una orden, según `catalogo_servicios.meses_recordatorio` y `km_recordatorio` (aceite: 3 meses o 5 000 km; caja automática: 12 meses o 40 000 km; GNV, GLP y aire: 12 meses; pastillas: 6 meses o 15 000 km). Un recordatorio nuevo del mismo servicio cancela el anterior.
+- Solo se envía por WhatsApp si el cliente tiene `acepta_mensajes`. A los demás se les muestra en Clientes para llamarlos.
 
-**`encuestas_satisfaccion`** — `orden_id`, `cliente_id`, `enviada_en`, `respondida_en`, `puntaje` (1 a 5), `comentario`.
+**`encuestas`** — una por orden entregada: `orden_id`, `cliente_id`, `puntaje` (1 a 5), `comentario`, `respondida_en`. Se responde con botones de WhatsApp.
 
-### 3.12 WhatsApp, notificaciones y auditoría (F1–F2)
+### 3.12 WhatsApp, avisos y auditoría (F2) — así quedó
 
-**`mensajes_whatsapp`** — la tabla de auditoría de WhatsApp: todo lo que entra y sale.
-- `wa_message_id` (único: si Meta reenvía el mismo mensaje, no se procesa dos veces), `direccion` (`entrante`, `saliente`), `celular`, `perfil_id` (vacío si el número no está registrado), `empresa_id` (vacío si no se sabe), `tipo` (`texto`, `audio`, `imagen`, `video`, `documento`, `boton`), `texto`, `transcripcion`, `archivo_id`, `intencion`, `datos_extraidos`, `resultado` (`sin_acceso`, `pendiente_confirmacion`, `confirmado`, `corregido`, `faltan_datos`, `error`), `respuesta`, `error_detalle`, `proveedor_ia`, `modelo_ia`.
+**`mensajes_whatsapp`** — auditoría de todo lo que llega: `wa_id` (único: si Meta reenvía, no se procesa dos veces), `celular`, `perfil_id` o `cliente_id`, `empresa_id`, `tipo`, `texto`, `transcripcion`, `intencion`, `datos`, `proveedor_ia`, `resultado`, `respuesta`, `borrador_id`. Solo la escribe el servidor; nadie la edita ni la borra; la leen gerencia y administración.
 
-**`acciones_pendientes`** — lo que la IA entendió y espera el botón "Confirmar".
-- `perfil_id`, `mensaje_id`, `intencion`, `datos`, `resumen` (el texto que se le mostró), `faltan` (qué datos se están preguntando), `estado` (`esperando_confirmacion`, `confirmada`, `corregida`, `expirada`, `cancelada`), `expira_en`, `resultado` (qué registros se crearon al confirmar).
-- **Nada se guarda en las tablas reales hasta que se confirma.** Si nadie confirma en 24 horas, expira.
+**`borradores_whatsapp`** — lo que se entendió de un mensaje y espera «Confirmar»: `perfil_id`, `intencion`, `datos`, `faltan` (lo que se está preguntando), `resumen`, `estado` (`pendiente`, `confirmado`, `corregido`, `vencido`, `fallido`), `resultado`, `expira_en` (2 horas). Nada se guarda en las tablas reales hasta confirmar, y se guarda con la sesión de esa persona (RLS).
 
-**`notificaciones`** — cada aviso enviado.
-- `perfil_id` o `cliente_id`, `tipo_aviso`, `canal` (`push`, `whatsapp`), `titulo`, `cuerpo`, `estado` (`pendiente`, `enviada`, `fallida`, `leida`), `enviada_en`, `error`.
+**`preferencias_whatsapp`** — en qué taller registra por WhatsApp quien pertenece a varios.
 
-**`suscripciones_push`** — los celulares y computadoras donde cada persona aceptó recibir avisos de la app.
-- `perfil_id`, `endpoint`, `claves`, `dispositivo`.
+**`config_avisos`** — canal de cada tipo de aviso por taller: `push`, `whatsapp`, `ambos` o `apagado` (al cliente: `whatsapp` o `apagado`).
+
+**`avisos`** — cada aviso armado: `tipo`, `destino` (`personal` o `cliente`), `perfil_id` o `cliente_id`, `celular`, `canal`, `titulo`, `texto`, `plantilla` y `variables` (para Meta), `botones`, `clave_unica` (evita repetidos), `programado_para`, `estado` (`pendiente`, `enviado`, `fallido`, `omitido`), `intentos`.
+
+**`suscripciones_push`** — los celulares y computadoras donde cada persona activó los avisos: `perfil_id`, `endpoint`, `p256dh`, `auth`.
+
+**Archivos de comprobantes:** `compras.archivo_path` y `comprobantes_venta.archivo_path` apuntan a la carpeta privada `comprobantes` (`{empresa}/compras|ventas/…`). Lo leído por IA y los pagos por WhatsApp entran siempre `por_confirmar` (lo fuerza la base).
 
 **`auditoria`** — quién cambió qué y cuándo, en todas las tablas.
 - `tabla`, `registro_id`, `empresa_id`, `accion` (`crear`, `editar`, `anular`), `antes`, `despues`, `perfil_id`, `origen`, `creado_en`.
 - Nadie puede editarla ni borrarla, ni siquiera gerencia.
 
-### 3.13 Inventario (F6, opcional)
+### 3.13 Inventario (F6) — así quedó
 
-**`repuestos`** — `codigo` (único por empresa), `descripcion`, `marca`, `unidad`, `stock_actual`, `stock_minimo`, `costo_promedio_sin_igv`, `precio_venta`, `activo`.
+**`repuestos`** — `codigo` (único por taller), `nombre`, `marca`, `unidad`, `stock`, `stock_minimo`, `costo_promedio_sin_igv`, `ultimo_costo_sin_igv`, `precio_venta_sin_igv`, `activo`. El stock y el costo no se escriben a mano: solo cambian con movimientos.
 
-**`movimientos_inventario`** — `repuesto_id`, `tipo` (`entrada_compra`, `salida_orden`, `ajuste`), `cantidad`, `costo_unitario_sin_igv`, `compra_item_id`, `orden_id`, `motivo`.
-- Al llegar a esta fase, `entregas_stock` pasa a alimentar los movimientos de salida; no hay que rehacer nada.
+**`movimientos_inventario`** (kardex) — `repuesto_id`, `tipo` (`entrada`, `salida`, `ajuste`), `cantidad` (con signo), `costo_unitario_sin_igv`, `stock_despues`, `compra_item_id`, `orden_id`, `nota`, `estado` (`vigente`, `anulado`) con motivo.
+- Entrada: sola, al confirmar una compra cuya línea apunta a un repuesto (`compra_items.repuesto_id`); anular la compra la descarga.
+- Salida: a una orden; vale al costo promedio y ese costo pasa a la utilidad de la orden. No deja stock negativo.
+- Ajuste: conteo, merma o uso interno, siempre con motivo.
 
 ---
 
