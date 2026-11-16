@@ -9,7 +9,10 @@ import { Casilla } from "@/components/ui/casilla";
 import { Tarjeta } from "@/components/ui/tarjeta";
 import { montosLinea, sumarMontos } from "@/lib/dinero";
 import { formatearSoles } from "@/lib/formato";
+import { cn } from "@/lib/utils";
 import { leerXmlSunat } from "@/lib/xml-sunat";
+import { avisoIa, LeerConIa } from "@/components/ia/leer-con-ia";
+import type { ComprobanteLeido } from "@/lib/ia/esquemas";
 import { registrarCompra, type Resultado } from "../acciones";
 
 type Opcion = { id: string; etiqueta: string };
@@ -35,7 +38,7 @@ function sugerirRepuesto(descripcion: string, repuestos: RepuestoOpcion[]): stri
   return repuestos.find((r) => simple(r.nombre) === d || d.includes(simple(r.codigo)))?.id ?? "";
 }
 
-export function FormularioCompra({ proveedores, ordenes, repuestos = [], hoy, tasaIgv, ordenInicial }: { proveedores: Proveedor[]; ordenes: Opcion[]; repuestos?: RepuestoOpcion[]; hoy: string; tasaIgv: number; ordenInicial?: string }) {
+export function FormularioCompra({ proveedores, ordenes, repuestos = [], hoy, tasaIgv, ordenInicial, ia = false }: { proveedores: Proveedor[]; ordenes: Opcion[]; repuestos?: RepuestoOpcion[]; hoy: string; tasaIgv: number; ordenInicial?: string; ia?: boolean }) {
   const router = useRouter();
   const [proveedorId, setProveedorId] = useState("");
   const [ruc, setRuc] = useState("");
@@ -47,7 +50,8 @@ export function FormularioCompra({ proveedores, ordenes, repuestos = [], hoy, ta
   const [moneda, setMoneda] = useState<"PEN" | "USD">("PEN");
   const [tipoCambio, setTipoCambio] = useState("1");
   const [incluyeIgv, setIncluyeIgv] = useState(true);
-  const [origen, setOrigen] = useState<"manual" | "xml_sunat">("manual");
+  const [origen, setOrigen] = useState<"manual" | "xml_sunat" | "ia">("manual");
+  const [archivo, setArchivo] = useState<string>();
   const siguiente = useRef(1);
   const [lineas, setLineas] = useState<Linea[]>(() => [lineaVacia(0, ordenInicial)]);
   const [avisoXml, setAvisoXml] = useState<string>();
@@ -92,6 +96,29 @@ export function FormularioCompra({ proveedores, ordenes, repuestos = [], hoy, ta
     }
   }
 
+  function leidoPorIa(c: ComprobanteLeido, ruta?: string) {
+    const existente = proveedores.find((p) => p.ruc && p.ruc === c.emisor_ruc);
+    setProveedorId(existente?.id ?? "");
+    setRuc(c.emisor_ruc && /^(10|15|17|20)\d{9}$/.test(c.emisor_ruc) ? c.emisor_ruc : "");
+    setRazonSocial(c.emisor_nombre ?? "");
+    setTipo(["factura", "boleta", "nota_venta", "ticket"].includes(c.tipo) ? c.tipo : "ticket");
+    setSerie((c.serie ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4));
+    setNumero((c.numero ?? "").replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 8));
+    setFecha(c.fecha && /^\d{4}-\d{2}-\d{2}$/.test(c.fecha) ? c.fecha : hoy);
+    setMoneda(c.moneda);
+    setIncluyeIgv(c.precios_incluyen_igv);
+    setOrigen("ia");
+    setArchivo(ruta);
+    const lineasIa = c.lineas.length ? c.lineas : [{ descripcion: "Según comprobante", cantidad: 1, precio_unitario: c.total ?? 0, importe: c.total ?? 0 }];
+    setLineas(
+      lineasIa.map((l) => ({
+        clave: siguiente.current++, descripcion: l.descripcion.slice(0, 200), cantidad: String(l.cantidad || 1), precio: String(l.precio_unitario || (l.importe && l.cantidad ? Math.round((l.importe / l.cantidad) * 100) / 100 : 0)),
+        orden: ordenInicial ?? "", repuesto: ordenInicial ? "" : sugerirRepuesto(l.descripcion, repuestos),
+      })),
+    );
+    setAvisoXml(avisoIa(c, Math.round(c.lineas.reduce((a, l) => a + l.importe, 0) * 100) / 100));
+  }
+
   const datos = JSON.stringify({
     proveedorId,
     ruc: proveedorId ? "" : ruc,
@@ -104,6 +131,7 @@ export function FormularioCompra({ proveedores, ordenes, repuestos = [], hoy, ta
     tipoCambio: moneda === "USD" ? tipoCambio : "1",
     incluyeIgv,
     origen,
+    archivo: origen === "ia" ? (archivo ?? "") : "",
     lineas: lineas.map(({ descripcion, cantidad, precio, orden, repuesto }) => ({ descripcion, cantidad, precio, orden, repuesto: orden ? "" : repuesto })),
   });
 
@@ -117,7 +145,8 @@ export function FormularioCompra({ proveedores, ordenes, repuestos = [], hoy, ta
             Subir el XML del proveedor (opcional, llena todo solo)
             <input type="file" accept=".xml,text/xml,application/xml" className="sr-only" onChange={(ev) => leerXml(ev.target.files?.[0])} />
           </label>
-          {avisoXml ? <p className="rounded-2xl bg-interna px-4 py-3 text-sm">{avisoXml}</p> : null}
+          {ia ? <LeerConIa pista="compra" onLeido={leidoPorIa} /> : null}
+          {avisoXml ? <p className={cn("rounded-2xl px-4 py-3 text-sm", origen === "ia" ? "bg-aviso-fondo" : "bg-interna")}>{avisoXml}</p> : null}
 
           <Campo etiqueta="Proveedor" error={e.razonSocial}>
             {(p) => (
@@ -287,7 +316,7 @@ export function FormularioCompra({ proveedores, ordenes, repuestos = [], hoy, ta
           </dl>
           {estado.error ? <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">{estado.error}</p> : null}
           <Boton type="submit" disabled={enviando} className="w-full">
-            {enviando ? "Guardando…" : "Registrar compra"}
+            {enviando ? "Guardando…" : origen === "ia" ? "Guardar por confirmar" : "Registrar compra"}
           </Boton>
           <p className="text-sm text-tinta-3">Lo que asignes a una orden cuenta como costo de esa orden. Lo que va al inventario suma al stock de ese repuesto.</p>
         </Tarjeta>

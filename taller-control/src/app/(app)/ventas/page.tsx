@@ -11,21 +11,24 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { listarOrdenes } from "@/lib/taller/consultas";
 import { numeroOrden } from "@/lib/taller/estados";
 import { MOTIVOS_NOTA } from "@/lib/dinero";
-import { anularComprobante, anularNotaCredito } from "./acciones";
+import { ConfirmarMontos } from "@/components/ia/confirmar-montos";
+import { estadoIa } from "@/lib/ia/proveedor";
+import { anularComprobante, anularNotaCredito, confirmarComprobante } from "./acciones";
 import { AsignarOrden, RegistrarComprobante, RegistrarNota } from "./formulario";
 
 export const metadata = { title: "Comprobantes de venta" };
 
-export default async function Ventas({ searchParams }: { searchParams: Promise<{ nuevo?: string }> }) {
+export default async function Ventas({ searchParams }: { searchParams: Promise<{ nuevo?: string; ver?: string }> }) {
   const ctx = await obtenerContexto();
   if (!tieneAlguno(ctx.roles, CAJA)) notFound();
-  const { nuevo } = await searchParams;
+  const { nuevo, ver } = await searchParams;
+  const verPendientes = ver === "por-confirmar";
   const supabase = await clienteServidor();
   const hoy = diaEnLima(new Date());
   const [{ data }, ordenes, { data: notasCrudas }] = await Promise.all([
     supabase
       .from("comprobantes_venta")
-      .select("id, orden_id, tipo, serie, numero, fecha_emision, subtotal_sin_igv, igv, total, estado, origen_datos, motivo_anulacion")
+      .select("id, orden_id, tipo, serie, numero, fecha_emision, documento_cliente, subtotal_sin_igv, igv, total, estado, origen_datos, motivo_anulacion, archivo_path")
       .eq("empresa_id", ctx.taller.id)
       .order("fecha_emision", { ascending: false })
       .order("creado_en", { ascending: false })
@@ -42,7 +45,12 @@ export default async function Ventas({ searchParams }: { searchParams: Promise<{
   const notasDe = (id: string) => notas.filter((x) => x.comprobante_id === id);
   const porId = new Map(ordenes.map((o) => [o.id, o]));
   const opciones = ordenes.map((o) => ({ id: o.id, etiqueta: `${numeroOrden(o.numero)} · ${o.placa.replace(/^([A-Z0-9]{3})(\d{3})$/, "$1-$2")}${o.cliente ? ` · ${o.cliente}` : ""}` }));
-  const lista = data ?? [];
+  const todos = data ?? [];
+  const pendientes = todos.filter((c) => c.estado === "por_confirmar");
+  const lista = verPendientes ? pendientes : todos;
+  const rutas = pendientes.map((c) => c.archivo_path).filter(Boolean) as string[];
+  const { data: firmados } = rutas.length ? await supabase.storage.from("comprobantes").createSignedUrls(rutas, 1800) : { data: [] };
+  const enlace = new Map((firmados ?? []).map((f) => [f.path, f.signedUrl]));
   const sinOrden = lista.filter((c) => !c.orden_id && c.estado !== "anulado");
   const delMes = lista.filter((c) => c.estado === "confirmado" && c.fecha_emision.slice(0, 7) === hoy.slice(0, 7));
   const notasMes = notas.filter((x) => x.estado === "confirmado" && x.fecha_emision.slice(0, 7) === hoy.slice(0, 7));
@@ -53,13 +61,24 @@ export default async function Ventas({ searchParams }: { searchParams: Promise<{
       <TituloCaja
         titulo="Comprobantes de venta"
         detalle={`${delMes.length} este mes por ${formatearSoles(netoMes)}${notasMes.length ? ` (ya restadas ${notasMes.length} ${notasMes.length === 1 ? "nota" : "notas"} de crédito)` : ""}${sinOrden.length ? ` · ${sinOrden.length} sin orden asignada` : ""}. El sistema no emite comprobantes: registra los que ya entregaste.`}
-        accion={<RegistrarComprobante ordenes={opciones} hoy={hoy} abrir={nuevo === "1"} />}
+        accion={<RegistrarComprobante ordenes={opciones} hoy={hoy} abrir={nuevo === "1"} ia={estadoIa().lectura} />}
       />
       <SubnavCaja actual="/ventas" roles={ctx.roles} />
       <Tarjeta aria-labelledby="t-comp">
-        <CabeceraTarjeta id="t-comp" titulo="Últimos comprobantes" />
+        <CabeceraTarjeta
+          id="t-comp"
+          titulo={verPendientes ? "Por confirmar" : "Últimos comprobantes"}
+          detalle={verPendientes ? "Leídos por IA. No cuentan en ventas ni en el saldo hasta que alguien los revise y confirme." : undefined}
+          accion={
+            pendientes.length || verPendientes ? (
+              <Link href={verPendientes ? "/ventas" : "/ventas?ver=por-confirmar"} className="presionable flex h-10 items-center rounded-full bg-aviso-fondo px-4 text-sm font-medium text-aviso">
+                {verPendientes ? "Ver todos" : `Por confirmar (${pendientes.length})`}
+              </Link>
+            ) : undefined
+          }
+        />
         {lista.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-control px-4 py-5 text-center text-[15px] text-tinta-2">Todavía no hay comprobantes registrados.</p>
+          <p className="rounded-2xl border border-dashed border-control px-4 py-5 text-center text-[15px] text-tinta-2">{verPendientes ? "No hay comprobantes por confirmar." : "Todavía no hay comprobantes registrados."}</p>
         ) : (
           <ul className="flex flex-col">
             {lista.map((c) => {
@@ -74,7 +93,7 @@ export default async function Ventas({ searchParams }: { searchParams: Promise<{
                     </p>
                     <p className="text-[13px] text-tinta-3">
                       {c.fecha_emision.split("-").reverse().join("/")} · sin IGV {formatearSoles(Number(c.subtotal_sin_igv))}
-                      {c.origen_datos === "xml_sunat" ? " · leído del XML" : ""}
+                      {c.origen_datos === "xml_sunat" ? " · leído del XML" : c.origen_datos === "ia" ? " · leído por IA" : ""}
                       {o ? (
                         <>
                           {" · "}
@@ -97,8 +116,28 @@ export default async function Ventas({ searchParams }: { searchParams: Promise<{
                         const disponible = Math.round((Number(c.total) - usadas) * 100) / 100;
                         return (
                           <div className="flex items-center gap-1">
-                            <EnlacePdf href={`/pdf/comprobante/${c.id}`} />
-                            {disponible > 0.009 ? <RegistrarNota comprobante={c.id} etiqueta={`${c.serie}-${c.numero}`} disponible={disponible} hoy={hoy} /> : null}
+                            {c.estado === "por_confirmar" ? (
+                              <>
+                                <span className="shrink-0 rounded-full bg-aviso-fondo px-2.5 py-1 text-[12px] font-medium text-aviso">Por confirmar</span>
+                                <ConfirmarMontos
+                                  id={c.id}
+                                  titulo={`${c.tipo === "boleta" ? "Boleta" : "Factura"} ${c.serie}-${c.numero}`}
+                                  archivo={c.archivo_path ? enlace.get(c.archivo_path) : null}
+                                  accion={confirmarComprobante}
+                                  filas={[
+                                    ["Fecha", c.fecha_emision.split("-").reverse().join("/")],
+                                    ["Cliente", c.documento_cliente ?? "—"],
+                                    ["Orden", o ? numeroOrden(o.numero) : "Sin orden"],
+                                    ["Sin IGV", formatearSoles(Number(c.subtotal_sin_igv))],
+                                    ["IGV", formatearSoles(Number(c.igv))],
+                                    ["Total", formatearSoles(Number(c.total))],
+                                  ]}
+                                />
+                              </>
+                            ) : (
+                              <EnlacePdf href={`/pdf/comprobante/${c.id}`} />
+                            )}
+                            {disponible > 0.009 && c.estado === "confirmado" ? <RegistrarNota comprobante={c.id} etiqueta={`${c.serie}-${c.numero}`} disponible={disponible} hoy={hoy} /> : null}
                             <Anular id={c.id} accion={anularComprobante} que="comprobante" />
                           </div>
                         );

@@ -5,6 +5,8 @@ import { FileUp, Plus } from "lucide-react";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ventana";
+import { avisoIa, LeerConIa } from "@/components/ia/leer-con-ia";
+import type { ComprobanteLeido } from "@/lib/ia/esquemas";
 import { leerXmlSunat } from "@/lib/xml-sunat";
 import { MOTIVOS_NOTA } from "@/lib/dinero";
 import { Casilla } from "@/components/ui/casilla";
@@ -19,18 +21,39 @@ export function RegistrarComprobante({
   variante = "primario",
   tamano = "normal",
   abrir = false,
+  ia = false,
 }: {
   ordenes: Opcion[];
   hoy: string;
   ordenFija?: string;
   abrir?: boolean;
+  /** ¿Hay IA configurada para leer fotos y PDF? */
+  ia?: boolean;
   variante?: "primario" | "secundario";
   tamano?: "normal" | "chico";
 }) {
   const [abierta, setAbierta] = useState(abrir);
   const [sinIgv, setSinIgv] = useState(false);
-  const [v, setV] = useState({ tipo: "boleta", serie: "", numero: "", fecha: hoy, total: "", sin_igv: "", igv: "", documento: "", detalle: "", origen: "manual" });
+  const [v, setV] = useState({ tipo: "boleta", serie: "", numero: "", fecha: hoy, total: "", sin_igv: "", igv: "", documento: "", detalle: "", origen: "manual", archivo: "" });
   const [avisoXml, setAvisoXml] = useState<string>();
+
+  function leidoPorIa(c: ComprobanteLeido, ruta?: string) {
+    const total = c.total ?? c.lineas.reduce((a, l) => a + l.importe, 0);
+    setV({
+      tipo: c.tipo === "factura" ? "factura" : "boleta",
+      serie: (c.serie ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4),
+      numero: (c.numero ?? "").replace(/\D/g, "").replace(/^0+(?=\d)/, "").slice(0, 8),
+      fecha: c.fecha && /^\d{4}-\d{2}-\d{2}$/.test(c.fecha) ? c.fecha : hoy,
+      total: total ? total.toFixed(2) : "",
+      sin_igv: c.subtotal_sin_igv !== null && c.igv !== null ? c.subtotal_sin_igv.toFixed(2) : "",
+      igv: c.subtotal_sin_igv !== null && c.igv !== null ? c.igv.toFixed(2) : "",
+      documento: (c.cliente_documento ?? "").replace(/\D/g, "").slice(0, 11),
+      detalle: c.lineas.map((l) => `${l.cantidad} × ${l.descripcion}`).join("\n").slice(0, 2000),
+      origen: "ia",
+      archivo: ruta ?? "",
+    });
+    setAvisoXml(avisoIa(c, Math.round(c.lineas.reduce((a, l) => a + l.importe, 0) * 100) / 100));
+  }
   const [estado, accion, enviando] = useActionState<Resultado, FormData>(async (previo, form) => {
     const r = await registrarComprobante(previo, form);
     if (r.ok) setAbierta(false);
@@ -54,6 +77,7 @@ export function RegistrarComprobante({
         documento: c.cliente.documento,
         detalle: c.lineas.map((l) => `${l.cantidad} × ${l.descripcion}`).join("\n"),
         origen: "xml_sunat",
+        archivo: "",
       });
       setAvisoXml(`Leído del XML: ${c.serie}-${c.numero}, S/ ${c.total.toFixed(2)} (sin IGV S/ ${c.sinIgv.toFixed(2)}).`);
     } catch (err) {
@@ -76,8 +100,10 @@ export function RegistrarComprobante({
             Subir el XML de SUNAT (opcional, llena todo solo)
             <input type="file" accept=".xml,text/xml,application/xml" className="sr-only" onChange={(ev) => leerXml(ev.target.files?.[0])} />
           </label>
-          {avisoXml ? <p className="rounded-2xl bg-interna px-4 py-3 text-sm">{avisoXml}</p> : null}
+          {ia ? <LeerConIa pista="venta" onLeido={leidoPorIa} /> : null}
+          {avisoXml ? <p className={v.origen === "ia" ? "rounded-2xl bg-aviso-fondo px-4 py-3 text-sm" : "rounded-2xl bg-interna px-4 py-3 text-sm"}>{avisoXml}</p> : null}
           <input type="hidden" name="origen" value={v.origen} />
+          <input type="hidden" name="archivo" value={v.archivo} />
           <input type="hidden" name="sin_igv" value={v.sin_igv} />
           <input type="hidden" name="igv" value={v.igv} />
           <input type="hidden" name="sin_igv_operacion" value={sinIgv ? "1" : ""} />
@@ -105,7 +131,7 @@ export function RegistrarComprobante({
               {(p) => (
                 <div className="relative">
                   <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-tinta-3">S/</span>
-                  <Entrada {...p} name="total" type="number" step="0.01" inputMode="decimal" value={v.total} onChange={(ev) => setV((x) => ({ ...x, total: ev.target.value, origen: "manual", sin_igv: "", igv: "" }))} className="num pl-11" />
+                  <Entrada {...p} name="total" type="number" step="0.01" inputMode="decimal" value={v.total} onChange={(ev) => setV((x) => ({ ...x, total: ev.target.value, origen: x.origen === "ia" ? "ia" : "manual", sin_igv: "", igv: "" }))} className="num pl-11" />
                 </div>
               )}
             </Campo>

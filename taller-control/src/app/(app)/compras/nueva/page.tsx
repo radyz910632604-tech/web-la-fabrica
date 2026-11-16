@@ -6,6 +6,7 @@ import { diaEnLima } from "@/lib/formato";
 import { listarOrdenes } from "@/lib/taller/consultas";
 import { configDinero } from "@/lib/taller/dinero-consultas";
 import { etiquetaOrden } from "@/lib/taller/estados";
+import { estadoIa } from "@/lib/ia/proveedor";
 import { FormularioCompra } from "./formulario";
 
 export const metadata = { title: "Registrar compra" };
@@ -33,6 +34,7 @@ export default async function NuevaCompra({ searchParams }: { searchParams: Prom
         repuestos={repuestos ?? []}
         hoy={diaEnLima(new Date())}
         tasaIgv={config.tasaIgv}
+        ia={estadoIa().lectura}
         ordenInicial={ordenes.some((o) => o.id === orden) ? orden : undefined}
       />
     </div>

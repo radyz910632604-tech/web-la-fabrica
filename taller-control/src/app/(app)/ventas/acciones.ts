@@ -21,7 +21,8 @@ const esquema = z.object({
   orden: z.string(),
   documento: z.string().trim().max(15),
   detalle: z.string().trim().max(2000),
-  origen: z.enum(["manual", "xml_sunat"]),
+  origen: z.enum(["manual", "xml_sunat", "ia"]),
+  archivo: z.string().max(300).optional(),
   sin_igv_operacion: z.string().optional(),
 });
 
@@ -40,7 +41,7 @@ export async function registrarComprobante(_previo: Resultado, form: FormData): 
   const tasaIgv = d.sin_igv_operacion === "1" ? 0 : config.tasaIgv;
   // Del XML se guardan los montos tal cual; a mano, se desglosa el total.
   const montos =
-    d.origen === "xml_sunat" && d.sin_igv && d.igv
+    d.origen !== "manual" && d.sin_igv && d.igv && Math.abs(Number(d.sin_igv) + Number(d.igv) - d.total) <= 0.05
       ? { sinIgv: Number(d.sin_igv), igv: Number(d.igv), total: d.total }
       : desdeTotal(d.total, tasaIgv);
   const supabase = await clienteServidor();
@@ -58,13 +59,14 @@ export async function registrarComprobante(_previo: Resultado, form: FormData): 
     total: montos.total,
     detalle: d.detalle || null,
     origen_datos: d.origen,
+    archivo_path: d.origen === "ia" && d.archivo?.startsWith(`${ctx.taller.id}/ventas/`) ? d.archivo : null,
   });
   if (error) {
     if (error.code === "23505") return { errores: { numero: `La ${d.tipo} ${d.serie}-${Number(d.numero)} ya está registrada.` } };
     return { error: "No se pudo registrar el comprobante." };
   }
   revalidatePath("/", "layout");
-  return { ok: `${d.tipo === "boleta" ? "Boleta" : "Factura"} ${d.serie}-${Number(d.numero)} registrada.` };
+  return { ok: `${d.tipo === "boleta" ? "Boleta" : "Factura"} ${d.serie}-${Number(d.numero)} registrada${d.origen === "ia" ? ": queda por confirmar" : ""}.` };
 }
 
 export async function asignarOrdenComprobante(id: string, ordenId: string): Promise<Resultado> {
@@ -147,4 +149,15 @@ export async function anularNotaCredito(id: string, motivo: string): Promise<Res
   if (error || count !== 1) return { error: "No se pudo anular." };
   revalidatePath("/", "layout");
   return { ok: "Nota de crédito anulada." };
+}
+
+/** Confirmar los montos de un comprobante leído por IA, después de revisarlo. */
+export async function confirmarComprobante(id: string): Promise<Resultado> {
+  const ctx = await obtenerContexto();
+  if (!tieneAlguno(ctx.roles, CAJA)) return { error: "Tu rol no confirma comprobantes." };
+  const supabase = await clienteServidor();
+  const { error, count } = await supabase.from("comprobantes_venta").update({ estado: "confirmado" }, { count: "exact" }).eq("id", id).eq("estado", "por_confirmar");
+  if (error || count !== 1) return { error: "No se pudo confirmar." };
+  revalidatePath("/", "layout");
+  return { ok: "Comprobante confirmado." };
 }

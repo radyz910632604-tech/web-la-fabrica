@@ -30,6 +30,7 @@ const esquema = z.object({
   tipoCambio: z.coerce.number().positive("Escribe el tipo de cambio."),
   incluyeIgv: z.boolean(),
   origen: z.enum(["manual", "xml_sunat", "ia"]),
+  archivo: z.string().max(300).default(""),
   lineas: z.array(linea).min(1, "Agrega al menos un repuesto."),
 });
 
@@ -85,6 +86,8 @@ export async function registrarCompra(_previo: Resultado, form: FormData): Promi
       igv: total.igv,
       total: total.total,
       origen: d.origen,
+      // Solo se acepta un archivo subido a la carpeta de compras de este taller.
+      archivo: d.archivo.startsWith(`${ctx.taller.id}/compras/`) ? d.archivo : null,
     },
     p_items: items,
   });
@@ -117,4 +120,15 @@ export async function asignarItem(id: string, ordenId: string): Promise<Resultad
   if (error || count !== 1) return { error: "No se pudo asignar." };
   revalidatePath("/", "layout");
   return { ok: ordenId ? "Repuesto entregado a la orden." : "Repuesto devuelto al stock." };
+}
+
+/** Confirmar los montos de una compra leída por IA, después de revisarla. */
+export async function confirmarCompra(id: string): Promise<Resultado> {
+  const ctx = await obtenerContexto();
+  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "almacen"])) return { error: "Tu rol no confirma compras." };
+  const supabase = await clienteServidor();
+  const { error, count } = await supabase.from("compras").update({ estado: "confirmado" }, { count: "exact" }).eq("id", id).eq("estado", "por_confirmar");
+  if (error || count !== 1) return { error: "No se pudo confirmar." };
+  revalidatePath("/", "layout");
+  return { ok: "Compra confirmada." };
 }

@@ -14,7 +14,8 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { listarOrdenes } from "@/lib/taller/consultas";
 import { etiquetaOrden, numeroOrden } from "@/lib/taller/estados";
 import { cn } from "@/lib/utils";
-import { anularCompra } from "./acciones";
+import { ConfirmarMontos } from "@/components/ia/confirmar-montos";
+import { anularCompra, confirmarCompra } from "./acciones";
 import { EntregarRepuesto } from "./controles";
 
 export const metadata = { title: "Compras" };
@@ -28,13 +29,14 @@ export default async function Compras({ searchParams }: { searchParams: Promise<
   if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "almacen"])) notFound();
   const { ver, registrada } = await searchParams;
   const verStock = ver === "stock";
+  const verPendientes = ver === "por-confirmar";
   const registra = tieneAlguno(ctx.roles, ["gerencia", "administrador", "almacen"]);
   const supabase = await clienteServidor();
   const hoy = diaEnLima(new Date());
   const [{ data }, ordenes] = await Promise.all([
     supabase
       .from("compras")
-      .select("id, tipo_comprobante, serie, numero, fecha_emision, moneda, tipo_cambio, subtotal_sin_igv, total, estado, motivo_anulacion, origen_datos, proveedores (razon_social), compra_items (id, descripcion, cantidad, total, destino, orden_id, repuesto_id)")
+      .select("id, tipo_comprobante, serie, numero, fecha_emision, moneda, tipo_cambio, subtotal_sin_igv, igv, total, estado, motivo_anulacion, origen_datos, archivo_path, proveedores (razon_social, ruc), compra_items (id, descripcion, cantidad, total, destino, orden_id, repuesto_id)")
       .eq("empresa_id", ctx.taller.id)
       .order("fecha_emision", { ascending: false })
       .order("creado_en", { ascending: false })
@@ -43,11 +45,16 @@ export default async function Compras({ searchParams }: { searchParams: Promise<
   ]);
   const porId = new Map(ordenes.map((o) => [o.id, o]));
   const activas = ordenes.filter((o) => o.estado !== "entregado").map((o) => ({ id: o.id, etiqueta: etiquetaOrden(o) }));
-  const compras = (data ?? []).map((c) => ({
-    ...c,
-    proveedor: (Array.isArray(c.proveedores) ? c.proveedores[0] : c.proveedores)?.razon_social ?? "Proveedor",
-    items: (c.compra_items ?? []) as Item[],
-  }));
+  const todas = (data ?? []).map((c) => {
+    const prov = Array.isArray(c.proveedores) ? c.proveedores[0] : c.proveedores;
+    return { ...c, proveedor: prov?.razon_social ?? "Proveedor", ruc: prov?.ruc ?? null, items: (c.compra_items ?? []) as Item[] };
+  });
+  const pendientes = todas.filter((c) => c.estado === "por_confirmar");
+  const compras = verPendientes ? pendientes : todas;
+  // Enlaces temporales a los originales de lo que falta confirmar.
+  const rutas = pendientes.map((c) => c.archivo_path).filter(Boolean) as string[];
+  const { data: firmados } = rutas.length ? await supabase.storage.from("comprobantes").createSignedUrls(rutas, 1800) : { data: [] };
+  const enlace = new Map((firmados ?? []).map((f) => [f.path, f.signedUrl]));
   const vigentes = compras.filter((c) => c.estado !== "anulado");
   const delMes = vigentes.filter((c) => c.fecha_emision.slice(0, 7) === hoy.slice(0, 7));
   const totalMes = delMes.reduce((a, c) => a + enSoles(Number(c.total), c.moneda as "PEN" | "USD", Number(c.tipo_cambio)), 0);
@@ -72,16 +79,17 @@ export default async function Compras({ searchParams }: { searchParams: Promise<
       <SubnavCaja actual="/compras" roles={ctx.roles} />
       {registrada ? <p className="rounded-2xl bg-positivo-fondo px-4 py-3 text-[15px] text-positivo">Compra registrada.</p> : null}
 
-      <div className="flex gap-1 self-start rounded-full bg-hundida p-1">
+      <div className="-mx-4 flex gap-1 self-start overflow-x-auto rounded-full bg-hundida p-1 px-4 [scrollbar-width:none] md:mx-0 md:px-1">
         {[
           ["Todas las compras", "/compras", !verStock],
           [`Stock sin orden (${enStock.length})`, "/compras?ver=stock", verStock],
+          ...(pendientes.length || verPendientes ? [[`Por confirmar (${pendientes.length})`, "/compras?ver=por-confirmar", verPendientes]] : []),
         ].map(([n, href, activo]) => (
           <Link
             key={String(href)}
             href={String(href)}
             aria-current={activo ? "page" : undefined}
-            className={cn("presionable flex h-10 items-center rounded-full px-4 text-sm", activo ? "bg-tarjeta font-medium shadow-reposo" : "text-tinta-2 hover:text-tinta")}
+            className={cn("presionable flex h-10 items-center rounded-full px-4 text-sm whitespace-nowrap", activo ? "bg-tarjeta font-medium shadow-reposo" : "text-tinta-2 hover:text-tinta")}
           >
             {n}
           </Link>
@@ -115,9 +123,13 @@ export default async function Compras({ searchParams }: { searchParams: Promise<
         </Tarjeta>
       ) : (
         <Tarjeta aria-labelledby="t-compras">
-          <CabeceraTarjeta id="t-compras" titulo="Últimas compras" />
+          <CabeceraTarjeta
+            id="t-compras"
+            titulo={verPendientes ? "Por confirmar" : "Últimas compras"}
+            detalle={verPendientes ? "Leídas por IA. No cuentan en costos ni en el stock hasta que alguien las revise y confirme." : undefined}
+          />
           {compras.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-control px-4 py-5 text-center text-[15px] text-tinta-2">Todavía no hay compras registradas.</p>
+            <p className="rounded-2xl border border-dashed border-control px-4 py-5 text-center text-[15px] text-tinta-2">{verPendientes ? "No hay compras por confirmar." : "Todavía no hay compras registradas."}</p>
           ) : (
             <ul className="flex flex-col">
               {compras.map((c) => {
@@ -135,7 +147,7 @@ export default async function Compras({ searchParams }: { searchParams: Promise<
                       <p className="text-[13px] text-tinta-3">
                         {TIPO[c.tipo_comprobante]}
                         {c.serie ? ` ${c.serie}-${c.numero}` : ""} · {c.fecha_emision.split("-").reverse().join("/")}
-                        {c.origen_datos === "xml_sunat" ? " · leído del XML" : ""}
+                        {c.origen_datos === "xml_sunat" ? " · leído del XML" : c.origen_datos === "ia" ? " · leído por IA" : ""}
                         {anulado ? ` · Anulada: ${c.motivo_anulacion}` : ""}
                       </p>
                       <p className="mt-1 text-[13px] text-tinta-2">
@@ -158,7 +170,28 @@ export default async function Compras({ searchParams }: { searchParams: Promise<
                         ) : null}
                       </p>
                     </div>
-                    <EnlacePdf href={`/pdf/compra/${c.id}`} />
+                    {c.estado === "por_confirmar" ? (
+                      <span className="mt-1 shrink-0 rounded-full bg-aviso-fondo px-2.5 py-1 text-[12px] font-medium text-aviso">Por confirmar</span>
+                    ) : null}
+                    {c.estado === "por_confirmar" && registra ? (
+                      <ConfirmarMontos
+                        id={c.id}
+                        titulo={`Compra a ${c.proveedor}`}
+                        archivo={c.archivo_path ? enlace.get(c.archivo_path) : null}
+                        accion={confirmarCompra}
+                        filas={[
+                          ["Proveedor", `${c.proveedor}${c.ruc ? ` · RUC ${c.ruc}` : ""}`],
+                          ["Comprobante", `${TIPO[c.tipo_comprobante]}${c.serie ? ` ${c.serie}-${c.numero}` : ""}`],
+                          ["Fecha", c.fecha_emision.split("-").reverse().join("/")],
+                          ...c.items.map((i) => [`${Number(i.cantidad)} × ${i.descripcion}`, formatearSoles(Number(i.total))] as [string, string]),
+                          ["Sin IGV", formatearSoles(Number(c.subtotal_sin_igv))],
+                          ["IGV", formatearSoles(Number(c.igv))],
+                          ["Total", c.moneda === "USD" ? `US$ ${Number(c.total).toFixed(2)}` : formatearSoles(Number(c.total))],
+                        ]}
+                      />
+                    ) : (
+                      <EnlacePdf href={`/pdf/compra/${c.id}`} />
+                    )}
                     {!anulado && registra ? <Anular id={c.id} accion={anularCompra} que="compra" /> : null}
                   </li>
                 );

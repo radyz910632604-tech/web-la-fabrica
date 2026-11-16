@@ -11,6 +11,7 @@ import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { MEDIOS, MOTIVOS_NOTA, TIPO_PAGO_CORTO, type MedioPago } from "@/lib/dinero";
 import { formatearMomento, formatearSoles } from "@/lib/formato";
 import type { DineroOrden } from "@/lib/taller/dinero-consultas";
+import { estadoIa } from "@/lib/ia/proveedor";
 import { cn } from "@/lib/utils";
 
 const ESTADO_COT: Record<string, { texto: string; clase: string }> = {
@@ -120,7 +121,7 @@ export function TarjetaDinero({
           )}
         </Seccion>
 
-        <Seccion titulo="Comprobantes" accion={<RegistrarComprobante ordenes={[]} hoy={hoy} ordenFija={ordenId} variante="secundario" tamano="chico" />}>
+        <Seccion titulo="Comprobantes" accion={<RegistrarComprobante ordenes={[]} hoy={hoy} ordenFija={ordenId} variante="secundario" tamano="chico" ia={estadoIa().lectura} />}>
           {d.comprobantes.length === 0 ? (
             <p className="text-sm text-tinta-2">Sin boleta ni factura registrada.</p>
           ) : (
