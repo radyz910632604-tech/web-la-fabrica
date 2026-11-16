@@ -3,7 +3,7 @@
 Sistema interno para talleres automotrices: app instalable y WhatsApp sobre una misma base de datos.
 La especificación completa está en [ESPECIFICACION.md](ESPECIFICACION.md).
 
-**Estado:** Fase 1, Entrega 1A lista para revisar ([qué incluye y cómo probarla](docs/fase-1a-entrega.md)).
+**Estado:** Fase 1 completa (entregas [1A](docs/fase-1a-entrega.md) y [1B](docs/fase-1b-entrega.md)): acceso, personal, panel, clientes, carros, órdenes con fotos, citas y app instalable.
 
 ---
 
@@ -77,6 +77,9 @@ Todas usan la contraseña `taller-ejemplo` en local. Los números son ficticios.
 | 900 000 006 | Andrea Torres | Ventas por redes |
 | 900 000 007 | Milagros Vega | Confirmación de citas |
 | 900 000 008 | Diego Paredes | Asesor (Taller Sur) |
+| 900 000 010 | Ernesto Lara | Técnico |
+
+El Taller Norte trae 14 carros en el taller, 46 entregas recientes y citas de hoy, todo ficticio.
 
 ## Comandos
 
@@ -94,7 +97,7 @@ Todas usan la contraseña `taller-ejemplo` en local. Los números son ficticios.
 ## Carpetas
 
 ```
-src/app/            pantallas (ingresar, panel, personal, configuración)
+src/app/            pantallas (ingresar, panel, órdenes, clientes, citas, personal, configuración…)
 src/components/     piezas visuales (ui/ base, panel/, armazon/ = barras)
 src/lib/            reglas: roles, navegación, formatos, celulares, placas, sesión
 supabase/           migraciones (tablas y permisos), configuración y pruebas de la base

@@ -5,9 +5,9 @@ Sistema interno de gestión para talleres automotrices en Lima. **No tiene relac
 @AGENTS.md
 
 - Fuente de verdad: `ESPECIFICACION.md`. Léela completa antes de trabajar.
-- Fase actual: **Fase 1, Entrega 1A entregada, esperando aprobación** (`docs/fase-1a-entrega.md`). Siguiente: Entrega 1B (clientes, vehículos, órdenes con fotos, citas, PWA).
+- Fase actual: **Fase 1 completa** (`docs/fase-1a-entrega.md`, `docs/fase-1b-entrega.md`). Siguiente: publicar en EasyPanel y Fase 2 (WhatsApp con n8n). El usuario autorizó avanzar sin esperar aprobación entre entregas («avanza solo»).
 - Plan y modelo de datos: `docs/fase-0-plan.md`, `docs/modelo-de-datos.md`. Contexto de producto: `PRODUCT.md`.
-- No avances de fase ni de entrega sin la aprobación explícita del usuario.
+- Pide aprobación antes de cambiar de fase salvo que el usuario haya dicho que avances solo.
 - Habla en español sencillo: el usuario no es programador.
 - Pregunta antes de instalar algo nuevo o de tomar decisiones que cuesten dinero.
 - Commits pequeños, en español.

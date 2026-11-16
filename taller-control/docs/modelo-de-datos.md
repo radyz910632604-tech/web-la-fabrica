@@ -1,4 +1,6 @@
-# Modelo de datos propuesto — Taller Control
+# Modelo de datos — Taller Control
+
+> Fase 1 implementada en `supabase/migrations/`. Diferencias con esta propuesta: la campaña de una cita es texto libre (sin tabla `campanas` por ahora); ventas por redes y confirmación ven la lista de clientes del taller; las fotos son las únicas imágenes por ahora (videos después).
 
 > Fase 0 · Propuesta para tu visto bueno. Todavía no existe en la base de datos.
 > Explicado en sencillo: cada "tabla" es como una hoja de Excel; cada "campo" es una columna.
