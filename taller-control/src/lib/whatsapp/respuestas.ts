@@ -7,7 +7,8 @@ import type { Intencion } from "@/lib/ia/esquemas";
  */
 
 export type Boton = { id: string; titulo: string };
-export type Respuesta = { texto: string; botones?: Boton[] };
+/** Texto, botones y, si se pidió, un PDF (enlace que vence en una hora) para mandarlo como documento. */
+export type Respuesta = { texto: string; botones?: Boton[]; documento?: { url: string; nombre: string } };
 
 const soles = (n: number) => `S/ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export const placaBonita = (p: string) => p.replace(/^([A-Z0-9]{3})(\d{3})$/, "$1-$2");
@@ -17,6 +18,8 @@ export const PERMITIDO: Record<Exclude<Intencion, "ayuda" | "desconocido" | "his
   nuevo_ingreso: ["gerencia", "administrador", "asesor"],
   avance: ["gerencia", "administrador", "asesor", "tecnico"],
   compra: ["gerencia", "administrador", "almacen"],
+  recepcion: ["gerencia", "administrador", "almacen"],
+  documento: ["gerencia", "administrador", "asesor"],
   comprobante_venta: ["gerencia", "administrador", "asesor", "recepcion"],
   pago: ["gerencia", "administrador", "asesor", "recepcion"],
   cita: ["gerencia", "administrador", "asesor", "vendedor_redes"],
@@ -27,6 +30,8 @@ const EJEMPLOS: Record<string, string> = {
   nuevo_ingreso: "• *Ingreso:* «ingreso ABC123 Juan Pérez 987654321 para cambio de aceite, 85000 km, entrega hoy 6pm»",
   avance: "• *Avance:* «ABC123 ya se cambió el embrague» o «ABC123 listo». Puedes mandar fotos o video con la placa escrita.",
   compra: "• *Compra:* manda la foto o el PDF de la factura del proveedor (escribe la placa si es para un carro).",
+  recepcion: "• *Llegaron repuestos:* manda una nota de voz («llegaron 4 galones de aceite 10W40 de Lubricantes Demo, factura F001-123, a 85 cada uno») y después la foto de los repuestos o de la factura.",
+  documento: "• *Pedir un PDF:* «recibo ABC123», «cotización ABC123», «orden ABC123» o «cierre de caja».",
   comprobante_venta: "• *Boleta o factura:* manda la foto o el PDF de la que entregaste al cliente.",
   pago: "• *Pago:* «pago ABC123 150 yape abono»",
   cita: "• *Cita:* «cita Ana Díaz 987654321 mañana 10am cambio de aceite, Facebook»",
@@ -62,6 +67,9 @@ const CAMPO: Record<string, string> = {
   fecha_hora: "¿Para qué *día y hora* es la cita?",
   entrega_prometida: "¿Para qué *día y hora* le prometiste el carro al cliente? Por ejemplo «hoy 6pm» o «mañana 10am». Si todavía no se sabe, responde «por definir».",
   items_cotizacion: "¿Qué ítems lleva la cotización? Por ejemplo «pastillas 180, mano de obra 60».",
+  items_compra: "¿Qué repuestos llegaron? Di la cantidad, el nombre y el precio por unidad, por ejemplo «4 aceite 10W40 a 85, 2 filtros a 30».",
+  proveedor: "¿De qué *proveedor* son? (el nombre de la tienda o empresa)",
+  foto_evidencia: "Manda la *foto* de los repuestos o de la factura como evidencia. Si no tienes foto, responde «sin foto».",
   orden: "No encontré una orden abierta para esa placa. Revisa la placa.",
 };
 
@@ -119,6 +127,19 @@ export function resumen(intencion: string, d: Record<string, unknown>): string {
       const items = (d.items ?? []) as { descripcion: string; cantidad: number; precio: number }[];
       const total = items.reduce((a, i) => a + i.cantidad * i.precio, 0);
       return [`*Cotización* ${placa}${orden}`, ...items.map((i) => `• ${i.cantidad !== 1 ? `${i.cantidad} × ` : ""}${i.descripcion}: ${soles(i.cantidad * i.precio)}`), `Total con IGV: ${soles(total)}`].join("\n");
+    }
+    case "recepcion": {
+      const items = (d.items ?? []) as { descripcion: string; cantidad: number; precio: number | null; repuesto: string | null }[];
+      const total = items.reduce((a, i) => a + (i.precio ?? 0) * i.cantidad, 0);
+      return [
+        "*Llegaron repuestos*",
+        `Proveedor: ${d.proveedor ?? "—"}${d.comprobante ? ` · ${d.comprobante}` : " · sin comprobante"}`,
+        ...items.map((i) => `• ${i.cantidad} × ${i.descripcion}${i.precio !== null ? ` a ${soles(i.precio)}` : " (sin precio)"}${placa ? "" : i.repuesto ? ` → inventario: ${i.repuesto}` : " → no está en el inventario"}`),
+        total ? `Total: ${soles(total)}` : null,
+        placa ? `Para ${placa}${orden}` : null,
+        Array.isArray(d.fotos) && d.fotos.length ? `Foto de evidencia: ${d.fotos.length}` : "Sin foto de evidencia",
+        "Quedará *por confirmar* en Compras; al confirmarla, entra al inventario.",
+      ].filter(Boolean).join("\n");
     }
     case "compra":
     case "comprobante_venta": {

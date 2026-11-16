@@ -12,6 +12,10 @@ Sistema interno de gestión para talleres automotrices en Lima. **No tiene relac
 - Avisos: `src/lib/avisos/` (ciclo cada 15 min desde n8n, push con `web-push`). Flujos de n8n en `n8n/`.
 - Hora de entrega prometida: `ordenes_trabajo.entrega_prometida` (migración 0011). Reglas puras en `src/lib/taller/entrega.ts`; se elige con `src/components/taller/elegir-entrega.tsx`; el ciclo de avisos alerta al asesor antes de vencer y al atrasarse.
 - Carga instantánea: `src/app/(app)/loading.tsx` (sin él, Next.js no adelanta nada de las páginas dinámicas).
+- Recibos de venta (`recibos`, función `emitir_recibo`, migración 0012): correlativo desde `configuracion_empresa.recibo_inicial`; cuentan como venta si la orden no tiene boleta ni factura (`dineroDeOrden`, `recibosSinComprobante`).
+- Gastos del taller (`gastos`, pantalla `/gastos`) y utilidad neta (`totalesPeriodo`, `reporteMensual`); ganancia por carro en `src/lib/taller/ganancias.ts`.
+- PDF con el formato del taller: `src/lib/pdf/documento.ts` (cabecera con logo del bucket `marca`, `recuadro`, `ultimaLinea`, `cierre`, marca de agua). Monto en letras: `src/lib/letras.ts`.
+- WhatsApp: intenciones `recepcion` (almacén, nota de voz + foto → compra por confirmar) y `documento` (PDF por WhatsApp: se arma con `conCliente(sesion)` y se sube al bucket `documentos` con enlace de 1 hora).
 - PDF: `src/lib/pdf/` (pdf-lib, Helvetica) y la ruta `src/app/pdf/[tipo]/[id]/route.ts`; leen con la sesión de quien pide.
 - Dinero: cálculos puros en `src/lib/dinero.ts` y `src/lib/alertas.ts` (con pruebas); consultas en `src/lib/taller/*-consultas.ts` y `reportes.ts`. Nada con dinero se borra: se anula con motivo (disparador `privado.proteger_dinero`).
 - Plan y modelo de datos: `docs/fase-0-plan.md`, `docs/modelo-de-datos.md`. Contexto de producto: `PRODUCT.md`.

@@ -19,13 +19,14 @@ const RESULTADO: Record<string, [string, ColorEstado]> = {
   corregido: ["Corregido", "gris"],
   encuesta: ["Encuesta", "verde"],
   cotizacion: ["Respuesta a cotización", "verde"],
+  documento: ["PDF enviado", "verde"],
   rechazado: ["Sin permiso", "rojo"],
   sin_acceso: ["Número no registrado", "rojo"],
   error: ["Error", "rojo"],
   recibido: ["Recibido", "gris"],
 };
 const INTENCION: Record<string, string> = {
-  nuevo_ingreso: "Ingreso", avance: "Avance", compra: "Compra", comprobante_venta: "Comprobante", pago: "Pago", cita: "Cita", cotizacion: "Cotización", historial: "Historial", ayuda: "Ayuda", desconocido: "No entendido",
+  nuevo_ingreso: "Ingreso", avance: "Avance", compra: "Compra", recepcion: "Llegaron repuestos", documento: "Pidió un PDF", comprobante_venta: "Comprobante", pago: "Pago", cita: "Cita", cotizacion: "Cotización", historial: "Historial", ayuda: "Ayuda", desconocido: "No entendido",
 };
 
 /** Auditoría de WhatsApp: cada mensaje que llegó y qué hizo el sistema. */

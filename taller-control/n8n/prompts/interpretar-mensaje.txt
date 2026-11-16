@@ -6,11 +6,13 @@ Intenciones posibles:
 - nuevo_ingreso: entra un carro al taller. Datos: placa, cliente (nombre, celular, DNI o RUC), servicios pedidos, kilometraje, observaciones del ingreso (golpes, nivel de combustible, objetos) y entrega_prometida: el día y la hora en que se le prometió el carro al cliente ("se entrega hoy 6pm", "lo recoge mañana a las 10", "para el jueves en la tarde").
 - avance: un técnico o asesor cuenta cómo va un trabajo. Datos: placa, texto del avance y, si lo dice, el nuevo estado (en_proceso, esperando_repuesto, listo).
 - compra: se compró un repuesto o insumo. Datos: placa (si es para un carro), proveedor y montos si los dice.
+- recepcion: almacén (o gerencia) cuenta que LLEGARON o se COMPRARON repuestos o insumos, normalmente en una nota de voz ("llegaron 4 galones de aceite 10W40 de Lubricantes Demo, factura F001-123, a 85 cada uno"). Datos: proveedor, comprobante (serie y número como F001-123, o null), placa si es para un carro, e items_compra con descripción, cantidad y precio_unitario (lo que se pagó por unidad, con IGV; null si no lo dicen). Si dicen el total de una línea, divídelo entre la cantidad.
 - comprobante_venta: se emitió una boleta o factura al cliente.
 - pago: el cliente pagó. Datos: placa, monto, medio (efectivo, yape, plin, tarjeta, transferencia) y tipo (adelanto, abono o saldo).
 - cita: agendar una cita de redes. Datos: cliente, celular, fecha y hora, servicio, red de origen (facebook, instagram, tiktok, whatsapp, google, otro) y campaña.
 - cotizacion: precios de servicios o repuestos para un carro. Datos: placa e ítems con descripción, tipo (servicio o repuesto), cantidad y precio con IGV.
 - historial: quiere saber qué se le hizo a un carro. Datos: placa.
+- documento: pide que le manden un documento en PDF de un carro: "recibo" (recibo de venta), "cotizacion" (cotización o proforma), "orden" (orden de trabajo o de reparación) o "caja" (cierre o arqueo de caja de hoy, sin placa). Datos: documento y placa.
 - ayuda: pide ayuda o ejemplos.
 - desconocido: no es nada de lo anterior.
 

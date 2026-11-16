@@ -30,7 +30,7 @@ export const esquemaComprobante = z.object({
 });
 export type ComprobanteLeido = z.infer<typeof esquemaComprobante>;
 
-export const INTENCIONES = ["nuevo_ingreso", "avance", "compra", "comprobante_venta", "pago", "cita", "cotizacion", "historial", "ayuda", "desconocido"] as const;
+export const INTENCIONES = ["nuevo_ingreso", "avance", "compra", "recepcion", "comprobante_venta", "pago", "cita", "cotizacion", "historial", "documento", "ayuda", "desconocido"] as const;
 export type Intencion = (typeof INTENCIONES)[number];
 
 export const esquemaMensaje = z.object({
@@ -53,6 +53,12 @@ export const esquemaMensaje = z.object({
   red_origen: z.enum(["facebook", "instagram", "tiktok", "whatsapp", "google", "otro"]).nullable(),
   campana: z.string().nullable(),
   items_cotizacion: z.array(z.object({ descripcion: z.string(), tipo: z.enum(["servicio", "repuesto"]), cantidad: z.number(), precio_con_igv: z.number() })),
+  /** Recepción de repuestos: proveedor, comprobante («F001-123») y lo que llegó (precio por unidad, con IGV). */
+  proveedor: z.string().nullable(),
+  comprobante: z.string().nullable(),
+  items_compra: z.array(z.object({ descripcion: z.string(), cantidad: z.number(), precio_unitario: z.number().nullable() })),
+  /** Documento pedido por WhatsApp: recibo, cotización (proforma), orden o cierre de caja. */
+  documento: z.enum(["recibo", "cotizacion", "orden", "caja"]).nullable(),
   dudas: z.string().nullable(),
 });
 export type MensajeInterpretado = z.infer<typeof esquemaMensaje>;
@@ -68,6 +74,6 @@ export function mensajeVacio(intencion: Intencion = "desconocido"): MensajeInter
   return {
     intencion, placa: null, cliente_nombre: null, cliente_celular: null, cliente_documento: null, servicios: [], kilometraje: null,
     observaciones: null, texto_avance: null, nuevo_estado: null, monto: null, medio_pago: null, tipo_pago: null, fecha_hora: null,
-    entrega_prometida: null, red_origen: null, campana: null, items_cotizacion: [], dudas: null,
+    entrega_prometida: null, red_origen: null, campana: null, items_cotizacion: [], proveedor: null, comprobante: null, items_compra: [], documento: null, dudas: null,
   };
 }

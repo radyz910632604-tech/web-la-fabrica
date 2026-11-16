@@ -5,11 +5,14 @@ import { normalizarCelular } from "@/lib/celulares";
 import { desdeTotal, montoNeto, montosLinea, redondear, saldo as calcularSaldo, sumarMontos } from "@/lib/dinero";
 import { mensajeVacio, type ComprobanteLeido, type Intencion, type MensajeInterpretado } from "@/lib/ia/esquemas";
 import { interpretarMensaje, leerComprobante, leerPlaca, transcribirAudio, type Archivo } from "@/lib/ia/proveedor";
-import { fechaHoraDesdeTexto, itemsDesdeTexto, normalizarPlaca } from "@/lib/ia/sin-ia";
+import { fechaHoraDesdeTexto, interpretarSinIa, itemsDesdeTexto, normalizarPlaca } from "@/lib/ia/sin-ia";
 import { cuandoEntrega } from "@/lib/taller/entrega";
 import { validarPlaca } from "@/lib/placas";
-import { tieneAlguno, type Rol } from "@/lib/roles";
+import { CAJA, tieneAlguno, type Rol } from "@/lib/roles";
+import { pdfCaja, pdfCotizacion, pdfOrden, pdfRecibo, type Pdf } from "@/lib/pdf/documentos";
+import type { Contexto } from "@/lib/sesion";
 import { clienteAdmin } from "@/lib/supabase/admin";
+import { conCliente } from "@/lib/supabase/servidor";
 import { atenderCliente } from "./clientes";
 import { ayuda, botonesConfirmar, historial, pedirDato, PERMITIDO, placaBonita, resumen, SIN_ACCESO, type Respuesta } from "./respuestas";
 import { sesionDe } from "./sesion";
@@ -152,7 +155,10 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
   if (pendiente && pendiente.faltan.length) {
     const m0 = (pendiente.datos.m ?? mensajeVacio(pendiente.intencion as Intencion)) as MensajeInterpretado;
     const m = await completar(ctx, m0, pendiente.faltan, texto, archivo);
-    const p = await preparar(ctx, pendiente.intencion as Intencion, m, archivo && pendiente.intencion === "avance" ? archivo : undefined, pendiente.datos);
+    // En la recepción de repuestos, «sin foto» deja seguir sin evidencia.
+    const previoDatos = pendiente.intencion === "recepcion" && /\bsin foto\b|no tengo foto/i.test(texto) ? { ...pendiente.datos, sinFoto: true } : pendiente.datos;
+    const conArchivo = archivo && (pendiente.intencion === "avance" || pendiente.intencion === "recepcion") ? archivo : undefined;
+    const p = await preparar(ctx, pendiente.intencion as Intencion, m, conArchivo, previoDatos);
     extra.borrador_id = pendiente.id;
     extra.intencion = pendiente.intencion;
     if ("respuesta" in p) {
@@ -198,9 +204,17 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
     return listo(m.intencion === "ayuda" ? a : { texto: `No entendí qué quieres registrar.\n\n${a.texto}` }, "respondido");
   }
   if (m.intencion === "historial") return listo(await verHistorial(ctx, m.placa), "respondido");
-  if (!tieneAlguno(ctx.roles, PERMITIDO[m.intencion])) return listo({ texto: `Tu rol no registra ${NOMBRE[m.intencion]} por WhatsApp. Escribe «ayuda» para ver lo que sí puedes hacer.` }, "rechazado");
+  if (!tieneAlguno(ctx.roles, PERMITIDO[m.intencion])) {
+    if (m.intencion === "documento") return listo({ texto: "Los documentos en PDF por WhatsApp los piden gerencia, administración y los asesores." }, "rechazado");
+    return listo({ texto: `Tu rol no registra ${NOMBRE[m.intencion]} por WhatsApp. Escribe «ayuda» para ver lo que sí puedes hacer.` }, "rechazado");
+  }
+  // Pedir un PDF no guarda nada: se arma con la sesión de la persona y se manda.
+  if (m.intencion === "documento") {
+    const d = await enviarDocumento(ctx, m);
+    return listo(d, d.documento ? "documento" : "respondido");
+  }
 
-  const p = await preparar(ctx, m.intencion, m, m.intencion === "avance" ? archivo : undefined, lectura ? { lectura: lectura.lectura, archivo: lectura.archivo } : {});
+  const p = await preparar(ctx, m.intencion, m, m.intencion === "avance" || m.intencion === "recepcion" ? archivo : undefined, lectura ? { lectura: lectura.lectura, archivo: lectura.archivo } : {});
   if ("respuesta" in p) return listo(p.respuesta, p.resultado ?? "respondido");
   const res = resumen(m.intencion, p.datos);
   const { data: b, error } = await ctx.db
@@ -216,7 +230,7 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
 }
 
 const NOMBRE: Record<string, string> = {
-  nuevo_ingreso: "ingresos", avance: "avances", compra: "compras", comprobante_venta: "comprobantes de venta", pago: "pagos", cita: "citas", cotizacion: "cotizaciones",
+  nuevo_ingreso: "ingresos", avance: "avances", compra: "compras", recepcion: "repuestos que llegaron", documento: "documentos", comprobante_venta: "comprobantes de venta", pago: "pagos", cita: "citas", cotizacion: "cotizaciones",
 };
 
 async function interpretar(ctx: Ctx, texto: string, adjunto?: Archivo): Promise<MensajeInterpretado> {
@@ -264,6 +278,8 @@ async function completar(ctx: Ctx, m: MensajeInterpretado, faltan: string[], tex
     // Al responder «mañana 10am» la IA puede verlo como fecha de cita: sirve igual.
     if (campo === "entrega_prometida") n.entrega_prometida = ia.entrega_prometida ?? ia.fecha_hora ?? texto;
     if (campo === "items_cotizacion") n.items_cotizacion = ia.items_cotizacion.length ? ia.items_cotizacion : itemsDesdeTexto(texto);
+    if (campo === "items_compra") n.items_compra = ia.items_compra.length ? ia.items_compra : interpretarSinIa(`llegaron: ${texto}`).items_compra;
+    if (campo === "proveedor" && /[a-záéíóúñ]{2}/i.test(texto)) n.proveedor = ia.proveedor ?? texto.trim().slice(0, 160);
   }
   return n;
 }
@@ -280,6 +296,61 @@ function entregaPrometida(texto: string | null, hoy: string): Date | null | unde
   const cuando = iso ? new Date(`${iso}:00-05:00`) : null;
   if (!cuando || Number.isNaN(cuando.getTime()) || cuando.getTime() < Date.now() - 5 * 60_000) return undefined;
   return cuando;
+}
+
+// ---------------------------------------------------------------------------
+// Pedir un documento en PDF (recibo, cotización, orden o caja)
+// ---------------------------------------------------------------------------
+async function enviarDocumento(ctx: Ctx, m: MensajeInterpretado): Promise<Respuesta> {
+  const tipo = m.documento ?? "orden";
+  const placa = m.placa ? validarPlaca(m.placa) : null;
+  const placaOk = placa && placa.estado !== "invalida" ? placa.placa : null;
+  const { data: empresa } = await ctx.db.from("empresas").select("nombre").eq("id", ctx.empresa).maybeSingle();
+  // El PDF se arma igual que en la app, con la sesión (y los permisos) de quien lo pide.
+  const ctxPdf = {
+    perfil: { id: ctx.perfil, nombre: ctx.nombre, celular: ctx.celular },
+    taller: { id: ctx.empresa, nombre: empresa?.nombre ?? "Taller", roles: ctx.roles },
+    talleres: [{ id: ctx.empresa, nombre: empresa?.nombre ?? "Taller", roles: ctx.roles }],
+    roles: ctx.roles,
+    rolPrincipal: ctx.roles[0],
+    configuracion: { adminVeUtilidad: false, adminVeSueldos: false, minutosAvisoEntrega: 120 },
+  } as Contexto;
+  let pdf: Pdf = null;
+  let texto = "";
+  if (tipo === "caja") {
+    const { data: caja } = await ctx.db.from("cajas").select("id, estado").eq("empresa_id", ctx.empresa).order("abierta_en", { ascending: false }).limit(1).maybeSingle();
+    if (!caja) return { texto: "Todavía no hay cajas abiertas en el sistema." };
+    pdf = await conCliente(ctx.db, () => pdfCaja(ctxPdf, caja.id));
+    texto = caja.estado === "abierta" ? "Aquí está la caja de hoy (todavía abierta)." : "Aquí está el último arqueo de caja.";
+  } else {
+    const nombreDoc = tipo === "cotizacion" ? "cotización" : tipo;
+    if (!placaOk) return { texto: `¿De qué carro? Escribe la placa, por ejemplo «${nombreDoc} ABC123».` };
+    const { orden } = await ordenDe(ctx, placaOk, false);
+    if (!orden) return { texto: `No encontré órdenes de ${placaBonita(placaOk)}.` };
+    const ot = `OT-${String(orden.numero).padStart(6, "0")}`;
+    if (tipo === "orden") {
+      pdf = await conCliente(ctx.db, () => pdfOrden(ctxPdf, orden.id, tieneAlguno(ctx.roles, CAJA)));
+      texto = `Aquí está la orden de reparación ${ot} de ${placaBonita(placaOk)}.`;
+    } else if (tipo === "cotizacion") {
+      const { data: c } = await ctx.db.from("cotizaciones").select("id, version").eq("orden_id", orden.id).order("version", { ascending: false }).limit(1).maybeSingle();
+      if (!c) return { texto: `La orden ${ot} de ${placaBonita(placaOk)} todavía no tiene cotización.` };
+      pdf = await conCliente(ctx.db, () => pdfCotizacion(ctxPdf, c.id, "con"));
+      texto = `Aquí está la proforma de ${placaBonita(placaOk)} (${ot}, versión ${c.version}).`;
+    } else {
+      const { data: r } = await ctx.db.from("recibos").select("id, numero").eq("orden_id", orden.id).neq("estado", "anulado").maybeSingle();
+      if (!r) return { texto: `La orden ${ot} de ${placaBonita(placaOk)} todavía no tiene recibo. Emítelo en la app: orden → Dinero → Recibo de venta.` };
+      pdf = await conCliente(ctx.db, () => pdfRecibo(ctxPdf, r.id));
+      texto = `Aquí está el recibo N° ${r.numero} de ${placaBonita(placaOk)}.`;
+    }
+  }
+  if (!pdf) return { texto: "No pude armar ese documento: puede que tu rol no lo vea." };
+  // Se guarda un momento para que WhatsApp lo descargue con un enlace que vence en una hora.
+  const admin = clienteAdmin();
+  const ruta = `${ctx.empresa}/${randomUUID()}/${pdf.archivo.replace(/[^a-zA-Z0-9._-]+/g, "-")}`;
+  const { error } = await admin.storage.from("documentos").upload(ruta, pdf.bytes, { contentType: "application/pdf" });
+  const { data: firmado } = error ? { data: null } : await admin.storage.from("documentos").createSignedUrl(ruta, 3600);
+  if (!firmado?.signedUrl) return { texto: "Armé el documento, pero no pude prepararlo para enviarlo. Ábrelo en la app." };
+  return { texto, documento: { url: firmado.signedUrl, nombre: pdf.archivo } };
 }
 
 // ---------------------------------------------------------------------------
@@ -380,6 +451,49 @@ async function preparar(ctx: Ctx, intencion: Intencion, m: MensajeInterpretado, 
         .map((i) => ({ descripcion: i.descripcion.trim().slice(0, 200), tipo: i.tipo, cantidad: i.cantidad, precio: i.precio_con_igv }));
       if (!items.length) faltan.push("items_cotizacion");
       return { datos: { placa: placaOk, ordenId: orden.id, ordenNumero: orden.numero, items }, faltan };
+    }
+    case "recepcion": {
+      const items = m.items_compra.map((i) => ({ ...i, descripcion: i.descripcion.trim() })).filter((i) => i.descripcion.length >= 2 && i.cantidad > 0).slice(0, 30);
+      if (!items.length) faltan.push("items_compra");
+      const proveedor = m.proveedor?.trim() || null;
+      if (!proveedor) faltan.push("proveedor");
+      let orden: { id: string; numero: number } | null = null;
+      if (placaOk) {
+        orden = (await ordenDe(ctx, placaOk)).orden;
+        if (!orden) return { respuesta: { texto: `No encontré una orden abierta de ${placaBonita(placaOk)}. Si los repuestos son para el almacén, manda el mensaje sin la placa.` } };
+      }
+      // Sin placa van al inventario: se busca cada repuesto por su nombre o código.
+      const { data: repuestos } = orden ? { data: [] } : await ctx.db.from("repuestos").select("id, codigo, nombre").eq("empresa_id", ctx.empresa).eq("activo", true);
+      const simple = (t: string) => t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+      const buscar = (desc: string) => {
+        const d = simple(desc);
+        const palabras = d.split(" ").filter((w) => w.length >= 3);
+        let mejor: { id: string; codigo: string; nombre: string; puntos: number } | null = null;
+        for (const r of (repuestos ?? []) as { id: string; codigo: string; nombre: string }[]) {
+          const nombre = simple(r.nombre);
+          if (simple(r.codigo) && d.includes(simple(r.codigo))) return { ...r, puntos: 99 };
+          const puntos = palabras.filter((w) => nombre.includes(w)).length;
+          if (puntos >= Math.min(2, palabras.length) && (!mejor || puntos > mejor.puntos)) mejor = { ...r, puntos };
+        }
+        return mejor;
+      };
+      const fotos = [...((previo.fotos as { ruta: string }[] | undefined) ?? [])];
+      if (archivo && archivo.mime.startsWith("image/")) {
+        const ruta = await subir(ctx, "comprobantes", `${ctx.empresa}/compras/${randomUUID()}`, archivo);
+        if (ruta) fotos.push({ ruta });
+      }
+      if (!fotos.length && !previo.sinFoto && !faltan.length) faltan.push("foto_evidencia");
+      const comp = /^([FB][A-Z0-9]{3})-(\d{1,8})$/.exec((m.comprobante ?? "").toUpperCase().replace(/\s+/g, ""));
+      return {
+        datos: {
+          proveedor, comprobante: comp ? `${comp[1]}-${comp[2]}` : null, placa: orden ? placaOk : null, ordenId: orden?.id ?? null, ordenNumero: orden?.numero ?? null, fotos, sinFoto: Boolean(previo.sinFoto),
+          items: items.map((i) => {
+            const r = orden ? null : buscar(i.descripcion);
+            return { descripcion: i.descripcion.slice(0, 200), cantidad: i.cantidad, precio: i.precio_unitario, repuestoId: r?.id ?? null, repuesto: r ? `${r.codigo} ${r.nombre}` : null };
+          }),
+        },
+        faltan,
+      };
     }
     case "compra":
     case "comprobante_venta": {
@@ -520,6 +634,31 @@ async function ejecutar(ctx: Ctx, intencion: string, d: Record<string, unknown>)
       const { error } = await db.rpc("crear_cotizacion", { p_orden: d.ordenId, p_adicional: false, p_items: items, p_con_igv: true });
       if (error) return falla("no se pudo crear la cotización.");
       return { ok: true, texto: `✅ Cotización creada en OT-${String(d.ordenNumero).padStart(6, "0")}. Envíala al cliente desde la orden.` };
+    }
+    case "recepcion": {
+      const items = d.items as { descripcion: string; cantidad: number; precio: number | null; repuestoId: string | null }[];
+      const comp = typeof d.comprobante === "string" ? /^([FB][A-Z0-9]{3})-(\d{1,8})$/.exec(d.comprobante) : null;
+      const tipo = comp ? (comp[1].startsWith("F") ? "factura" : "boleta") : "sin_comprobante";
+      const { data: cfg } = await db.from("configuracion_empresa").select("tasa_igv").eq("empresa_id", empresa).maybeSingle();
+      const tasa = tipo === "factura" ? Number(cfg?.tasa_igv ?? 0.18) : 0;
+      const lineas = items.map((x) => {
+        const m = montosLinea({ cantidad: x.cantidad, precioUnitario: x.precio ?? 0, incluyeIgv: true }, tasa);
+        return { descripcion: x.descripcion, cantidad: x.cantidad, precio_sin_igv: redondear(m.sinIgv / x.cantidad), sin_igv: m.sinIgv, igv: m.igv, total: m.total, orden: d.ordenId ?? null, repuesto: d.ordenId ? null : x.repuestoId };
+      });
+      const t = sumarMontos(lineas.map((i) => ({ sinIgv: i.sin_igv, igv: i.igv, total: i.total })));
+      const fotos = (d.fotos as { ruta: string }[] | undefined) ?? [];
+      const { error } = await db.rpc("registrar_compra", {
+        p_empresa: empresa,
+        p_proveedor: { ruc: null, razon_social: String(d.proveedor).slice(0, 160) },
+        p_compra: { tipo, serie: comp?.[1] ?? null, numero: comp?.[2].replace(/^0+(?=\d)/, "") ?? null, fecha: ctx.hoy, moneda: "PEN", tipo_cambio: 1, tasa_igv: tasa, sin_igv: t.sinIgv, igv: t.igv, total: t.total, origen: "ia", archivo: fotos[0]?.ruta ?? null },
+        p_items: lineas,
+      });
+      if (error) return falla(error.code === "23505" ? "esa compra ya estaba registrada." : "tu rol no registra compras o faltan datos.");
+      const sinPrecio = items.some((x) => x.precio === null);
+      return {
+        ok: true,
+        texto: `✅ Recepción registrada: ${items.length} ${items.length === 1 ? "repuesto" : "repuestos"} de ${d.proveedor}${t.total ? ` por S/ ${t.total.toFixed(2)}` : ""}. Queda *por confirmar* en Compras → Por confirmar; al confirmarla entra ${d.ordenId ? "a la orden" : "al inventario"}.${sinPrecio ? " Faltan precios: complétalos al confirmar." : ""}`,
+      };
     }
     case "compra": {
       const l = d.lectura as ComprobanteLeido;

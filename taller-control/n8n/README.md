@@ -4,7 +4,7 @@ Aquí están los dos flujos de n8n que conectan el número de WhatsApp del talle
 
 | Archivo | Qué hace |
 | --- | --- |
-| `whatsapp-entrante.json` | Recibe cada mensaje de Meta, **valida la firma**, descarga audios, fotos, PDF o videos, los manda a la app y responde con texto o botones (Confirmar / Corregir). |
+| `whatsapp-entrante.json` | Recibe cada mensaje de Meta, **valida la firma**, descarga audios, fotos, PDF o videos, los manda a la app y responde con texto, botones (Confirmar / Corregir) o un **PDF** (recibo, proforma, orden o arqueo que pidió gerencia, administración o un asesor). |
 | `avisos-programados.json` | Cada 15 minutos pide a la app los avisos que tocan (resúmenes, citas del día, carro listo, cotizaciones, encuestas, recordatorios) y los envía con plantillas de WhatsApp. Los avisos «en el celular» los envía la app sola. |
 | `plantillas.md` | Las plantillas que debes crear en Meta (los avisos que inicia el taller). |
 | `prompts/` | Las instrucciones que sigue la IA (leer comprobantes, placas y mensajes; vocabulario para audios). Las usa la app; están en texto para que se puedan revisar. |

@@ -179,3 +179,19 @@ create policy "gastos: registrar" on public.gastos for insert to authenticated
   with check (privado.es_gestor(empresa_id) and estado = 'confirmado');
 create policy "gastos: anular" on public.gastos for update to authenticated
   using (privado.es_gestor(empresa_id)) with check (privado.es_gestor(empresa_id));
+
+-- ---------------------------------------------------------------------
+-- 5. PDF que se mandan por WhatsApp
+-- ---------------------------------------------------------------------
+-- La app arma el PDF con la sesión de quien lo pide (sus permisos) y lo deja
+-- aquí un momento para que WhatsApp lo descargue con un enlace que vence.
+-- Solo el servidor escribe y lee este bucket (sin políticas para usuarios).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('documentos', 'documentos', false, 10485760, array['application/pdf'])
+on conflict (id) do nothing;
+
+-- La auditoría de WhatsApp registra también los documentos enviados.
+alter table public.mensajes_whatsapp drop constraint mensajes_whatsapp_resultado_check;
+alter table public.mensajes_whatsapp add constraint mensajes_whatsapp_resultado_check check (resultado in (
+  'recibido', 'borrador', 'pide_dato', 'confirmado', 'corregido', 'respondido', 'sin_acceso', 'rechazado', 'error', 'encuesta', 'cotizacion', 'documento'
+));

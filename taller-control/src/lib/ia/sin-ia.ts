@@ -33,6 +33,36 @@ export function interpretarSinIa(entrada: string): MensajeInterpretado {
   if (/^(ayuda|help|\?|menu|hola|buenas?)\b/.test(bajo)) return mensajeVacio("ayuda");
   if (/^(historial|historia|que se le hizo)\b/.test(bajo)) return { ...mensajeVacio("historial"), placa };
 
+  // Pedir un documento: «recibo ABC123», «mándame la cotización de ABC123», «cierre de caja».
+  const doc = /^(?:(?:manda(?:me)?|envia(?:me)?|pasa(?:me)?|dame|quiero|pdf(?: de)?)\s+)?(?:(?:el|la)\s+)?(?:pdf\s+(?:de\s+)?(?:el|la)?\s*)?(recibo|cotizacion|proforma|orden(?: de (?:trabajo|reparacion))?|cierre(?: de caja)?|arqueo(?: de caja)?|caja)\b/.exec(bajo);
+  if (doc) {
+    const tipo = /^(recibo)/.test(doc[1]) ? "recibo" : /^(cotizacion|proforma)/.test(doc[1]) ? "cotizacion" : /^orden/.test(doc[1]) ? "orden" : "caja";
+    const resto = quitar(bajo.slice(doc[0].length), placaCruda?.toLowerCase());
+    if ((tipo === "caja" && !placa) || (placa && !/\d/.test(resto))) return { ...mensajeVacio("documento"), documento: tipo, placa };
+  }
+
+  // Llegaron repuestos (nota de voz de almacén): «llegaron de Lubricantes Demo factura F001-123: 4 aceite 10W40 a 85, 2 filtro a 30».
+  if (/^(llegaron|recibi(mos)?|compre|compramos|compra de)\b/.test(bajo) || /\b(repuestos?|pedido|mercaderia)\b.*\b(llegaron|llego)\b|\b(llegaron|llego)\b.*\b(repuestos?|pedido|mercaderia)\b/.test(bajo)) {
+    const comp = /\b([fb][a-z0-9]{3})\s*-?\s*(\d{1,8})\b/i.exec(texto);
+    const prov = /\bde\s+([^,:]+?)(?=\s*(?:,|:|\bfactura\b|\bboleta\b|\bticket\b|$))/i.exec(texto.split(":")[0]);
+    const lista = texto.includes(":") ? texto.slice(texto.indexOf(":") + 1) : "";
+    const items_compra = lista
+      .split(/[,;\n]+|\s+y\s+(?=\d)/)
+      .map((parte) => {
+        const m = /^\s*(\d+(?:[.,]\d+)?)\s+(.+?)(?:\s+(?:a|x|por)?\s*(?:s\/\.?\s*)?(\d+(?:[.,]\d{1,2})?)\s*(?:soles|c\/u|cada uno)?)?\s*$/i.exec(parte.trim());
+        if (!m || m[2].trim().length < 2) return null;
+        return { descripcion: m[2].replace(/\s+(a|x|por)$/i, "").trim(), cantidad: Number(m[1].replace(",", ".")), precio_unitario: m[3] ? Number(m[3].replace(",", ".")) : null };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+    return {
+      ...mensajeVacio("recepcion"),
+      placa,
+      proveedor: prov ? prov[1].trim().slice(0, 160) : null,
+      comprobante: comp ? `${comp[1].toUpperCase()}-${comp[2]}` : null,
+      items_compra,
+    };
+  }
+
   // Pago: "pago ABC123 150 yape abono"
   if (/\b(pag[oa]|pagado|yape|plin|abono|abon[oó]|adelanto|cancel[oó]|cobr[eé])\b/.test(bajo)) {
     const m = MONTO.exec(texto) ?? MONTO_SUELTO.exec(quitar(texto, placaCruda));
