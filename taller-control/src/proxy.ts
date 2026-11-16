@@ -43,5 +43,5 @@ function redirigir(request: NextRequest, respuesta: NextResponse, destino: strin
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|iconos/|.*\\.(?:svg|png|jpg|jpeg|webp|ico|woff2?)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|manifest.webmanifest|iconos/|.*\\.(?:svg|png|jpg|jpeg|webp|ico|woff2?)$).*)"],
 };
