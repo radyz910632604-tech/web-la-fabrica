@@ -161,3 +161,28 @@ export async function confirmarComprobante(id: string): Promise<Resultado> {
   revalidatePath("/", "layout");
   return { ok: "Comprobante confirmado." };
 }
+
+/** Emite el recibo de venta de la orden con lo aprobado (la base pone el número correlativo). */
+export async function emitirRecibo(ordenId: string, observaciones: string): Promise<Resultado & { id?: string }> {
+  const ctx = await obtenerContexto();
+  if (!tieneAlguno(ctx.roles, CAJA)) return { error: "Tu rol no emite recibos." };
+  const supabase = await clienteServidor();
+  const { data, error } = await supabase.rpc("emitir_recibo", { p_orden: ordenId, p_observaciones: observaciones.trim().slice(0, 300) || null });
+  if (error) {
+    if (error.message.includes("cotización aprobada")) return { error: "Primero aprueba la cotización: el recibo cobra lo aprobado." };
+    if (error.message.includes("ya tiene un recibo")) return { error: "Esta orden ya tiene recibo. Para emitir otro, anula el anterior." };
+    return { error: "No se pudo emitir el recibo." };
+  }
+  revalidatePath("/", "layout");
+  return { ok: "Recibo emitido.", id: data as string };
+}
+
+export async function anularRecibo(id: string, motivo: string): Promise<Resultado> {
+  await obtenerContexto();
+  if (motivo.trim().length < 5) return { error: "Escribe el motivo (mínimo 5 letras)." };
+  const supabase = await clienteServidor();
+  const { error, count } = await supabase.from("recibos").update({ estado: "anulado", motivo_anulacion: motivo.trim() }, { count: "exact" }).eq("id", id);
+  if (error || count !== 1) return { error: "Solo gerencia o administración anulan recibos." };
+  revalidatePath("/", "layout");
+  return { ok: "Recibo anulado." };
+}

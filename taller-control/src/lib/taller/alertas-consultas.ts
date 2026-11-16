@@ -31,7 +31,7 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
   const ids = ordenes.map((o) => o.id);
   const vacio = Promise.resolve({ data: [] as never[] });
 
-  const [fotos, servicios, cots, comps, pagos, items, sinOrden, fijos, costos, notasRes, salidasRes, repuestosRes, porConfirmarRes] = await Promise.all([
+  const [fotos, servicios, cots, comps, pagos, items, sinOrden, fijos, costos, notasRes, salidasRes, repuestosRes, porConfirmarRes, recibosRes] = await Promise.all([
     ids.length ? supabase.from("archivos").select("orden_id").eq("tipo", "foto").in("orden_id", ids) : vacio,
     ids.length ? supabase.from("orden_servicios").select("orden_id, es_adicional, servicio_id").in("orden_id", ids) : vacio,
     ids.length && permisos.verDinero ? supabase.from("cotizaciones").select("orden_id, es_adicional, estado, total").in("orden_id", ids) : vacio,
@@ -56,7 +56,9 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
       permisos.verDinero ? supabase.from("comprobantes_venta").select("serie, numero, tipo").eq("empresa_id", empresaId).eq("estado", "por_confirmar") : vacio,
       permisos.verDinero ? supabase.from("pagos").select("monto, medio").eq("empresa_id", empresaId).eq("estado", "por_confirmar") : vacio,
     ]),
+    ids.length && permisos.verDinero ? supabase.from("recibos").select("orden_id").eq("estado", "confirmado").in("orden_id", ids) : vacio,
   ]);
+  const conRecibo = new Set(((recibosRes.data ?? []) as { orden_id: string }[]).map((r) => r.orden_id));
 
   const contar = <T extends { orden_id: string | null }>(filas: T[] | null, filtro: (f: T) => boolean = () => true) => {
     const m = new Map<string, number>();
@@ -135,7 +137,8 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
       servicios: servPor.get(o.id) ?? 0,
       adicionales: adicPor.get(o.id) ?? 0,
       cotizacionesAdicionalesAprobadas: cotsLista.filter((c) => c.orden_id === o.id && c.es_adicional && c.estado === "aprobada").length,
-      tieneComprobante: susComps.length > 0,
+      // El recibo de venta del taller también cuenta como documento de la venta.
+      tieneComprobante: susComps.length > 0 || conRecibo.has(o.id),
       detalleComprobantes: susComps.map((c) => c.detalle ?? "").join(" "),
       repuestosComprados: susItems.map((i) => i.descripcion),
       saldo: permisos.verDinero ? s.saldo : null,

@@ -13,6 +13,7 @@ import {
   guardarPermisosAdmin,
   guardarReglas,
   guardarTaller,
+  subirLogo,
   type Resultado,
 } from "./acciones";
 
@@ -51,7 +52,7 @@ export function Pie({ estado, enviando, texto = "Guardar" }: { estado: Resultado
   );
 }
 
-type ValoresTaller = { nombre: string; razon_social: string | null; ruc: string | null; direccion: string | null; telefono: string | null };
+type ValoresTaller = { nombre: string; razon_social: string | null; ruc: string | null; direccion: string | null; telefono: string | null; correo: string | null; lema: string | null };
 
 export function FormTaller({ valores }: { valores: ValoresTaller }) {
   const [estado, accion, enviando] = useActionState(guardarTaller, {});
@@ -74,6 +75,12 @@ export function FormTaller({ valores }: { valores: ValoresTaller }) {
         <Campo etiqueta="Teléfono" error={e.telefono}>
           {(p) => <Entrada {...p} name="telefono" type="tel" defaultValue={valores.telefono ?? ""} />}
         </Campo>
+        <Campo etiqueta="Correo" error={e.correo}>
+          {(p) => <Entrada {...p} name="correo" type="email" defaultValue={valores.correo ?? ""} />}
+        </Campo>
+        <Campo etiqueta="Frase del taller" error={e.lema} ayuda="Sale bajo los datos del taller en los PDF.">
+          {(p) => <Entrada {...p} name="lema" defaultValue={valores.lema ?? ""} placeholder="Siempre dispuestos a sus sugerencias…" />}
+        </Campo>
       </div>
       <Pie estado={estado} enviando={enviando} />
     </form>
@@ -90,6 +97,7 @@ type ValoresReglas = {
   igv_pct: number;
   hora_resumen_mediodia: string;
   hora_cierre: string;
+  recibo_inicial: number;
 };
 
 function Numero({ nombre, etiqueta, unidad, valor, error, paso = 1 }: { nombre: string; etiqueta: string; unidad: string; valor: number; error?: string; paso?: number }) {
@@ -116,6 +124,7 @@ export function FormReglas({ valores }: { valores: ValoresReglas }) {
         <Numero nombre="horas_orden_sin_cambio" etiqueta="Avisar si una orden no avanza en" unidad="horas" valor={valores.horas_orden_sin_cambio} error={e.horas_orden_sin_cambio} />
         <Numero nombre="dias_cliente_inactivo" etiqueta="Cliente inactivo después de" unidad="días" valor={valores.dias_cliente_inactivo} error={e.dias_cliente_inactivo} />
         <Numero nombre="minutos_aviso_entrega" etiqueta="Avisar antes de la hora prometida" unidad="minutos" valor={valores.minutos_aviso_entrega} error={e.minutos_aviso_entrega} paso={15} />
+        <Numero nombre="recibo_inicial" etiqueta="Seguir los recibos desde el número" unidad="N°" valor={valores.recibo_inicial} error={e.recibo_inicial} />
         <Numero nombre="margen_minimo_pct" etiqueta="Margen mínimo por orden" unidad="%" valor={valores.margen_minimo_pct} error={e.margen_minimo_pct} paso={0.5} />
         <Numero nombre="igv_pct" etiqueta="IGV" unidad="%" valor={valores.igv_pct} error={e.igv_pct} paso={0.01} />
         <Campo etiqueta="Resumen del mediodía" error={e.hora_resumen_mediodia}>
@@ -257,5 +266,29 @@ export function FormServicios({ servicios }: { servicios: { id: string; nombre: 
         </div>
       </form>
     </div>
+  );
+}
+
+/** Logo del taller: vista previa y subir uno nuevo. */
+export function FormLogo({ url }: { url: string | null }) {
+  const [estado, accion, enviando] = useActionState(subirLogo, {});
+  return (
+    <form action={accion}>
+      <div className="flex flex-wrap items-center gap-5">
+        <div className="grid size-28 shrink-0 place-items-center overflow-hidden rounded-2xl border border-borde bg-white">
+          {url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} alt="Logo del taller" className="max-h-full max-w-full object-contain p-2" />
+          ) : (
+            <span className="px-3 text-center text-[13px] text-tinta-3">Sin logo</span>
+          )}
+        </div>
+        <label className="flex min-w-0 flex-1 flex-col gap-2 text-sm font-medium">
+          Imagen del logo (PNG o JPG, hasta 1 MB)
+          <input name="logo" type="file" accept="image/png,image/jpeg" required className="text-sm font-normal text-tinta-2 file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border-0 file:bg-interna file:px-4 file:text-sm file:font-medium file:text-tinta" />
+        </label>
+      </div>
+      <Pie estado={estado} enviando={enviando} texto="Subir logo" />
+    </form>
   );
 }

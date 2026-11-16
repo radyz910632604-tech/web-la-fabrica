@@ -17,6 +17,7 @@ export type VehiculoConocido = {
   color: string | null;
   combustible: string | null;
   transmision: string | null;
+  carroceria: string | null;
   kilometraje: number | null;
   cliente: ClienteConocido | null;
 };
@@ -58,7 +59,7 @@ export async function buscarPlaca(placa: string): Promise<VehiculoConocido | nul
   const supabase = await clienteServidor();
   const { data } = await supabase
     .from("vehiculos")
-    .select(`id, marca, modelo, anio, color, combustible, transmision, kilometraje_actual, clientes (${COLUMNAS_CLIENTE})`)
+    .select(`id, marca, modelo, anio, color, combustible, transmision, carroceria, kilometraje_actual, clientes (${COLUMNAS_CLIENTE})`)
     .eq("empresa_id", ctx.taller.id)
     .eq("placa", normalizarPlaca(placa))
     .maybeSingle();
@@ -72,6 +73,7 @@ export async function buscarPlaca(placa: string): Promise<VehiculoConocido | nul
     color: data.color,
     combustible: data.combustible,
     transmision: data.transmision,
+    carroceria: data.carroceria,
     kilometraje: data.kilometraje_actual,
     cliente: aCliente(cliente as Record<string, unknown> | null),
   };
@@ -107,7 +109,9 @@ const esquemaIngreso = z.object({
     color: z.preprocess(vacioANulo, z.string().trim().max(30).nullable()),
     combustible: z.preprocess(vacioANulo, z.enum(["gasolina", "diesel", "gnv", "glp", "dual", "electrico", "hibrido"]).nullable()),
     transmision: z.preprocess(vacioANulo, z.enum(["mecanica", "automatica", "cvt", "otra"]).nullable()),
+    carroceria: z.preprocess(vacioANulo, z.enum(["sedan", "hatchback", "suv", "camioneta", "pickup", "van", "coupe", "station_wagon", "otro"]).nullable()),
   }),
+  combustible: z.preprocess(vacioANulo, z.coerce.number().int().refine((v) => [0, 25, 50, 75, 100].includes(v)).nullable()),
   kilometraje: z.preprocess(vacioANulo, z.coerce.number().int().min(0, "No puede ser negativo.").max(3_000_000).nullable()),
   servicios: z.array(z.object({ id: z.string().nullable(), descripcion: z.string().trim().min(2).max(160) })).min(1, "Elige al menos un servicio."),
   observaciones: z.preprocess(vacioANulo, z.string().trim().max(2000).nullable()),
@@ -201,6 +205,7 @@ export async function registrarIngreso(datos: unknown): Promise<ResultadoIngreso
       tecnico_id: d.tecnicoId,
       cita_id: d.citaId,
       entrega_prometida: entrega.instante?.toISOString() ?? null,
+      nivel_combustible: d.combustible,
     })
     .select("id")
     .single();

@@ -39,6 +39,13 @@ const esquemaTaller = z.object({
     .transform((v) => v || null),
   direccion: opcional(200),
   telefono: opcional(30),
+  correo: z
+    .string()
+    .trim()
+    .max(120, "Máximo 120 caracteres.")
+    .refine((v) => v === "" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), "Revisa el correo.")
+    .transform((v) => v || null),
+  lema: opcional(160),
 });
 
 export async function guardarTaller(_previo: Resultado, form: FormData): Promise<Resultado> {
@@ -63,6 +70,7 @@ const esquemaReglas = z.object({
   dias_cliente_inactivo: entero(30, 1095, "los días"),
   horas_orden_sin_cambio: entero(1, 720, "las horas"),
   minutos_aviso_entrega: entero(15, 1440, "los minutos"),
+  recibo_inicial: entero(1, 99_999_999, "el número"),
   margen_minimo_pct: z.coerce.number().min(0, "Mínimo 0.").max(100, "Máximo 100."),
   igv_pct: z.coerce.number().min(0, "Mínimo 0.").max(50, "Máximo 50."),
   hora_resumen_mediodia: hora,
@@ -153,4 +161,23 @@ export async function cambiarServicioCatalogo(id: string, activo: boolean): Prom
   if (error || count !== 1) return { error: "No se pudo cambiar." };
   revalidatePath("/configuracion");
   return { ok: activo ? "Servicio activado." : "Servicio ocultado." };
+}
+
+/** Sube el logo del taller (PNG o JPG, hasta 1 MB): sale en todos los documentos PDF. */
+export async function subirLogo(_previo: Resultado, form: FormData): Promise<Resultado> {
+  const ctx = await exigirGestor();
+  const archivo = form.get("logo");
+  if (!(archivo instanceof File) || archivo.size === 0) return { error: "Elige la imagen del logo." };
+  if (!["image/png", "image/jpeg"].includes(archivo.type)) return { error: "El logo debe ser PNG o JPG." };
+  if (archivo.size > 1024 * 1024) return { error: "El logo pesa más de 1 MB. Usa una imagen más chica." };
+  const supabase = await clienteServidor();
+  const ruta = `${ctx.taller.id}/logo-${Date.now()}.${archivo.type === "image/png" ? "png" : "jpg"}`;
+  const { error } = await supabase.storage.from("marca").upload(ruta, archivo, { contentType: archivo.type, upsert: false });
+  if (error) return { error: "No se pudo subir el logo." };
+  const { data: antes } = await supabase.from("empresas").select("logo_ruta").eq("id", ctx.taller.id).single();
+  const { error: e2 } = await supabase.from("empresas").update({ logo_ruta: ruta }).eq("id", ctx.taller.id);
+  if (e2) return { error: "El logo se subió, pero no se guardó en el taller." };
+  if (antes?.logo_ruta) await supabase.storage.from("marca").remove([antes.logo_ruta]);
+  revalidatePath("/configuracion");
+  return { ok: "Logo guardado. Ya sale en los PDF." };
 }

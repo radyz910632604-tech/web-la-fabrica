@@ -6,6 +6,7 @@ import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ventana";
 import { registrarPago, type Resultado } from "@/app/(app)/cobros/acciones";
+import { emitirRecibo } from "@/app/(app)/ventas/acciones";
 import { cn } from "@/lib/utils";
 
 const MEDIOS = [
@@ -174,6 +175,44 @@ export function Anular({ id, accion, que }: { id: string; accion: (id: string, m
         >
           Anular {que}
         </Boton>
+      </ContenidoVentana>
+    </Ventana>
+  );
+}
+
+/** Emite el recibo de venta (con una observación opcional, como «ASESOR ANTHONY»). */
+export function EmitirRecibo({ ordenId, total }: { ordenId: string; total: string }) {
+  const [abierta, setAbierta] = useState(false);
+  const [obs, setObs] = useState("");
+  const [r, setR] = useState<Resultado & { id?: string }>({});
+  const [pendiente, iniciar] = useTransition();
+  return (
+    <Ventana open={abierta} onOpenChange={(a) => { setAbierta(a); if (a) setR({}); }}>
+      <DisparadorVentana asChild>
+        <Boton variante="secundario" tamano="chico">Emitir recibo</Boton>
+      </DisparadorVentana>
+      <ContenidoVentana titulo="Emitir recibo" descripcion={`Recibo de venta por ${total}, con el detalle de lo aprobado. El número lo pone el sistema.`}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            iniciar(async () => {
+              const res = await emitirRecibo(ordenId, obs);
+              setR(res);
+              if (res.id) {
+                setAbierta(false);
+                window.open(`/pdf/recibo/${res.id}`, "_blank", "noopener");
+              }
+            });
+          }}
+        >
+          <Campo etiqueta="Observaciones (opcional)" ayuda="Sale en el recibo. Si lo dejas vacío, va el nombre del asesor.">
+            {(p) => <Entrada {...p} value={obs} onChange={(e) => setObs(e.target.value)} maxLength={300} />}
+          </Campo>
+          {r.error ? <p role="alert" className="mt-3 text-sm text-negativo">{r.error}</p> : null}
+          <Boton type="submit" disabled={pendiente} className="mt-5 h-12 w-full">
+            {pendiente ? "Emitiendo…" : "Emitir y abrir el recibo"}
+          </Boton>
+        </form>
       </ContenidoVentana>
     </Ventana>
   );

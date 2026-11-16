@@ -8,11 +8,13 @@ import { detalleCaja } from "../taller/caja-consultas";
 import { cierreDelDia } from "../taller/cierre-consultas";
 import { nombresPersonal } from "../taller/consultas";
 import { dineroDeOrden } from "../taller/dinero-consultas";
-import { COMBUSTIBLES, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "../taller/estados";
+import { CARROCERIAS as CARROCERIAS_ES, COMBUSTIBLES, numeroOrden, TRANSMISIONES } from "../taller/estados";
+const CARROCERIAS: Record<string, string> = CARROCERIAS_ES;
 import { mesesHasta, personalDelMes, reporteMensual, sumarFilas } from "../taller/reportes";
 import { cantidadTexto, valorStock } from "../inventario";
 import { kardex, listarRepuestos, repuesto } from "../taller/inventario-consultas";
-import { Documento, fechaCorta, fechaHora, soles, type DatosTaller } from "./documento";
+import { montoEnLetras } from "../letras";
+import { Documento, fechaCorta, fechaHora, fechaHoraLarga, importe, soles, type DatosTaller } from "./documento";
 
 /**
  * Cada documento lee con la sesión de quien lo pide: si su rol no puede ver
@@ -26,12 +28,22 @@ export type ModoIgv = "con" | "sin";
 export type Pdf = { bytes: Uint8Array; archivo: string } | null;
 
 const DOC: Record<string, string> = { dni: "DNI", ruc: "RUC", ce: "C.E." };
+const DOC_LARGO: Record<string, string> = { dni: "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)", ruc: "R.U.C.", ce: "CARNÉ DE EXTRANJERÍA" };
 
+/** Datos del taller para la cabecera, con su logo si lo subieron en Configuración. */
 async function base(ctx: Contexto): Promise<{ taller: DatosTaller; pie: string }> {
   const supabase = await clienteServidor();
-  const { data } = await supabase.from("empresas").select("nombre, razon_social, ruc, direccion, telefono").eq("id", ctx.taller.id).single();
+  const { data } = await supabase.from("empresas").select("nombre, razon_social, ruc, direccion, telefono, correo, lema, logo_ruta").eq("id", ctx.taller.id).single();
+  let logo: DatosTaller["logo"] = null;
+  if (data?.logo_ruta) {
+    const { data: archivo } = await supabase.storage.from("marca").download(data.logo_ruta);
+    if (archivo) {
+      const bytes = new Uint8Array(await archivo.arrayBuffer());
+      logo = { bytes, tipo: bytes[0] === 0x89 && bytes[1] === 0x50 ? "png" : "jpg" };
+    }
+  }
   return {
-    taller: { nombre: data?.nombre ?? ctx.taller.nombre, razonSocial: data?.razon_social, ruc: data?.ruc, direccion: data?.direccion, telefono: data?.telefono },
+    taller: { nombre: data?.nombre ?? ctx.taller.nombre, razonSocial: data?.razon_social, ruc: data?.ruc, direccion: data?.direccion, telefono: data?.telefono, correo: data?.correo, lema: data?.lema, logo },
     pie: `Generado con Taller Control el ${fechaHora(new Date().toISOString())} por ${ctx.perfil.nombre}`,
   };
 }
@@ -39,25 +51,53 @@ async function base(ctx: Contexto): Promise<{ taller: DatosTaller; pie: string }
 const carro = (v?: { placa?: string | null; marca?: string | null; modelo?: string | null; anio?: number | null; color?: string | null }) =>
   [v?.marca, v?.modelo, v?.anio ? String(v.anio) : null, v?.color].filter(Boolean).join(" ") || null;
 const placa = (p?: string | null) => (p && /^[A-Z0-9]{3}\d{3}$/.test(p) ? `${p.slice(0, 3)}-${p.slice(3)}` : (p ?? null));
+const telefono = (c?: string | null) => (c ? c.replace(/^\+51(\d{9})$/, "+51 $1") : null);
+const docCliente = (cl?: { tipo_documento?: string | null; numero_documento?: string | null }) =>
+  cl?.numero_documento ? `${DOC[cl.tipo_documento ?? ""] ?? ""} ${cl.numero_documento}`.trim() : null;
 
-/** Totales según el IGV del documento y cómo se quieren ver los precios. */
-function totalesIgv(sinIgv: number, igv: number, total: number, tasa: number): [string, string, boolean?][] {
-  if (tasa === 0) return [["Total (operación sin IGV)", soles(total), true]];
+/** Totales para el pie del documento: Otros cargos, Gravado/Exento, Subtotal, Descuento, IGV. */
+function gruposTotales(sinIgv: number, igv: number, total: number, tasa: number): [string, string][][] {
   return [
-    ["Op. gravada (sin IGV)", soles(sinIgv)],
-    [`IGV ${Math.round(tasa * 100)} %`, soles(igv)],
-    ["Total", soles(total), true],
+    [
+      ["Otros Cargos", soles(0)],
+      ...(tasa > 0 ? ([["Total Gravado", soles(sinIgv)]] as [string, string][]) : []),
+      ["Total Exento", soles(tasa > 0 ? 0 : total)],
+    ],
+    [
+      ["Subtotal", soles(tasa > 0 ? sinIgv : total)],
+      ["Descuento", soles(0)],
+      [`IGV${tasa > 0 ? ` ${Math.round(tasa * 100)}%` : ""}`, soles(igv)],
+    ],
   ];
 }
 
+type ItemCot = { tipo: string; descripcion: string; cantidad: Num; precio_unitario_total: Num; subtotal_sin_igv: Num; total: Num };
+
+/** Filas CANTIDAD · DESCRIPCIÓN · UNITARIO · DESC. · IMP · TOTAL. */
+function filasDetalle(items: ItemCot[], tasa: number, verSinIgv: boolean): string[][] {
+  return items.map((i) => {
+    const cant = n(i.cantidad);
+    const monto = verSinIgv ? n(i.subtotal_sin_igv) : n(i.total);
+    return [cant.toFixed(2), i.descripcion.toUpperCase(), importe(monto / cant), "0.00%", tasa > 0 ? "IGV" : "Exe", importe(monto)];
+  });
+}
+const COLUMNAS_DETALLE = [
+  { titulo: "Cantidad", ancho: 0.9, alinear: "der" as const },
+  { titulo: "Descripción", ancho: 5 },
+  { titulo: "Unitario", ancho: 1.2, alinear: "der" as const },
+  { titulo: "Desc.", ancho: 0.9, alinear: "der" as const },
+  { titulo: "Imp", ancho: 0.7 },
+  { titulo: "Total", ancho: 1.2, alinear: "der" as const },
+];
+
 // ---------------------------------------------------------------------------
-// Cotización
+// Proforma (cotización)
 // ---------------------------------------------------------------------------
 export async function pdfCotizacion(ctx: Contexto, id: string, modo: ModoIgv): Promise<Pdf> {
   const supabase = await clienteServidor();
   const { data: c } = await supabase
     .from("cotizaciones")
-    .select("version, es_adicional, estado, enviada_en, respuesta_en, aprobada_por_medio, tasa_igv, subtotal_sin_igv, igv, total, creado_en, cotizacion_items (tipo, descripcion, cantidad, precio_unitario_total, subtotal_sin_igv, igv, total), ordenes_trabajo (numero, kilometraje_ingreso, vehiculos (placa, marca, modelo, anio, color), clientes (nombre, celular, tipo_documento, numero_documento))")
+    .select("version, es_adicional, estado, respuesta_en, aprobada_por_medio, tasa_igv, subtotal_sin_igv, igv, total, creado_en, cotizacion_items (tipo, descripcion, cantidad, precio_unitario_total, subtotal_sin_igv, igv, total), ordenes_trabajo (numero, kilometraje_ingreso, vehiculos (placa, marca, modelo, anio, color), clientes (nombre, celular, tipo_documento, numero_documento))")
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
     .maybeSingle();
@@ -67,90 +107,120 @@ export async function pdfCotizacion(ctx: Contexto, id: string, modo: ModoIgv): P
   const cl = uno(o?.clientes);
   const tasa = n(c.tasa_igv);
   const { taller, pie } = await base(ctx);
-  const numero = `${o ? numeroOrden(o.numero) : ""}-V${c.version}`;
-  const d = await Documento.crear(taller, c.es_adicional ? "Cotización adicional" : "Cotización", numero, pie);
-  const MEDIO: Record<string, string> = { whatsapp: "por WhatsApp", presencial: "en persona", llamada: "por llamada" };
-  d.datos([
+  const numero = `N° ${o ? String(o.numero).padStart(6, "0") : ""}-${c.version}`;
+  const vence = new Date(new Date(c.creado_en).getTime() + 30 * 86_400_000).toISOString();
+  const d = await Documento.crear(taller, c.es_adicional ? "Proforma adicional" : "Proforma", numero, pie, {
+    colorTitulo: "azul",
+    cabecera: [
+      ["Fecha", fechaHoraLarga(c.creado_en).replace(/^(\d{2})-(\d{2})-(\d{4})/, "$3-$2-$1")],
+      ["Fecha Vencimiento", fechaHoraLarga(vence).slice(0, 10)],
+      ["Orden", o ? numeroOrden(o.numero) : null],
+    ],
+  });
+  d.recuadro(null, [
     ["Cliente", cl?.nombre],
-    ["Documento", cl?.numero_documento ? `${DOC[cl.tipo_documento] ?? ""} ${cl.numero_documento}`.trim() : null],
-    ["Celular", cl?.celular ? formatearCelular(cl.celular) : null],
-    ["Fecha", fechaCorta(c.creado_en)],
+    ["Documento", docCliente(cl)],
+    ["Teléfono", telefono(cl?.celular)],
     ["Placa", placa(v?.placa)],
     ["Vehículo", carro(v)],
     ["Kilometraje", o?.kilometraje_ingreso != null ? `${Number(o.kilometraje_ingreso).toLocaleString("es-PE")} km` : null],
-    ["Estado", c.estado === "aprobada" ? `Aprobada${c.aprobada_por_medio ? ` ${MEDIO[c.aprobada_por_medio]}` : ""}${c.respuesta_en ? ` el ${fechaCorta(c.respuesta_en)}` : ""}` : c.estado === "rechazada" ? "Rechazada" : c.estado === "enviada" ? "Enviada al cliente" : "Borrador"],
   ]);
   const verSinIgv = modo === "sin" && tasa > 0;
-  const items = ((c.cotizacion_items ?? []) as { tipo: string; descripcion: string; cantidad: Num; subtotal_sin_igv: Num; total: Num }[]).map((i) => {
-    const cant = n(i.cantidad);
-    const importe = verSinIgv ? n(i.subtotal_sin_igv) : n(i.total);
-    return [String(cant), i.descripcion, i.tipo === "servicio" ? "Servicio" : "Repuesto", soles(importe / cant), soles(importe)];
-  });
-  d.seccion("Detalle", tasa === 0 ? "Operación sin IGV" : verSinIgv ? "Precios sin IGV" : "Precios con IGV incluido");
-  d.tabla(
-    [
-      { titulo: "Cant.", ancho: 0.6, alinear: "der" },
-      { titulo: "Descripción", ancho: 4 },
-      { titulo: "Tipo", ancho: 1.1 },
-      { titulo: verSinIgv ? "Valor unit." : "P. unit.", ancho: 1.3, alinear: "der" },
-      { titulo: verSinIgv ? "Valor venta" : "Importe", ancho: 1.3, alinear: "der" },
-    ],
-    items,
-  );
-  d.totales(totalesIgv(n(c.subtotal_sin_igv), n(c.igv), n(c.total), tasa));
-  d.parrafo("Precios en soles. Cotización válida por 7 días. El precio de los repuestos puede variar según su disponibilidad.", { tam: 8.5, color: "tenue" });
-  d.firmas(["Aprobado por el cliente", "Asesor de servicio"]);
-  return { bytes: await d.bytes(), archivo: `cotizacion-${numero}.pdf` };
+  d.tabla(COLUMNAS_DETALLE, filasDetalle((c.cotizacion_items ?? []) as ItemCot[], tasa, verSinIgv), { cebra: true });
+  d.ultimaLinea();
+  d.cierre(`Firmado por ${taller.razonSocial || taller.nombre}`, gruposTotales(n(c.subtotal_sin_igv), n(c.igv), n(c.total), tasa), ["Total", soles(n(c.total))]);
+  const MEDIO: Record<string, string> = { whatsapp: "por WhatsApp", presencial: "en persona", llamada: "por llamada" };
+  const estado = c.estado === "aprobada" ? `Aprobada por el cliente${c.aprobada_por_medio ? ` ${MEDIO[c.aprobada_por_medio]}` : ""}${c.respuesta_en ? ` el ${fechaCorta(c.respuesta_en)}` : ""}.` : c.estado === "rechazada" ? "El cliente no la aprobó." : "";
+  d.nota(`PRECIOS SUJETOS A CAMBIOS SIN PREVIO AVISO.${estado ? ` ${estado}` : ""}`);
+  return { bytes: await d.bytes(), archivo: `proforma-${numero.replace(/\D+/g, "-")}.pdf` };
 }
 
 // ---------------------------------------------------------------------------
-// Orden de trabajo
+// Orden de reparación
 // ---------------------------------------------------------------------------
 export async function pdfOrden(ctx: Contexto, id: string, verDinero: boolean): Promise<Pdf> {
   const supabase = await clienteServidor();
   const { data: o } = await supabase
     .from("ordenes_trabajo")
-    .select("id, numero, estado, tecnico_id, entregado_en, kilometraje_ingreso, observaciones_ingreso, ingresado_en, es_reingreso_garantia, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (nombre, celular, tipo_documento, numero_documento)")
+    .select("id, numero, estado, tecnico_id, creado_por, entregado_en, listo_en, entrega_prometida, nivel_combustible, kilometraje_ingreso, observaciones_ingreso, ingresado_en, es_reingreso_garantia, vehiculos (placa, marca, modelo, anio, color, combustible, transmision, carroceria), clientes (nombre, celular, tipo_documento, numero_documento)")
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
     .maybeSingle();
   if (!o) return null;
-  const [{ data: servicios }, { data: avances }, nombres] = await Promise.all([
+  const [{ data: servicios }, { data: avances }, { data: inicio }, nombres] = await Promise.all([
     supabase.from("orden_servicios").select("descripcion, es_adicional").eq("orden_id", id).order("creado_en"),
     supabase.from("orden_avances").select("texto, autor_id, creado_en").eq("orden_id", id).order("creado_en"),
+    supabase.from("orden_estados_historial").select("cambiado_en").eq("orden_id", id).eq("estado_nuevo", "en_proceso").order("cambiado_en").limit(1),
     nombresPersonal(ctx.taller.id),
   ]);
   const v = uno(o.vehiculos);
   const cl = uno(o.clientes);
   const { taller, pie } = await base(ctx);
-  const d = await Documento.crear(taller, "Orden de trabajo", numeroOrden(o.numero), pie);
-  d.datos([
+  const d = await Documento.crear(taller, "Orden de reparación", "", pie, {
+    destacados: [`Placa ${placa(v?.placa) ?? "—"}`, `No. ${String(o.numero).padStart(6, "0")}`],
+    cabecera: [
+      ["Fecha", fechaHora(o.ingresado_en)],
+      ["Fecha inicio", inicio?.[0] ? fechaHora(inicio[0].cambiado_en) : "—"],
+      ["Fecha final", o.listo_en ? fechaHora(o.listo_en) : "—"],
+      ["Entrega prometida", o.entrega_prometida ? fechaHora(o.entrega_prometida) : null],
+      ["Responsable", o.creado_por ? (nombres.get(o.creado_por) ?? null) : null],
+    ],
+  });
+  d.recuadro(null, [
     ["Cliente", cl?.nombre],
-    ["Celular", cl?.celular ? formatearCelular(cl.celular) : null],
-    ["Placa", placa(v?.placa)],
-    ["Vehículo", carro(v)],
-    ["Kilometraje", o.kilometraje_ingreso != null ? `${Number(o.kilometraje_ingreso).toLocaleString("es-PE")} km` : null],
-    [
-      "Combustible y caja",
-      [v?.combustible ? COMBUSTIBLES[v.combustible as keyof typeof COMBUSTIBLES] : null, v?.transmision ? TRANSMISIONES[v.transmision as keyof typeof TRANSMISIONES] : null].filter(Boolean).join(" · ") || null,
-    ],
-    ["Ingreso", fechaHora(o.ingresado_en)],
-    ["Estado", `${NOMBRE_ESTADO[o.estado as EstadoOrden]}${o.entregado_en ? ` el ${fechaHora(o.entregado_en)}` : ""}${o.es_reingreso_garantia ? " · Reingreso por garantía" : ""}`],
-    ["Técnico", o.tecnico_id ? (nombres.get(o.tecnico_id) ?? null) : "Sin asignar"],
+    ["Identificación", cl?.numero_documento ?? null],
+    ["Teléfono", cl?.celular ? formatearCelular(cl.celular) : null],
+    ["Whatsapp", cl?.celular ? formatearCelular(cl.celular) : null],
   ]);
-  d.seccion("Servicios");
-  d.tabla(
+  d.recuadro(
+    "Detalles del vehículo",
     [
-      { titulo: "#", ancho: 0.4, alinear: "der" },
-      { titulo: "Servicio", ancho: 5 },
-      { titulo: "Tipo", ancho: 1.2 },
+      ["Placa", placa(v?.placa)],
+      ["Marca", v?.marca],
+      ["Modelo", v?.modelo],
+      ["Estilo", v?.carroceria ? CARROCERIAS[v.carroceria] : null],
+      ["Año", v?.anio ? String(v.anio) : null],
+      ["Color", v?.color],
+      ["Combustible", v?.combustible ? COMBUSTIBLES[v.combustible as keyof typeof COMBUSTIBLES] : null],
+      ["Caja", v?.transmision ? TRANSMISIONES[v.transmision as keyof typeof TRANSMISIONES] : null],
+      ["Kilometraje", o.kilometraje_ingreso != null ? `${Number(o.kilometraje_ingreso).toLocaleString("es-PE")} km` : null],
+      ["Técnico", o.tecnico_id ? (nombres.get(o.tecnico_id) ?? null) : "Sin asignar"],
     ],
-    (servicios ?? []).map((s, i) => [String(i + 1), s.descripcion, s.es_adicional ? "Adicional" : "Solicitado"]),
+    { combustible: o.nivel_combustible ?? null },
   );
-  if (o.observaciones_ingreso) {
-    d.seccion("Observaciones de ingreso");
-    d.parrafo(o.observaciones_ingreso);
+
+  // Con permiso de caja: el detalle con precios de lo aprobado; si no, solo los servicios.
+  const dinero = verDinero ? await dineroDeOrden(ctx.taller.id, id, { verVentas: true, verUtilidad: false }, { tecnicoId: o.tecnico_id, entregadoEn: o.entregado_en }) : null;
+  const items = dinero
+    ? ((await supabase.from("cotizaciones").select("tasa_igv, cotizacion_items (tipo, descripcion, cantidad, precio_unitario_total, subtotal_sin_igv, total)").eq("orden_id", id).eq("estado", "aprobada")).data ?? []).flatMap((c) => (c.cotizacion_items ?? []) as ItemCot[])
+    : [];
+  if (dinero && items.length) {
+    d.tabla(
+      [
+        { titulo: "Cantidad", ancho: 0.9, alinear: "der" },
+        { titulo: "Descripción", ancho: 6 },
+        { titulo: "Unitario", ancho: 1.2, alinear: "der" },
+        { titulo: "Total", ancho: 1.2, alinear: "der" },
+      ],
+      items.map((i) => [n(i.cantidad).toFixed(2), i.descripcion.toUpperCase(), importe(n(i.total) / n(i.cantidad)), importe(n(i.total))]),
+      { cebra: true },
+    );
+    const productos = redondear(items.filter((i) => i.tipo === "repuesto").reduce((a, i) => a + n(i.total), 0));
+    const serviciosTotal = redondear(items.filter((i) => i.tipo !== "repuesto").reduce((a, i) => a + n(i.total), 0));
+    d.cierre("", [[["Productos", soles(productos)], ["Servicios", soles(serviciosTotal)]], [["Subtotal", soles(dinero.aCobrar)], ["Abonos", soles(dinero.pagado)]]], ["Total", soles(dinero.saldo)], { colorTotal: "rojo" });
+  } else {
+    d.tabla(
+      [
+        { titulo: "Cantidad", ancho: 0.9, alinear: "der" },
+        { titulo: "Descripción", ancho: 6 },
+        { titulo: "Tipo", ancho: 1.4 },
+      ],
+      (servicios ?? []).map((s) => ["1.00", s.descripcion.toUpperCase(), s.es_adicional ? "Adicional" : "Solicitado"]),
+      { cebra: true },
+    );
   }
+  if (o.observaciones_ingreso) d.nota(o.observaciones_ingreso, "Observaciones de ingreso");
+  if (o.es_reingreso_garantia) d.nota("Reingreso por garantía de un trabajo anterior.", "Garantía");
   if ((avances ?? []).length) {
     d.seccion("Avances");
     d.tabla(
@@ -162,18 +232,77 @@ export async function pdfOrden(ctx: Contexto, id: string, verDinero: boolean): P
       (avances ?? []).map((a) => [fechaHora(a.creado_en), a.texto, nombres.get(a.autor_id ?? "") ?? ""]),
     );
   }
-  if (verDinero) {
-    const dinero = await dineroDeOrden(ctx.taller.id, id, { verVentas: true, verUtilidad: false }, { tecnicoId: o.tecnico_id, entregadoEn: o.entregado_en });
-    d.seccion("Cuenta");
-    d.totales([
-      ["A cobrar", soles(dinero.aCobrar)],
-      ["Pagado", soles(dinero.pagado)],
-      [dinero.saldo < 0 ? "A favor del cliente" : "Saldo", soles(Math.abs(dinero.saldo)), true],
-    ]);
-  }
-  d.parrafo("El cliente declara que el vehículo se recibió en el estado descrito. El taller no se responsabiliza por objetos de valor no declarados.", { tam: 8, color: "tenue" });
-  d.firmas(["Cliente", "Recibido por el taller"]);
+  d.parrafo("El cliente declara que el vehículo se recibió en el estado descrito. El taller no se responsabiliza por objetos de valor no declarados.", { tam: 7.5, color: "tenue" });
+  d.firmas(["Firma del cliente", "Recibido por el taller"]);
   return { bytes: await d.bytes(), archivo: `orden-${numeroOrden(o.numero)}.pdf` };
+}
+
+// ---------------------------------------------------------------------------
+// Recibo de venta (lo que se le entrega al cliente al cobrar)
+// ---------------------------------------------------------------------------
+export async function pdfRecibo(ctx: Contexto, id: string): Promise<Pdf> {
+  const supabase = await clienteServidor();
+  const { data: r } = await supabase
+    .from("recibos")
+    .select("id, numero, orden_id, emitido_en, tasa_igv, subtotal_sin_igv, igv, total, observaciones, estado, motivo_anulacion, creado_por")
+    .eq("id", id)
+    .eq("empresa_id", ctx.taller.id)
+    .maybeSingle();
+  if (!r) return null;
+  const [{ data: o }, { data: cots }, { data: pagos }, nombres] = await Promise.all([
+    supabase.from("ordenes_trabajo").select("numero, creado_por, kilometraje_ingreso, vehiculos (placa, marca, modelo, anio, color, carroceria), clientes (nombre, celular, tipo_documento, numero_documento)").eq("id", r.orden_id).maybeSingle(),
+    supabase.from("cotizaciones").select("cotizacion_items (tipo, descripcion, cantidad, precio_unitario_total, subtotal_sin_igv, total)").eq("orden_id", r.orden_id).eq("estado", "aprobada").order("version"),
+    supabase.from("pagos").select("medio, tipo").eq("orden_id", r.orden_id).eq("estado", "confirmado").neq("tipo", "devolucion"),
+    nombresPersonal(ctx.taller.id),
+  ]);
+  const v = uno(o?.vehiculos);
+  const cl = uno(o?.clientes);
+  const tasa = n(r.tasa_igv);
+  const { taller, pie } = await base(ctx);
+  const d = await Documento.crear(taller, "Recibo", `N° ${r.numero}`, pie, {
+    marcaAgua: r.estado === "anulado" ? "ANULADO" : "ORIGINAL",
+    cabecera: [
+      ["Número orden", o ? String(o.numero).padStart(6, "0") : null],
+      ["Fecha", fechaHoraLarga(r.emitido_en)],
+      ["Hecho por", nombres.get(r.creado_por ?? "") ?? null],
+    ],
+  });
+  d.recuadro(null, [
+    ["Cliente", cl?.nombre],
+    ["Teléfono", telefono(cl?.celular)],
+    [cl?.numero_documento ? (DOC_LARGO[cl.tipo_documento ?? ""] ?? "Documento") : "Documento", cl?.numero_documento ?? null],
+  ]);
+  d.recuadro("Información del vehículo", [
+    ["Placa", v?.placa ?? null],
+    ["Marca", v?.marca?.toUpperCase()],
+    ["Modelo", v?.modelo?.toUpperCase()],
+    ["Estilo", v?.carroceria ? CARROCERIAS[v.carroceria].toUpperCase() : null],
+    ["Color", v?.color],
+    ["Año", v?.anio ? String(v.anio) : null],
+    ["Kilometraje", o?.kilometraje_ingreso != null ? String(o.kilometraje_ingreso) : null],
+  ]);
+  const items = (cots ?? []).flatMap((c) => (c.cotizacion_items ?? []) as ItemCot[]);
+  d.tabla(COLUMNAS_DETALLE, filasDetalle(items, tasa, false));
+  d.ultimaLinea();
+  d.cierre("Recibe conforme (Cliente)", gruposTotales(n(r.subtotal_sin_igv), n(r.igv), n(r.total), tasa), ["Total", soles(n(r.total))]);
+  const medios = [...new Set((pagos ?? []).map((p) => MEDIOS[p.medio as MedioPago]))];
+  d.lineasEnRecuadro([
+    ["Método de pago", medios.length ? medios.join(" + ") : "Pendiente de pago"],
+    ["Monto en letras", montoEnLetras(n(r.total))],
+  ]);
+  const asesor = o?.creado_por ? nombres.get(o.creado_por) : null;
+  d.nota([r.observaciones, asesor ? `ASESOR ${asesor.split(" ")[0].toUpperCase()}` : null, r.estado === "anulado" ? `ANULADO: ${r.motivo_anulacion}` : null].filter(Boolean).join(" · ") || "—", "Observaciones");
+  return { bytes: await d.bytes(), archivo: `recibo-${r.numero}.pdf` };
+}
+
+/** Totales según el IGV del documento (resúmenes internos). */
+function totalesIgv(sinIgv: number, igv: number, total: number, tasa: number): [string, string, boolean?][] {
+  if (tasa === 0) return [["Total (operación sin IGV)", soles(total), true]];
+  return [
+    ["Op. gravada (sin IGV)", soles(sinIgv)],
+    [`IGV ${Math.round(tasa * 100)} %`, soles(igv)],
+    ["Total", soles(total), true],
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -195,7 +324,7 @@ export async function pdfPago(ctx: Contexto, id: string): Promise<Pdf> {
   const cl = uno(o?.clientes);
   const { taller, pie } = await base(ctx);
   const numero = `R-${p.id.slice(0, 8).toUpperCase()}`;
-  const d = await Documento.crear(taller, p.tipo === "devolucion" ? "Constancia de devolución" : "Recibo de pago", numero, pie);
+  const d = await Documento.crear(taller, p.tipo === "devolucion" ? "Constancia de devolución" : "Constancia de pago", numero, pie);
   d.datos([
     ["Cliente", cl?.nombre],
     ["Celular", cl?.celular ? formatearCelular(cl.celular) : null],
@@ -215,9 +344,9 @@ export async function pdfPago(ctx: Contexto, id: string): Promise<Pdf> {
     ["Pagado hasta este recibo", soles(pagadoHasta)],
     [dinero.aCobrar - pagadoHasta < 0 ? "A favor del cliente" : "Saldo pendiente", soles(Math.abs(dinero.aCobrar - pagadoHasta)), true],
   ]);
-  d.nota("Este recibo es una constancia interna del taller. No reemplaza a la boleta o factura electrónica.");
+  d.nota("Constancia interna del pago. El recibo de venta y la boleta o factura electrónica se entregan aparte.");
   d.firmas(["Cliente", "Caja"]);
-  return { bytes: await d.bytes(), archivo: `recibo-${numero}.pdf` };
+  return { bytes: await d.bytes(), archivo: `constancia-${numero}.pdf` };
 }
 
 export async function pdfEstadoCuenta(ctx: Contexto, ordenId: string): Promise<Pdf> {
@@ -371,61 +500,105 @@ export async function pdfCaja(ctx: Contexto, id: string): Promise<Pdf> {
   const [det, nombres] = await Promise.all([detalleCaja(ctx.taller.id, id), nombresPersonal(ctx.taller.id)]);
   if (!det) return null;
   const { caja } = det;
+  const supabase = await clienteServidor();
+  const vigentes = det.movimientos.filter((m) => m.estado !== "anulado");
+  const pagos = vigentes.filter((m) => m.clase === "pago");
+  const ids = [...new Set(pagos.map((p) => p.ordenId).filter(Boolean))] as string[];
+  const { data: recibos } = ids.length ? await supabase.from("recibos").select("orden_id, numero").in("orden_id", ids).neq("estado", "anulado") : { data: [] };
+  const reciboDe = new Map(((recibos ?? []) as { orden_id: string; numero: number }[]).map((r) => [r.orden_id, r.numero]));
+  const medios = Object.keys(MEDIOS) as MedioPago[];
+  type M = (typeof vigentes)[number];
+  const suma = (lista: M[], medio?: MedioPago) => redondear(lista.filter((x) => !medio || x.medio === medio).reduce((a, x) => a + x.monto, 0));
+  const ventas = pagos.filter((p) => p.tipo === "saldo");
+  const abonos = pagos.filter((p) => p.tipo === "abono");
+  const iniciales = pagos.filter((p) => p.tipo === "adelanto");
+  const devoluciones = pagos.filter((p) => p.tipo === "devolucion");
+  const entradas = vigentes.filter((m) => m.clase === "movimiento" && m.tipo === "ingreso");
+  const salidas = vigentes.filter((m) => m.clase === "movimiento" && m.tipo === "egreso");
+  const fila = (concepto: string, monto: number) => [concepto, importe(monto)];
+  const total = (monto: number) => ["Total", soles(monto)];
+  const cols = [
+    { titulo: "Concepto", ancho: 4 },
+    { titulo: "Monto", ancho: 1.4, alinear: "der" as const },
+  ];
+
   const { taller, pie } = await base(ctx);
-  const d = await Documento.crear(taller, caja.estado === "cerrada" ? "Arqueo de caja" : "Caja abierta", fechaCorta(caja.abiertaEn), pie);
-  d.datos([
-    ["Abrió", `${nombres.get(caja.abiertaPor ?? "") ?? ""} · ${fechaHora(caja.abiertaEn)}`],
-    ["Cerró", caja.cerradaEn ? `${nombres.get(caja.cerradaPor ?? "") ?? ""} · ${fechaHora(caja.cerradaEn)}` : "Todavía abierta"],
-  ]);
-  d.seccion("Efectivo");
+  const d = await Documento.crear(taller, caja.estado === "cerrada" ? "Arqueo de caja" : "Caja abierta", fechaCorta(caja.abiertaEn), pie, {
+    cabecera: [
+      ["Cajero", nombres.get(caja.abiertaPor ?? "") ?? null],
+      ["Fecha de apertura", fechaHora(caja.abiertaEn)],
+      ["Fecha de cierre", caja.cerradaEn ? fechaHora(caja.cerradaEn) : "Todavía abierta"],
+      ["Cerró", caja.cerradaPor ? (nombres.get(caja.cerradaPor) ?? null) : null],
+    ],
+  });
+  d.seccion("Ingreso ventas", "Pagos que cancelan la orden");
+  d.tabla(cols, [...medios.map((m) => fila(`Ingreso ${MEDIOS[m].toLowerCase()}`, suma(ventas, m))), total(suma(ventas))], { resaltarUltima: true });
+  d.seccion("Otras entradas");
+  d.tabla(
+    cols,
+    [
+      ...medios.map((m) => fila(`Ingreso abonos ${MEDIOS[m].toLowerCase()}`, suma(abonos, m))),
+      ...medios.map((m) => fila(`Ingreso pago inicial ${MEDIOS[m].toLowerCase()}`, suma(iniciales, m))),
+      fila("Ingreso entradas (mov. caja)", suma(entradas)),
+      total(suma(abonos) + suma(iniciales) + suma(entradas)),
+    ],
+    { resaltarUltima: true },
+  );
+  d.seccion("Total consolidado por medio de pago");
+  d.tabla(
+    [
+      { titulo: "Medio", ancho: 2 },
+      { titulo: "Ventas", ancho: 1.1, alinear: "der" },
+      { titulo: "Abonos", ancho: 1.1, alinear: "der" },
+      { titulo: "Pago inicial", ancho: 1.1, alinear: "der" },
+      { titulo: "Devoluciones", ancho: 1.1, alinear: "der" },
+      { titulo: "Total", ancho: 1.1, alinear: "der" },
+    ],
+    [
+      ...medios.map((m) => [MEDIOS[m], importe(suma(ventas, m)), importe(suma(abonos, m)), importe(suma(iniciales, m)), importe(-suma(devoluciones, m)), importe(suma(ventas, m) + suma(abonos, m) + suma(iniciales, m) - suma(devoluciones, m))]),
+      ["Total", importe(suma(ventas)), importe(suma(abonos)), importe(suma(iniciales)), importe(-suma(devoluciones)), soles(det.totalCobrado)],
+    ],
+    { resaltarUltima: true },
+  );
+  d.seccion("Salidas");
+  d.tabla(cols, [fila("Devoluciones al cliente", suma(devoluciones)), fila("Gastos y retiros (mov. caja)", suma(salidas)), ["Total salidas", soles(suma(devoluciones) + suma(salidas))]], { resaltarUltima: true });
+
+  d.seccion("Cierre de caja", "Solo efectivo");
   const esperado = caja.esperado ?? det.efectivo.esperado;
   d.totales([
-    ["Sencillo inicial", soles(caja.montoInicial)],
-    ["Cobros en efectivo (menos devoluciones)", soles(det.efectivo.cobros)],
-    ["Otros ingresos", soles(det.efectivo.ingresos)],
-    ["Gastos y retiros", soles(-det.efectivo.egresos)],
+    ["+ Saldo apertura caja", soles(caja.montoInicial)],
+    ["+ Cobros en efectivo (menos devoluciones)", soles(det.efectivo.cobros)],
+    ["+ Entradas (mov. caja)", soles(det.efectivo.ingresos)],
+    ["- Salidas", soles(-det.efectivo.egresos)],
     ["Efectivo esperado", soles(esperado), true],
     ...(caja.contado !== null
       ? ([
           ["Efectivo contado", soles(caja.contado)],
-          [caja.diferencia === 0 ? "Diferencia (cuadra)" : (caja.diferencia ?? 0) > 0 ? "Sobrante" : "Faltante", soles(Math.abs(caja.diferencia ?? 0)), true],
+          [caja.diferencia === 0 ? "Descuadre (cuadra)" : (caja.diferencia ?? 0) > 0 ? "Sobrante" : "Faltante", soles(Math.abs(caja.diferencia ?? 0)), true],
         ] as [string, string, boolean?][])
       : []),
   ]);
-  d.seccion("Cobrado por medio de pago");
-  d.tabla(
-    [
-      { titulo: "Medio", ancho: 3 },
-      { titulo: "Cobrado", ancho: 1.5, alinear: "der" },
-    ],
-    [...(Object.keys(MEDIOS) as MedioPago[]).map((m) => [MEDIOS[m], soles(det.porMedio[m])]), ["Total", soles(det.totalCobrado)]],
-    { resaltarUltima: true },
-  );
-  if (det.movimientos.length) {
-    d.seccion("Movimientos");
+  if (pagos.length) {
+    d.seccion("Detalle de cobros");
+    const TIPO: Record<string, string> = { saldo: "Venta", abono: "Abono", adelanto: "Pago inicial", devolucion: "Devolución" };
+    const hora = (iso: string) => new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Lima" }).format(new Date(iso));
     d.tabla(
       [
-        { titulo: "Hora", ancho: 0.9 },
-        { titulo: "Concepto", ancho: 3.4 },
-        { titulo: "Medio", ancho: 1.2 },
-        { titulo: "Monto", ancho: 1.3, alinear: "der" },
+        { titulo: "Recibo", ancho: 0.9 },
+        { titulo: "Fecha", ancho: 1.1 },
+        { titulo: "Detalle", ancho: 3 },
+        { titulo: "Referencia", ancho: 1.3 },
+        { titulo: "Monto", ancho: 1.1, alinear: "der" },
       ],
-      [...det.movimientos]
-        .reverse()
-        .map((m) => [
-          new Intl.DateTimeFormat("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Lima" }).format(new Date(m.momento)),
-          `${m.concepto}${m.estado === "anulado" ? ` (anulado: ${m.motivoAnulacion})` : ""}`,
-          MEDIOS[m.medio],
-          m.estado === "anulado" ? "-" : soles(m.efecto),
-        ]),
+      [...pagos]
+        .sort((a, b) => a.momento.localeCompare(b.momento))
+        .map((p) => [p.ordenId && reciboDe.get(p.ordenId) ? String(reciboDe.get(p.ordenId)) : "—", hora(p.momento), `${TIPO[p.tipo] ?? p.tipo} · ${p.concepto.replace(/^\S+ de /, "")}`, MEDIOS[p.medio], (p.tipo === "devolucion" ? "-" : "") + importe(p.monto)]),
+      { cebra: true },
     );
   }
-  if (caja.observaciones) {
-    d.seccion("Observaciones");
-    d.parrafo(caja.observaciones);
-  }
+  if (caja.observaciones) d.nota(caja.observaciones, "Observaciones");
   d.firmas(["Entrega (caja)", "Recibe (gerencia o administración)"]);
-  return { bytes: await d.bytes(), archivo: `caja-${caja.abiertaEn.slice(0, 10)}.pdf` };
+  return { bytes: await d.bytes(), archivo: `arqueo-${caja.abiertaEn.slice(0, 10)}.pdf` };
 }
 
 export async function pdfCierre(ctx: Contexto, dia: string): Promise<Pdf> {

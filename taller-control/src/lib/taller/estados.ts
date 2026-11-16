@@ -65,6 +65,7 @@ export const COMBUSTIBLES = {
   electrico: "Eléctrico",
   hibrido: "Híbrido",
 } as const;
+export const CARROCERIAS = { sedan: "Sedán", hatchback: "Hatchback", suv: "SUV", camioneta: "Camioneta", pickup: "Pickup", van: "Van", coupe: "Coupé", station_wagon: "Station wagon", otro: "Otro" } as const;
 export const TRANSMISIONES = { mecanica: "Mecánica", automatica: "Automática", cvt: "CVT", otra: "Otra" } as const;
 
 /** 123 → "OT-000123" */

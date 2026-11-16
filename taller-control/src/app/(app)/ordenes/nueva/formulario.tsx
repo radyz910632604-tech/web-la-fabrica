@@ -10,7 +10,7 @@ import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
 import { validarPlaca } from "@/lib/placas";
-import { COMBUSTIBLES, DOCUMENTOS, ORIGENES_CLIENTE, TRANSMISIONES } from "@/lib/taller/estados";
+import { CARROCERIAS, COMBUSTIBLES, DOCUMENTOS, ORIGENES_CLIENTE, TRANSMISIONES } from "@/lib/taller/estados";
 import { cuandoEntrega, instanteLima } from "@/lib/taller/entrega";
 import { reducirFoto } from "@/lib/taller/fotos";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,14 @@ type Props = {
 };
 
 type Foto = { clave: string; archivo: File; vista: string };
+
+const NIVELES = [
+  ["0", "Reserva"],
+  ["25", "1/4"],
+  ["50", "1/2"],
+  ["75", "3/4"],
+  ["100", "Lleno"],
+] as const;
 
 export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
   const router = useRouter();
@@ -45,7 +53,8 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
     aceptaMensajes: false,
   });
   const [clienteConocido, setClienteConocido] = useState<ClienteConocido | null>(null);
-  const [vehiculo, setVehiculo] = useState({ marca: "", modelo: "", anio: "", color: "", combustible: "", transmision: "" });
+  const [vehiculo, setVehiculo] = useState({ marca: "", modelo: "", anio: "", color: "", combustible: "", transmision: "", carroceria: "" });
+  const [nivel, setNivel] = useState<string>("");
   const [kilometraje, setKilometraje] = useState("");
   const [elegidos, setElegidos] = useState<{ id: string | null; descripcion: string }[]>(() => {
     if (!cita) return [];
@@ -90,6 +99,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
         color: v.color ?? "",
         combustible: v.combustible ?? "",
         transmision: v.transmision ?? "",
+        carroceria: v.carroceria ?? "",
       });
       if (v.cliente && !cita) aplicarCliente(v.cliente);
     }
@@ -139,6 +149,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
         tecnicoId,
         citaId: cita?.id ?? "",
         entrega,
+        combustible: nivel,
       });
       if (r.errores) {
         setErrores(r.errores);
@@ -314,11 +325,23 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
                 </Selector>
               )}
             </Campo>
+            <Campo etiqueta="Tipo de carro">
+              {(p) => (
+                <Selector {...p} value={vehiculo.carroceria} onChange={(e) => campoVehiculo("carroceria", e.target.value)}>
+                  <option value="">Sin dato</option>
+                  {Object.entries(CARROCERIAS).map(([v, n]) => (
+                    <option key={v} value={v}>
+                      {n}
+                    </option>
+                  ))}
+                </Selector>
+              )}
+            </Campo>
             <Campo
               etiqueta="Kilometraje de ingreso"
               error={errores.kilometraje}
               ayuda={conocido?.kilometraje ? `La vez pasada: ${conocido.kilometraje.toLocaleString("es-PE")} km` : undefined}
-              className="col-span-2 lg:col-span-3"
+              className="col-span-2 lg:col-span-2"
             >
               {(p) => (
                 <div className="relative">
@@ -428,6 +451,27 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
                 />
               )}
             </Campo>
+            <div role="group" aria-labelledby="t-combustible" className="flex flex-col gap-2">
+              <span id="t-combustible" className="text-sm font-medium text-tinta">
+                Nivel de combustible
+              </span>
+              <div className="grid grid-cols-5 gap-1.5">
+                {NIVELES.map(([valor, texto]) => (
+                  <button
+                    key={valor}
+                    type="button"
+                    aria-pressed={nivel === valor}
+                    onClick={() => setNivel(nivel === valor ? "" : valor)}
+                    className={cn(
+                      "presionable min-h-11 cursor-pointer rounded-xl border px-1 text-[13px] sm:text-[14px]",
+                      nivel === valor ? "border-primario bg-primario text-primario-tinta" : "border-borde bg-tarjeta hover:bg-interna",
+                    )}
+                  >
+                    {texto}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Campo etiqueta="Técnico responsable">
               {(p) => (
                 <Selector {...p} value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)}>

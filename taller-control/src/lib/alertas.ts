@@ -122,7 +122,7 @@ export function calcularAlertas(d: {
     }
     if (!d.verDinero) continue;
     if (entregada && !o.tieneComprobante) {
-      alertas.push({ tipo: "entregada_sin_comprobante", severidad: "urgente", ordenId: o.id, mensaje: `${o.numero} se entregó sin boleta ni factura registrada.` });
+      alertas.push({ tipo: "entregada_sin_comprobante", severidad: "urgente", ordenId: o.id, mensaje: `${o.numero} se entregó sin recibo, boleta ni factura.` });
     }
     if (entregada && o.saldo !== null && o.saldo > 0.009) {
       alertas.push({ tipo: "entregada_con_saldo", severidad: "urgente", ordenId: o.id, mensaje: `${o.numero} se entregó con S/ ${o.saldo.toFixed(2)} de saldo.` });

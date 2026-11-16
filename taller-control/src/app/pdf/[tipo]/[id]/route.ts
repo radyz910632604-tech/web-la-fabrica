@@ -1,11 +1,11 @@
 import { respuestaPdf } from "@/lib/pdf/documento";
-import { pdfCaja, pdfCierre, pdfComprobante, pdfCompra, pdfCotizacion, pdfEstadoCuenta, pdfInventario, pdfKardex, pdfOrden, pdfPago, pdfReporte, type ModoIgv } from "@/lib/pdf/documentos";
+import { pdfCaja, pdfCierre, pdfComprobante, pdfCompra, pdfCotizacion, pdfEstadoCuenta, pdfInventario, pdfKardex, pdfOrden, pdfPago, pdfRecibo, pdfReporte, type ModoIgv } from "@/lib/pdf/documentos";
 import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 
 /**
  * PDF de cualquier documento: /pdf/cotizacion/{id}?igv=con|sin, /pdf/orden/{id},
- * /pdf/pago/{id}, /pdf/cuenta/{orden}, /pdf/comprobante/{id}, /pdf/compra/{id},
+ * /pdf/pago/{id}, /pdf/recibo/{id}, /pdf/cuenta/{orden}, /pdf/comprobante/{id}, /pdf/compra/{id},
  * /pdf/caja/{id}, /pdf/cierre/{AAAA-MM-DD}, /pdf/reporte/{AAAA-MM}?ambito=todos,
  * /pdf/kardex/{repuesto}, /pdf/inventario/hoy.
  * Se abre en el navegador; desde ahí se descarga, imprime o comparte.
@@ -24,6 +24,7 @@ export async function GET(peticion: Request, { params }: { params: Promise<{ tip
     if (tipo === "cotizacion" && uuid && caja) pdf = await pdfCotizacion(ctx, id, modo);
     else if (tipo === "orden" && uuid) pdf = await pdfOrden(ctx, id, caja);
     else if (tipo === "pago" && uuid && caja) pdf = await pdfPago(ctx, id);
+    else if (tipo === "recibo" && uuid && caja) pdf = await pdfRecibo(ctx, id);
     else if (tipo === "cuenta" && uuid && caja) pdf = await pdfEstadoCuenta(ctx, id);
     else if (tipo === "comprobante" && uuid && caja) pdf = await pdfComprobante(ctx, id);
     else if (tipo === "compra" && uuid) pdf = await pdfCompra(ctx, id, modo);

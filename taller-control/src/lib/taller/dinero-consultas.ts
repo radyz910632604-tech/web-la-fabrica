@@ -58,6 +58,8 @@ export type DineroOrden = {
   pagos: { id: string; monto: number; tipo: string; medio: string; pagadoEn: string; estado: string; operacion: string | null }[];
   cotizaciones: { id: string; version: number; adicional: boolean; estado: string; total: number; medio: string | null; items: { descripcion: string; tipo: string; cantidad: number; total: number }[] }[];
   repuestos: { descripcion: string; cantidad: number; sinIgv: number; deInventario?: boolean }[];
+  /** Recibos de venta (el vigente, si hay, y los anulados). */
+  recibos: { id: string; numero: number; emitidoEn: string; total: number; sinIgv: number; estado: string }[];
   ventaSinIgv: number;
   comprasSinIgv: number;
   manoObra: number | null;
@@ -76,14 +78,17 @@ export async function dineroDeOrden(
   orden: { tecnicoId: string | null; entregadoEn: string | null },
 ): Promise<DineroOrden> {
   const supabase = await clienteServidor();
-  const [{ data: comps }, { data: pagos }, { data: cots }, { data: items }, config, { data: notasCrudas }] = await Promise.all([
+  const [{ data: comps }, { data: pagos }, { data: cots }, { data: items }, config, { data: notasCrudas }, { data: recibosCrudos }] = await Promise.all([
     supabase.from("comprobantes_venta").select("id, tipo, serie, numero, fecha_emision, total, subtotal_sin_igv, estado, detalle").eq("orden_id", ordenId).order("fecha_emision"),
     supabase.from("pagos").select("id, monto, tipo, medio, pagado_en, estado, numero_operacion").eq("orden_id", ordenId).order("pagado_en"),
     supabase.from("cotizaciones").select("id, version, es_adicional, estado, total, aprobada_por_medio, cotizacion_items (descripcion, tipo, cantidad, total)").eq("orden_id", ordenId).order("version"),
     supabase.from("compra_items").select("descripcion, cantidad, subtotal_sin_igv, compras!inner (estado, moneda, tipo_cambio)").eq("orden_id", ordenId),
     configDinero(empresaId),
     supabase.from("notas_credito").select("id, comprobante_id, serie, numero, fecha_emision, total, subtotal_sin_igv, estado, motivo_codigo, motivo").eq("orden_id", ordenId).order("fecha_emision"),
+    supabase.from("recibos").select("id, numero, emitido_en, total, subtotal_sin_igv, estado").eq("orden_id", ordenId).order("numero"),
   ]);
+  const recibos = (recibosCrudos ?? []).map((r) => ({ id: r.id, numero: r.numero, emitidoEn: r.emitido_en, total: n(r.total), sinIgv: n(r.subtotal_sin_igv), estado: r.estado }));
+  const reciboVigente = recibos.find((r) => r.estado !== "anulado");
   // Repuestos sacados del inventario: su costo (promedio al salir) también es de la orden.
   const { data: salidas } = await supabase
     .from("movimientos_inventario")
@@ -117,7 +122,10 @@ export async function dineroDeOrden(
     repuestos.push({ descripcion: rep?.nombre ?? "Repuesto", cantidad: cant, sinIgv: redondear(cant * n(x.costo_unitario_sin_igv)), deInventario: true });
   }
 
-  const ventaSinIgv = redondear(vigentes.reduce((a, c) => a + c.sinIgv, 0) - notasVigentes.reduce((a, x) => a + x.sinIgv, 0));
+  // La venta es la boleta o factura; si no hay, el recibo de venta del taller.
+  const ventaSinIgv = vigentes.length
+    ? redondear(vigentes.reduce((a, c) => a + c.sinIgv, 0) - notasVigentes.reduce((a, x) => a + x.sinIgv, 0))
+    : (reciboVigente?.sinIgv ?? 0);
   const comprasSinIgv = redondear(repuestos.reduce((a, r) => a + r.sinIgv, 0));
   const s = calcularSaldo({
     totalComprobantes: redondear(vigentes.reduce((a, c) => a + c.total, 0) - notasVigentes.reduce((a, x) => a + x.total, 0)),
@@ -139,6 +147,7 @@ export async function dineroDeOrden(
   return {
     verVentas: permisos.verVentas,
     verUtilidad: permisos.verUtilidad,
+    recibos,
     comprobantes,
     notas,
     pagos: pagosLista,
@@ -207,12 +216,36 @@ export async function totalesPeriodo(empresaId: string, desdeDia: string, hastaD
     verSueldos ? supabase.from("miembros").select("perfil_id").eq("empresa_id", empresaId).eq("rol", "tecnico").eq("activo", true) : Promise.resolve({ data: [] }),
     supabase.from("notas_credito").select("subtotal_sin_igv, total").eq("empresa_id", empresaId).eq("estado", "confirmado").gte("fecha_emision", desdeDia).lt("fecha_emision", hastaDia),
   ]);
-  // Ventas netas: comprobantes menos sus notas de crédito.
-  const ventasSin = redondear((ventas ?? []).reduce((a, v) => a + n(v.subtotal_sin_igv), 0) - (notas ?? []).reduce((a, x) => a + n(x.subtotal_sin_igv), 0));
-  const ventasCon = redondear((ventas ?? []).reduce((a, v) => a + n(v.total), 0) - (notas ?? []).reduce((a, x) => a + n(x.total), 0));
+  // Ventas netas: comprobantes menos sus notas de crédito, más los recibos de venta
+  // de órdenes que no tienen boleta ni factura (así no se cuentan dos veces).
+  const recibos = await recibosSinComprobante(empresaId, desdeDia, hastaDia);
+  const ventasSin = redondear((ventas ?? []).reduce((a, v) => a + n(v.subtotal_sin_igv), 0) - (notas ?? []).reduce((a, x) => a + n(x.subtotal_sin_igv), 0) + recibos.sinIgv);
+  const ventasCon = redondear((ventas ?? []).reduce((a, v) => a + n(v.total), 0) - (notas ?? []).reduce((a, x) => a + n(x.total), 0) + recibos.total);
   const comprasSin = redondear((compras ?? []).reduce((a, c) => a + enSoles(n(c.subtotal_sin_igv), c.moneda as "PEN" | "USD", n(c.tipo_cambio)), 0));
   const mo = redondear(((tecnicos.data ?? []) as { perfil_id: string }[]).reduce((a, t) => a + (costos.get(t.perfil_id) ?? 0), 0) * fraccionMes);
   return { ventas: ventasSin, ventasConIgv: ventasCon, compras: comprasSin, manoObra: mo, utilidad: redondear(ventasSin - comprasSin - mo), entregados: count ?? 0 };
+}
+
+/** Recibos de venta del periodo cuyas órdenes no tienen boleta ni factura confirmada. */
+export async function recibosSinComprobante(empresaId: string, desdeDia: string, hastaDia: string): Promise<{ sinIgv: number; total: number; ordenes: string[] }> {
+  const supabase = await clienteServidor();
+  const { data } = await supabase
+    .from("recibos")
+    .select("orden_id, subtotal_sin_igv, total")
+    .eq("empresa_id", empresaId)
+    .eq("estado", "confirmado")
+    .gte("emitido_en", limitesDiaLima(desdeDia).desde.toISOString())
+    .lt("emitido_en", limitesDiaLima(hastaDia).desde.toISOString());
+  const lista = data ?? [];
+  if (!lista.length) return { sinIgv: 0, total: 0, ordenes: [] };
+  const { data: conComp } = await supabase.from("comprobantes_venta").select("orden_id").eq("estado", "confirmado").in("orden_id", lista.map((r) => r.orden_id));
+  const excluir = new Set((conComp ?? []).map((c) => c.orden_id));
+  const quedan = lista.filter((r) => !excluir.has(r.orden_id));
+  return {
+    sinIgv: redondear(quedan.reduce((a, r) => a + n(r.subtotal_sin_igv), 0)),
+    total: redondear(quedan.reduce((a, r) => a + n(r.total), 0)),
+    ordenes: quedan.map((r) => r.orden_id),
+  };
 }
 
 export type CuentaOrden = {

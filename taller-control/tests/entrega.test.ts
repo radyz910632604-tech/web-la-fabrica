@@ -109,3 +109,19 @@ describe("alertas de entrega", () => {
     expect(correr({ estado: "listo", entregaPrometida: en(-30).toISOString() })).toHaveLength(0);
   });
 });
+
+describe("monto en letras del recibo", async () => {
+  const { montoEnLetras, enteroEnLetras } = await import("@/lib/letras");
+  it("como en el recibo del taller", () => {
+    expect(montoEnLetras(550)).toBe("QUINIENTOS CINCUENTA EXACTOS");
+    expect(montoEnLetras(1600)).toBe("MIL SEISCIENTOS EXACTOS");
+    expect(montoEnLetras(889.99)).toBe("OCHOCIENTOS OCHENTA Y NUEVE CON 99/100");
+    expect(montoEnLetras(100)).toBe("CIEN EXACTOS");
+    expect(montoEnLetras(121)).toBe("CIENTO VEINTIUNO EXACTOS");
+  });
+  it("miles y millones", () => {
+    expect(enteroEnLetras(21000)).toBe("VEINTIÚN MIL".replace("Ú", "U"));
+    expect(enteroEnLetras(1_250_000)).toBe("UN MILLÓN DOSCIENTOS CINCUENTA MIL");
+    expect(enteroEnLetras(2_000_001)).toBe("DOS MILLONES UNO");
+  });
+});

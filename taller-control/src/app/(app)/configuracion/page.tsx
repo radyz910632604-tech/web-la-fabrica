@@ -8,7 +8,7 @@ import { catalogo } from "@/lib/taller/consultas";
 import { costosVigentes } from "@/lib/taller/dinero-consultas";
 import { FormAvisos } from "./avisos";
 import { FormComisiones, FormCostos, FormManoObra, FormManoObraServicios } from "./dinero";
-import { FormMeta, FormNuevoTaller, FormPermisosAdmin, FormReglas, FormServicios, FormTaller, Seccion } from "./formularios";
+import { FormLogo, FormMeta, FormNuevoTaller, FormPermisosAdmin, FormReglas, FormServicios, FormTaller, Seccion } from "./formularios";
 
 export const metadata = { title: "Configuración del taller" };
 
@@ -19,12 +19,13 @@ export default async function Configuracion() {
   const supabase = await clienteServidor();
   const [anio, mes] = diaEnLima(new Date()).split("-").map(Number);
   const [{ data: taller }, { data: config }, { data: meta }, servicios] = await Promise.all([
-    supabase.from("empresas").select("nombre, razon_social, ruc, direccion, telefono").eq("id", ctx.taller.id).single(),
+    supabase.from("empresas").select("nombre, razon_social, ruc, direccion, telefono, correo, lema, logo_ruta").eq("id", ctx.taller.id).single(),
     supabase.from("configuracion_empresa").select("*").eq("empresa_id", ctx.taller.id).single(),
     supabase.from("metas_ventas").select("meta_sin_igv").eq("empresa_id", ctx.taller.id).eq("anio", anio).eq("mes", mes).maybeSingle(),
     catalogo(ctx.taller.id, false),
   ]);
   if (!taller || !config) notFound();
+  const logoUrl = taller.logo_ruta ? ((await supabase.storage.from("marca").createSignedUrl(taller.logo_ruta, 3600)).data?.signedUrl ?? null) : null;
 
   const esGerencia = ctx.roles.includes("gerencia");
   const { data: canales } = await supabase.from("config_avisos").select("tipo, canal").eq("empresa_id", ctx.taller.id);
@@ -47,8 +48,12 @@ export default async function Configuracion() {
         </p>
       </header>
 
-      <Seccion titulo="Datos del taller" descripcion="Aparecen en los mensajes al cliente y en los reportes.">
+      <Seccion titulo="Datos del taller" descripcion="Aparecen en los recibos, proformas, órdenes y reportes en PDF, y en los mensajes al cliente.">
         <FormTaller valores={taller} />
+      </Seccion>
+
+      <Seccion titulo="Logo" descripcion="Sale arriba a la izquierda en todos los documentos PDF.">
+        <FormLogo url={logoUrl} />
       </Seccion>
 
       <Seccion titulo="Reglas del taller" descripcion="Cuándo una cita cuenta como &quot;no llegó&quot;, cuánto antes se avisa de una entrega, cuánto dura la garantía y a qué hora salen los resúmenes.">
@@ -63,6 +68,7 @@ export default async function Configuracion() {
             igv_pct: Math.round(Number(config.tasa_igv) * 10000) / 100,
             hora_resumen_mediodia: String(config.hora_resumen_mediodia).slice(0, 5),
             hora_cierre: String(config.hora_cierre).slice(0, 5),
+            recibo_inicial: config.recibo_inicial,
           }}
         />
       </Seccion>

@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { PackagePlus } from "lucide-react";
 import { anularPago } from "@/app/(app)/cobros/acciones";
-import { anularComprobante } from "@/app/(app)/ventas/acciones";
+import { anularComprobante, anularRecibo } from "@/app/(app)/ventas/acciones";
 import { RegistrarComprobante } from "@/app/(app)/ventas/formulario";
-import { Anular, RegistrarPago } from "@/components/caja/controles";
+import { Anular, EmitirRecibo, RegistrarPago } from "@/components/caja/controles";
 import { NuevaCotizacion, RespuestaCotizacion } from "@/components/caja/cotizaciones";
 import { Boton } from "@/components/ui/boton";
 import { EnlacePdf } from "@/components/ui/enlace-pdf";
@@ -121,6 +121,33 @@ export function TarjetaDinero({
           )}
         </Seccion>
 
+        <Seccion
+          titulo="Recibo de venta"
+          accion={
+            !d.recibos.some((r) => r.estado !== "anulado") && d.cotizaciones.some((c) => c.estado === "aprobada") ? (
+              <EmitirRecibo ordenId={ordenId} total={formatearSoles(d.cotizaciones.filter((c) => c.estado === "aprobada").reduce((a, c) => a + c.total, 0))} />
+            ) : undefined
+          }
+        >
+          {d.recibos.length === 0 ? (
+            <p className="text-sm text-tinta-2">{d.cotizaciones.some((c) => c.estado === "aprobada") ? "Al cobrar, emite el recibo para el cliente." : "Se emite cuando haya una cotización aprobada."}</p>
+          ) : (
+            <ul className="flex flex-col">
+              {d.recibos.map((r) => (
+                <li key={r.id} className="flex items-center gap-3 py-1.5">
+                  <p className={cn("min-w-0 flex-1 text-[15px]", r.estado === "anulado" && "text-tinta-3 line-through")}>
+                    Recibo N° {r.numero}
+                    <span className="text-[13px] text-tinta-3"> · {formatearMomento(new Date(r.emitidoEn), ahora)}</span>
+                  </p>
+                  <span className="num text-[15px]">{formatearSoles(r.total)}</span>
+                  <EnlacePdf href={`/pdf/recibo/${r.id}`} texto="Recibo" />
+                  {r.estado !== "anulado" ? <Anular id={r.id} accion={anularRecibo} que="recibo" /> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Seccion>
+
         <Seccion titulo="Comprobantes" accion={<RegistrarComprobante ordenes={[]} hoy={hoy} ordenFija={ordenId} variante="secundario" tamano="chico" ia={estadoIa().lectura} />}>
           {d.comprobantes.length === 0 ? (
             <p className="text-sm text-tinta-2">Sin boleta ni factura registrada.</p>
@@ -162,7 +189,7 @@ export function TarjetaDinero({
                     <span className="text-[13px] text-tinta-3"> · {formatearMomento(new Date(p.pagadoEn), ahora)}</span>
                   </p>
                   <span className={cn("num text-[15px]", p.tipo === "devolucion" && "text-negativo")}>{formatearSoles(p.tipo === "devolucion" ? -p.monto : p.monto)}</span>
-                  <EnlacePdf href={`/pdf/pago/${p.id}`} texto="Recibo" />
+                  <EnlacePdf href={`/pdf/pago/${p.id}`} texto="Constancia" />
                   {p.estado !== "anulado" ? <Anular id={p.id} accion={anularPago} que="pago" /> : null}
                 </li>
               ))}
