@@ -20,7 +20,7 @@ import { AbrirCaja, CerrarCaja, Movimiento } from "./controles";
 
 export const metadata = { title: "Caja del día" };
 
-const hora = (iso: string) => new Intl.DateTimeFormat("es-PE", { hour: "numeric", minute: "2-digit", timeZone: "America/Lima" }).format(new Date(iso));
+const hora = (iso: string) => new Intl.DateTimeFormat("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Lima" }).format(new Date(iso));
 
 export default async function CajaDelDia() {
   const ctx = await obtenerContexto();
@@ -37,9 +37,11 @@ export default async function CajaDelDia() {
       ) : (
         <ul className="flex flex-col">
           {historial.map((c) => (
-            <li key={c.id} className="flex flex-wrap items-center gap-3 border-t border-regla py-3 first:border-t-0">
-              <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium">{formatearMomento(new Date(c.abiertaEn), ahora)} → {c.cerradaEn ? hora(c.cerradaEn) : ""}</p>
+            <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-regla py-3 first:border-t-0">
+              <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
+                <p className="text-[15px] font-medium">
+                  {formatearMomento(new Date(c.abiertaEn), ahora)} a {c.cerradaEn ? hora(c.cerradaEn) : ""}
+                </p>
                 <p className="num text-[13px] text-tinta-3">
                   Esperado {formatearSoles(c.esperado ?? 0)} · contado {formatearSoles(c.contado ?? 0)} · cerró {quien(c.cerradaPor)}
                 </p>

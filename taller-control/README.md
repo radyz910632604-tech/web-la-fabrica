@@ -77,6 +77,7 @@ Todas usan la contraseña `taller-ejemplo` en local. Los números son ficticios.
 | 900 000 006 | Andrea Torres | Ventas por redes |
 | 900 000 007 | Milagros Vega | Confirmación de citas |
 | 900 000 008 | Diego Paredes | Asesor (Taller Sur) |
+| 900 000 009 | Sandra Ríos | Recepción y caja |
 | 900 000 010 | Ernesto Lara | Técnico |
 
 El Taller Norte trae 14 carros en el taller, 90 entregas recientes, citas de hoy y su dinero (compras, boletas, pagos, cotizaciones y sueldos), todo ficticio.

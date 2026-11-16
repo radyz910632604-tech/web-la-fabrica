@@ -128,7 +128,7 @@ export function CerrarCaja({ caja, esperado }: { caja: string; esperado: number 
   return (
     <Ventana open={abierta} onOpenChange={setAbierta}>
       <DisparadorVentana asChild>
-        <Boton>
+        <Boton variante="secundario">
           <Lock />
           Cerrar caja
         </Boton>
