@@ -6,6 +6,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { NOMBRE_ROL, type Rol } from "@/lib/roles";
 import { catalogo } from "@/lib/taller/consultas";
 import { costosVigentes } from "@/lib/taller/dinero-consultas";
+import { FormAvisos } from "./avisos";
 import { FormComisiones, FormCostos, FormManoObra, FormManoObraServicios } from "./dinero";
 import { FormMeta, FormNuevoTaller, FormPermisosAdmin, FormReglas, FormServicios, FormTaller, Seccion } from "./formularios";
 
@@ -26,6 +27,7 @@ export default async function Configuracion() {
   if (!taller || !config) notFound();
 
   const esGerencia = ctx.roles.includes("gerencia");
+  const { data: canales } = await supabase.from("config_avisos").select("tipo, canal").eq("empresa_id", ctx.taller.id);
   const [{ data: personas }, costos, { data: fijos }, { data: reglas }] = esGerencia
     ? await Promise.all([
         supabase.rpc("directorio", { p_empresa: ctx.taller.id }),
@@ -62,6 +64,10 @@ export default async function Configuracion() {
             hora_cierre: String(config.hora_cierre).slice(0, 5),
           }}
         />
+      </Seccion>
+
+      <Seccion titulo="Avisos" descripcion="Por dónde sale cada aviso. El aviso en el celular es gratis; WhatsApp cuesta por conversación.">
+        <FormAvisos canales={Object.fromEntries(((canales ?? []) as { tipo: string; canal: string }[]).map((c) => [c.tipo, c.canal]))} />
       </Seccion>
 
       <Seccion titulo="Servicios del taller" descripcion="Los que aparecen para tocar al registrar un ingreso. Cada uno puede tener su propio plazo de garantía.">

@@ -12,3 +12,23 @@ self.addEventListener("fetch", (e) => {
     fetch(e.request).catch(() => new Response(PAGINA_SIN_CONEXION, { headers: { "Content-Type": "text/html; charset=utf-8" } })),
   );
 });
+
+// Avisos push del taller (resúmenes del día, citas, carros listos).
+self.addEventListener("push", (e) => {
+  let datos = { titulo: "Taller Control", texto: "Tienes un aviso nuevo.", enlace: "/" };
+  try {
+    datos = { ...datos, ...e.data.json() };
+  } catch {}
+  e.waitUntil(self.registration.showNotification(datos.titulo, { body: datos.texto, icon: "/iconos/icono-192.png", badge: "/iconos/icono-192.png", data: { enlace: datos.enlace } }));
+});
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const destino = new URL(e.notification.data?.enlace ?? "/", self.location.origin).href;
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((ventanas) => {
+      const abierta = ventanas.find((v) => v.url.startsWith(self.location.origin));
+      if (abierta) return abierta.navigate(destino).then((v) => v && v.focus());
+      return self.clients.openWindow(destino);
+    }),
+  );
+});

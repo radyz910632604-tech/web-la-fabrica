@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { FilePlus2, Plus, X } from "lucide-react";
-import { crearCotizacion, responderCotizacion, type Resultado } from "@/app/(app)/ordenes/[id]/dinero-acciones";
+import { FilePlus2, Plus, Send, X } from "lucide-react";
+import { crearCotizacion, enviarCotizacionWhatsapp, responderCotizacion, type Resultado } from "@/app/(app)/ordenes/[id]/dinero-acciones";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { Casilla } from "@/components/ui/casilla";
@@ -150,6 +150,10 @@ export function RespuestaCotizacion({ id, ordenId, estado }: { id: string; orden
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
+        <Boton variante="secundario" tamano="chico" disabled={pendiente} onClick={() => iniciar(async () => setR(await enviarCotizacionWhatsapp(id, ordenId)))}>
+          <Send />
+          {estado === "enviada" ? "Reenviar por WhatsApp" : "Enviar por WhatsApp"}
+        </Boton>
         {estado === "borrador" ? (
           <Boton variante="secundario" tamano="chico" disabled={pendiente} onClick={() => responder({ estado: "enviada" })}>
             Marcar enviada
@@ -177,6 +181,7 @@ export function RespuestaCotizacion({ id, ordenId, estado }: { id: string; orden
         </Boton>
       </div>
       {r.error ? <p className="text-sm text-negativo">{r.error}</p> : null}
+      {r.ok ? <p role="status" className="text-sm text-positivo">{r.ok}</p> : null}
     </div>
   );
 }

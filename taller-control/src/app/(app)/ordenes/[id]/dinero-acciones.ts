@@ -72,3 +72,15 @@ export async function responderCotizacion(id: string, ordenId: string, datos: un
   revalidatePath(`/ordenes/${ordenId}`);
   return { ok: "Listo." };
 }
+
+/** Enviar la cotización al cliente por WhatsApp, con botones para aprobarla. */
+export async function enviarCotizacionWhatsapp(id: string, ordenId: string): Promise<Resultado> {
+  await obtenerContexto();
+  const supabase = await clienteServidor();
+  const { data, error } = await supabase.rpc("enviar_cotizacion_whatsapp", { p_cotizacion: id });
+  if (error) return { error: error.code === "42501" ? "Tu rol no envía cotizaciones." : error.code === "23514" ? "Esta cotización ya fue respondida." : "No se pudo enviar." };
+  revalidatePath(`/ordenes/${ordenId}`);
+  if (data === "sin_consentimiento") return { error: "El cliente no aceptó recibir mensajes. Envíala tú y toca «Marcar enviada»." };
+  if (data === "apagado") return { error: "El envío de cotizaciones por WhatsApp está apagado en Configuración → Avisos." };
+  return { ok: "Listo: se enviará por WhatsApp en unos minutos. Cuando el cliente responda, se marca sola." };
+}

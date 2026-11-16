@@ -1,3 +1,4 @@
+import { ActivarAvisos } from "@/components/avisos/activar-avisos";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { NOMBRE_ROL, ROLES, type Rol } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
@@ -86,6 +87,14 @@ export default async function Ayuda() {
         <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.025em] md:text-[32px]">Ayuda</h1>
         <p className="mt-1.5 text-[15px] text-tinta-2 md:text-base">Lo que puedes hacer con tu rol, paso a paso.</p>
       </header>
+      <Tarjeta id="avisos" aria-labelledby="t-avisos" className="scroll-mt-24">
+        <CabeceraTarjeta id="t-avisos" titulo="Avisos en este celular" />
+        <ActivarAvisos clavePublica={process.env.VAPID_PUBLICA ?? null} />
+      </Tarjeta>
+      <Tarjeta aria-labelledby="t-wa">
+        <CabeceraTarjeta id="t-wa" titulo="Por WhatsApp" detalle="Escribe, manda un audio o una foto al número del taller. Antes de guardar te muestro lo que entendí, con «Confirmar» y «Corregir»." />
+        <p className="text-[15px] leading-6 text-tinta-2">Escribe «ayuda» en el chat del taller para ver los ejemplos de tu rol. Por ejemplo: «ABC123 listo», «pago ABC123 150 yape», «historial ABC123» o la foto de una factura.</p>
+      </Tarjeta>
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         {propios.map((r) => (
           <Guia key={r} rol={r} />

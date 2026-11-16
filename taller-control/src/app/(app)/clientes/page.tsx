@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Search } from "lucide-react";
 import { VentanaCliente } from "@/components/taller/formulario-cliente";
-import { Tarjeta } from "@/components/ui/tarjeta";
+import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
 import { formatearMomento } from "@/lib/formato";
 import { tieneAlguno } from "@/lib/roles";
@@ -60,6 +60,16 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
     );
   });
   const inactivos = clientes.filter((c) => c.inactivo).length;
+  // Mantenimientos que ya tocan (o tocan en 15 días): WhatsApp a quien aceptó; a los demás, llamarlos.
+  const en15 = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date(ahora.getTime() + 15 * 86400_000));
+  const { data: tocan } = await supabase
+    .from("recordatorios_mantenimiento")
+    .select("id, servicio, fecha_objetivo, km_objetivo, estado, clientes (id, nombre, celular, acepta_mensajes), vehiculos (placa)")
+    .eq("empresa_id", ctx.taller.id)
+    .in("estado", ["pendiente", "enviado"])
+    .lte("fecha_objetivo", en15)
+    .order("fecha_objetivo")
+    .limit(40);
   const puedeCrear = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes"]);
 
   return (
@@ -141,6 +151,33 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
           </ul>
         )}
       </Tarjeta>
+      {tocan?.length && ver === "todos" && !q ? (
+        <Tarjeta aria-labelledby="t-mantenimientos">
+          <CabeceraTarjeta id="t-mantenimientos" titulo="Mantenimientos que tocan" detalle="Según el último servicio. A quien aceptó mensajes le llega un WhatsApp; a los demás, llámalos." />
+          <ul className="flex flex-col">
+            {tocan.map((r) => {
+              const c = Array.isArray(r.clientes) ? r.clientes[0] : r.clientes;
+              const v = Array.isArray(r.vehiculos) ? r.vehiculos[0] : r.vehiculos;
+              return (
+                <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-regla py-3 first:border-t-0">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-medium">
+                      {c?.nombre} <span className="font-normal text-tinta-2">· {v?.placa.replace(/^([A-Z0-9]{3})(\d{3})$/, "$1-$2")}</span>
+                    </p>
+                    <p className="text-[13px] text-tinta-3">
+                      {r.servicio} · desde el {r.fecha_objetivo.split("-").reverse().join("/")}
+                      {r.km_objetivo ? ` o a los ${r.km_objetivo.toLocaleString("es-PE")} km` : ""}
+                    </p>
+                  </div>
+                  <p className="num text-[13px] text-tinta-2">
+                    {r.estado === "enviado" ? "WhatsApp enviado" : c?.acepta_mensajes ? "Se enviará por WhatsApp" : `Llamar al ${c ? formatearCelular(c.celular) : ""}`}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </Tarjeta>
+      ) : null}
     </div>
   );
 }

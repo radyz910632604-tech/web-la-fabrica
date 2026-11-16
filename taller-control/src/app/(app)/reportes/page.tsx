@@ -6,6 +6,7 @@ import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { diaEnLima, formatearSoles, nombreMes } from "@/lib/formato";
 import { obtenerContexto } from "@/lib/sesion";
+import { clienteServidor } from "@/lib/supabase/servidor";
 import { mesesHasta, personalDelMes, reporteMensual, sumarFilas, type FilaMes } from "@/lib/taller/reportes";
 import { cn } from "@/lib/utils";
 import { ElegirMes } from "./controles";
@@ -87,6 +88,21 @@ export default async function Reportes({ searchParams }: { searchParams: Promise
   const totalCostos = personal.reduce((a, p) => a + p.costo, 0);
   const totalComisiones = personal.reduce((a, p) => a + p.comision, 0);
   const excel = `/reportes/excel?mes=${mes}${conjunto ? "&ambito=todos" : ""}`;
+  // Encuestas de satisfacción del mes (por la fecha de respuesta).
+  const supabase = await clienteServidor();
+  const inicio = new Date(`${mes}-01T00:00:00-05:00`);
+  const fin = new Date(new Date(inicio).setMonth(inicio.getMonth() + 1));
+  const { data: encuestas } = await supabase
+    .from("encuestas")
+    .select("puntaje, comentario, respondida_en, ordenes_trabajo (numero, vehiculos (placa))")
+    .in("empresa_id", alcance.map((t) => t.id))
+    .not("respondida_en", "is", null)
+    .gte("respondida_en", inicio.toISOString())
+    .lt("respondida_en", fin.toISOString())
+    .order("respondida_en", { ascending: false });
+  const respondidas = encuestas ?? [];
+  const promedio = respondidas.length ? respondidas.reduce((a, x) => a + Number(x.puntaje), 0) / respondidas.length : null;
+  const contentos = respondidas.filter((x) => Number(x.puntaje) >= 4).length;
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
@@ -153,6 +169,38 @@ export default async function Reportes({ searchParams }: { searchParams: Promise
           />
         </Tarjeta>
       ) : null}
+
+      <Tarjeta aria-labelledby="t-satisfaccion">
+        <CabeceraTarjeta
+          id="t-satisfaccion"
+          titulo="Satisfacción de los clientes"
+          detalle={respondidas.length ? `${respondidas.length} ${respondidas.length === 1 ? "encuesta respondida" : "encuestas respondidas"} · ${Math.round((contentos / respondidas.length) * 100)} % contentos` : "Llega por WhatsApp 3 horas después de entregar el carro, a quien aceptó mensajes."}
+        />
+        {respondidas.length ? (
+          <div className="grid gap-4 md:grid-cols-[12rem_minmax(0,1fr)]">
+            <div className="rounded-2xl bg-interna px-5 py-4">
+              <p className="text-[13px] text-tinta-2">Promedio</p>
+              <p className="num text-[32px] font-medium tracking-[-0.02em]">{promedio!.toFixed(1)}<span className="text-[17px] text-tinta-3"> / 5</span></p>
+            </div>
+            <ul className="flex flex-col">
+              {respondidas.filter((x) => x.comentario || Number(x.puntaje) <= 3).slice(0, 8).map((x, i) => {
+                const o = Array.isArray(x.ordenes_trabajo) ? x.ordenes_trabajo[0] : x.ordenes_trabajo;
+                const v = o ? (Array.isArray(o.vehiculos) ? o.vehiculos[0] : o.vehiculos) : null;
+                return (
+                  <li key={i} className="border-t border-regla py-2 text-[15px] first:border-t-0">
+                    <span className={Number(x.puntaje) <= 3 ? "font-medium text-negativo" : "font-medium"}>{Number(x.puntaje) >= 4 ? "Muy bien" : Number(x.puntaje) === 3 ? "Regular" : "Mal"}</span>
+                    <span className="text-tinta-3"> · {v?.placa?.replace(/^([A-Z0-9]{3})(\d{3})$/, "$1-$2") ?? ""}</span>
+                    {x.comentario ? <p className="text-tinta-2">«{x.comentario}»</p> : null}
+                  </li>
+                );
+              })}
+              {respondidas.every((x) => !x.comentario && Number(x.puntaje) > 3) ? <li className="text-[15px] text-tinta-2">Sin quejas ni comentarios este mes.</li> : null}
+            </ul>
+          </div>
+        ) : (
+          <p className="rounded-2xl border border-dashed border-control px-4 py-5 text-center text-[15px] text-tinta-2">Todavía no hay encuestas respondidas en {etiquetaMes(mes)}.</p>
+        )}
+      </Tarjeta>
 
       <Tarjeta aria-labelledby="t-personal">
         <CabeceraTarjeta id="t-personal" titulo="Personal y comisiones" detalle={`${etiquetaMes(mes)} · según las reglas de Configuración`} />

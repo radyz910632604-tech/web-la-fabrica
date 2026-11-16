@@ -174,11 +174,17 @@ function Avisos({ verAlertas }: { verAlertas: boolean }) {
             <OpcionMenu asChild className="mt-3 justify-center rounded-full bg-primario font-medium text-primario-tinta data-highlighted:bg-primario/88">
               <Link href="/alertas">Ver alertas</Link>
             </OpcionMenu>
+            <OpcionMenu asChild className="mt-1 justify-center rounded-full">
+              <Link href="/ayuda#avisos">Avisos en este celular</Link>
+            </OpcionMenu>
           </>
         ) : (
           <>
-            <p className="text-[15px] font-medium">No tienes avisos</p>
-            <p className="mt-1 text-sm text-tinta-2">Aquí llegarán los resúmenes del día cuando se conecte WhatsApp (Fase 2).</p>
+            <p className="text-[15px] font-medium">Avisos del día</p>
+            <p className="mt-1 text-sm text-tinta-2">El resumen del mediodía y del cierre llega como notificación a tu celular o por WhatsApp, según lo elija el taller.</p>
+            <OpcionMenu asChild className="mt-3 justify-center rounded-full bg-primario font-medium text-primario-tinta data-highlighted:bg-primario/88">
+              <Link href="/ayuda#avisos">Activar en este celular</Link>
+            </OpcionMenu>
           </>
         )}
       </ContenidoMenu>
