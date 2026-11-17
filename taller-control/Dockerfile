@@ -26,6 +26,8 @@ COPY --from=construccion --chown=taller:taller /app/.next/static ./.next/static
 COPY --from=construccion --chown=taller:taller /app/public ./public
 # Instrucciones de la IA (texto plano, se pueden revisar en n8n/prompts/).
 COPY --from=construccion --chown=taller:taller /app/n8n/prompts ./n8n/prompts
+# Cambios de la base de datos: la app los aplica sola al arrancar (si está SUPABASE_DB_URL).
+COPY --from=construccion --chown=taller:taller /app/supabase/migrations ./supabase/migrations
 USER taller
 EXPOSE 3000
 CMD ["node", "server.js"]

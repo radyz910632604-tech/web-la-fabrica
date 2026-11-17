@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { versionesFaltantes } from "./base/esquema";
 import { clienteServidor } from "./supabase/servidor";
 import { esRol, rolPrincipal, type Rol } from "./roles";
 
@@ -23,6 +24,8 @@ export type Contexto = {
  * Todo se lee con su propia sesión: la base de datos decide qué devuelve.
  */
 export const obtenerContexto = cache(async (): Promise<Contexto> => {
+  // Si a la base le falta una actualización, nadie trabaja a medias: se avisa cómo ponerla al día.
+  if ((await versionesFaltantes()).length) redirect("/actualizar");
   const supabase = await clienteServidor();
   // getClaims valida la firma de la sesión. Con llaves de firma asimétricas (Supabase → JWT Keys)
   // lo hace aquí mismo, sin viajar a Supabase; con la llave antigua consulta a Supabase como antes.
