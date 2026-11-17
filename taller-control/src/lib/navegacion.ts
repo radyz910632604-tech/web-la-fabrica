@@ -29,7 +29,8 @@ export type Icono =
   | "confirmar"
   | "usuarios"
   | "whatsapp"
-  | "configuracion";
+  | "configuracion"
+  | "sistema";
 
 export type Destino = {
   clave: string;
@@ -72,6 +73,9 @@ const GESTION: Destino[] = [
   { clave: "configuracion", nombre: "Configuración del taller", corto: "Ajustes", href: "/configuracion", icono: "configuracion" },
 ];
 
+/** Solo gerencia: qué está conectado, qué falta y las copias de seguridad. */
+const SISTEMA: Destino = { clave: "sistema", nombre: "Estado del sistema", corto: "Sistema", href: "/sistema", icono: "sistema" };
+
 const sinRoles = (d: Destino & { roles: readonly Rol[] }): Destino => ({
   clave: d.clave,
   nombre: d.nombre,
@@ -90,7 +94,8 @@ export function accionesPara(roles: readonly Rol[]): Destino[] {
 }
 
 export function gestionPara(roles: readonly Rol[]): Destino[] {
-  return esGestor(roles) ? GESTION : [];
+  if (!esGestor(roles)) return [];
+  return roles.includes("gerencia") ? [...GESTION, SISTEMA] : GESTION;
 }
 
 /** Todo destino conocido, para la página /pronto. */

@@ -15,6 +15,7 @@ import {
   Receipt,
   Vault,
   Settings,
+  ShieldCheck,
   UserCog,
   Users,
   Wallet,
@@ -44,6 +45,7 @@ const ICONOS = {
   usuarios: UserCog,
   whatsapp: MessageCircle,
   configuracion: Settings,
+  sistema: ShieldCheck,
 } satisfies Record<NombreIcono, unknown>;
 
 export function Icono({ nombre, ...props }: { nombre: NombreIcono } & LucideProps) {
