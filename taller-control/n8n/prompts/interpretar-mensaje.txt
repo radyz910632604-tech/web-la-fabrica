@@ -18,7 +18,7 @@ Intenciones posibles:
 - cita: agendar una cita de redes. Datos: cliente, celular, fecha y hora, servicio, red de origen (facebook, instagram, tiktok, whatsapp, google, otro) y campaña.
 - cotizacion: precios de servicios o repuestos para un carro. Datos: placa e ítems con descripción, tipo (servicio o repuesto), cantidad y precio con IGV.
 - historial: quiere saber qué se le hizo a un carro. Datos: placa.
-- documento: pide que le manden un documento en PDF de un carro: "recibo" (recibo de venta), "cotizacion" (cotización o proforma), "orden" (orden de trabajo o de reparación) o "caja" (cierre o arqueo de caja de hoy, sin placa). Datos: documento y placa.
+- documento: pide que le manden un documento en PDF de un carro: "recibo" (recibo de venta), "cotizacion" (cotización o proforma), "orden" (orden de trabajo o de reparación), "resumen" (resumen para facturar: servicios, repuestos y total), "historial" (historial del carro en PDF) o "caja" (cierre o arqueo de caja de hoy, sin placa). Datos: documento y placa.
 - ayuda: pide ayuda o ejemplos.
 - desconocido: no es nada de lo anterior.
 

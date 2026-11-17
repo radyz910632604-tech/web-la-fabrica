@@ -65,7 +65,7 @@ export const esquemaMensaje = z.object({
   comprobante: z.string().nullable(),
   items_compra: z.array(z.object({ descripcion: z.string(), cantidad: z.number(), precio_unitario: z.number().nullable() })),
   /** Documento pedido por WhatsApp: recibo, cotización (proforma), orden o cierre de caja. */
-  documento: z.enum(["recibo", "cotizacion", "orden", "caja"]).nullable(),
+  documento: z.enum(["recibo", "cotizacion", "orden", "caja", "historial", "resumen"]).nullable(),
   dudas: z.string().nullable(),
   /** Qué tan seguro está de lo que entendió. */
   confianza: z.enum(["alta", "media", "baja"]).nullable(),

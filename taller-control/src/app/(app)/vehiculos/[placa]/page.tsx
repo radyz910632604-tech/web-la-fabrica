@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Placa } from "@/components/marca/placa";
 import { ListaOrdenes } from "@/components/taller/lista-ordenes";
+import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { normalizarPlaca, formatearPlaca } from "@/lib/placas";
 import { tieneAlguno } from "@/lib/roles";
@@ -50,6 +51,7 @@ export default async function Vehiculo({ params }: { params: Promise<{ placa: st
         <div className="flex flex-wrap items-center gap-3">
           <Placa placa={v.placa} className="h-10 px-3 text-[19px]" />
           <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.025em] md:text-[32px]">Historial del carro</h1>
+          {tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "recepcion"]) ? <EnlacePdf href={`/pdf/historial/${v.placa}`} texto="Historial en PDF" boton className="md:ml-auto" /> : null}
         </div>
         <p className="text-[15px] text-tinta-2 md:text-base">
           {ordenes.length} {ordenes.length === 1 ? "visita" : "visitas"}

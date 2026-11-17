@@ -39,7 +39,10 @@ export function interpretarSinIa(entrada: string): MensajeInterpretado {
   const placa = normalizarPlaca(texto);
 
   if (/^(ayuda|help|\?|menu|hola|buenas?)\b/.test(bajo)) return mensajeVacio("ayuda");
-  if (/^(historial|historia|que se le hizo)\b/.test(bajo)) return { ...mensajeVacio("historial"), placa };
+  // «historial ABC123 en pdf» → el PDF; «historial ABC123» → la respuesta corta por WhatsApp.
+  if (/^(historial|historia|que se le hizo)\b/.test(bajo)) return /\bpdf\b/.test(bajo) ? { ...mensajeVacio("documento"), documento: "historial", placa } : { ...mensajeVacio("historial"), placa };
+  if (/^(?:(?:manda(?:me)?|envia(?:me)?|pasa(?:me)?|dame)\s+)?(?:el\s+)?(?:pdf\s+(?:de(?:l)?\s+)?)?(historial)\b/.test(bajo) && placa) return { ...mensajeVacio("documento"), documento: "historial", placa };
+  if (/^(?:(?:manda(?:me)?|envia(?:me)?|pasa(?:me)?|dame)\s+)?(?:el\s+)?resumen(?:\s+(?:para|de)\s+factura(?:r|cion))?\b/.test(bajo) && placa) return { ...mensajeVacio("documento"), documento: "resumen", placa };
 
   // Pedir un documento: «recibo ABC123», «mándame la cotización de ABC123», «cierre de caja».
   const doc = /^(?:(?:manda(?:me)?|envia(?:me)?|pasa(?:me)?|dame|quiero|pdf(?: de)?)\s+)?(?:(?:el|la)\s+)?(?:pdf\s+(?:de\s+)?(?:el|la)?\s*)?(recibo|cotizacion|proforma|orden(?: de (?:trabajo|reparacion))?|cierre(?: de caja)?|arqueo(?: de caja)?|caja)\b/.exec(bajo);

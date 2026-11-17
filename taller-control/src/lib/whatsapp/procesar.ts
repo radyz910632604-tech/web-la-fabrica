@@ -11,7 +11,7 @@ import { NOMBRE_ESTADO, type EstadoOrden } from "@/lib/taller/estados";
 import { cuadreComprobante } from "@/lib/avisos/textos";
 import { validarPlaca } from "@/lib/placas";
 import { CAJA, tieneAlguno, type Rol } from "@/lib/roles";
-import { pdfCaja, pdfCotizacion, pdfOrden, pdfRecibo, type Pdf } from "@/lib/pdf/documentos";
+import { pdfCaja, pdfCotizacion, pdfHistorial, pdfOrden, pdfRecibo, type Pdf } from "@/lib/pdf/documentos";
 import type { Contexto } from "@/lib/sesion";
 import { clienteAdmin } from "@/lib/supabase/admin";
 import { conCliente } from "@/lib/supabase/servidor";
@@ -410,12 +410,19 @@ async function enviarDocumento(ctx: Ctx, m: MensajeInterpretado): Promise<Respue
   } else {
     const nombreDoc = tipo === "cotizacion" ? "cotización" : tipo;
     if (!placaOk) return { texto: `¿De qué carro? Escribe la placa, por ejemplo «${nombreDoc} ABC123».` };
+    if (tipo === "historial") {
+      const h = await conCliente(ctx.db, () => pdfHistorial(ctxPdf, placaOk, tieneAlguno(ctx.roles, CAJA)));
+      if (!h) return { texto: `No encontré el carro ${placaBonita(placaOk)}.` };
+      return await entregarPdf(ctx, h, `Aquí está el historial de ${placaBonita(placaOk)}.`);
+    }
     const { orden } = await ordenDe(ctx, placaOk, false);
     if (!orden) return { texto: `No encontré órdenes de ${placaBonita(placaOk)}.` };
     const ot = `OT-${String(orden.numero).padStart(6, "0")}`;
-    if (tipo === "orden") {
+    if (tipo === "orden" || tipo === "resumen") {
+      // El resumen para facturar es la orden con servicios, repuestos, abonos y total (solo para quien ve la caja).
+      if (tipo === "resumen" && !tieneAlguno(ctx.roles, CAJA)) return { texto: "El resumen para facturar lo piden caja, el asesor y gerencia." };
       pdf = await conCliente(ctx.db, () => pdfOrden(ctxPdf, orden.id, tieneAlguno(ctx.roles, CAJA)));
-      texto = `Aquí está la orden de reparación ${ot} de ${placaBonita(placaOk)}.`;
+      texto = tipo === "resumen" ? `Aquí está el resumen para facturar de ${placaBonita(placaOk)} (${ot}): servicios, repuestos, abonos y total.` : `Aquí está la orden de reparación ${ot} de ${placaBonita(placaOk)}.`;
     } else if (tipo === "cotizacion") {
       const { data: c } = await ctx.db.from("cotizaciones").select("id, version").eq("orden_id", orden.id).order("version", { ascending: false }).limit(1).maybeSingle();
       if (!c) return { texto: `La orden ${ot} de ${placaBonita(placaOk)} todavía no tiene cotización.` };
@@ -429,7 +436,11 @@ async function enviarDocumento(ctx: Ctx, m: MensajeInterpretado): Promise<Respue
     }
   }
   if (!pdf) return { texto: "No pude armar ese documento: puede que tu rol no lo vea." };
-  // Se guarda un momento para que WhatsApp lo descargue con un enlace que vence en una hora.
+  return entregarPdf(ctx, pdf, texto);
+}
+
+/** Deja el PDF un momento en el bucket «documentos» para que WhatsApp lo descargue con un enlace que vence en una hora. */
+async function entregarPdf(ctx: Ctx, pdf: NonNullable<Pdf>, texto: string): Promise<Respuesta> {
   const admin = clienteAdmin();
   const ruta = `${ctx.empresa}/${randomUUID()}/${pdf.archivo.replace(/[^a-zA-Z0-9._-]+/g, "-")}`;
   const { error } = await admin.storage.from("documentos").upload(ruta, pdf.bytes, { contentType: "application/pdf" });
