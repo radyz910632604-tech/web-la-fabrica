@@ -105,3 +105,7 @@ alter table public.config_avisos add constraint config_avisos_tipo_check check (
   'recordatorio_mantenimiento', 'encuesta', 'cotizacion', 'entrega_por_vencer', 'entrega_atrasada',
   'sin_movimiento', 'espera_aprobacion', 'listo_sin_facturar', 'resumen_para_caja', 'comprobante_no_cuadra', 'repuesto_sin_costo'
 ));
+
+-- 5. Etiqueta de cada foto (la pone la IA al recibirla por WhatsApp; se puede cambiar en la app).
+alter table public.archivos
+  add column etiqueta text check (etiqueta is null or etiqueta in ('ingreso', 'dano', 'tablero', 'trabajo', 'salida', 'repuestos', 'documento', 'otro'));

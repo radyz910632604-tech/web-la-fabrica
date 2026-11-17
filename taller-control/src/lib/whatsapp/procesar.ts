@@ -3,10 +3,11 @@ import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizarCelular } from "@/lib/celulares";
 import { desdeTotal, montoNeto, montosLinea, redondear, saldo as calcularSaldo, sumarMontos } from "@/lib/dinero";
-import { mensajeVacio, type ComprobanteLeido, type Intencion, type MensajeInterpretado } from "@/lib/ia/esquemas";
+import { mensajeVacio, type ComprobanteLeido, type Intencion, type MensajeInterpretado, type PlacaLeida } from "@/lib/ia/esquemas";
 import { interpretarMensaje, leerComprobante, leerPlaca, transcribirAudio, type Archivo } from "@/lib/ia/proveedor";
 import { fechaHoraDesdeTexto, interpretarSinIa, itemsDesdeTexto, normalizarPlaca } from "@/lib/ia/sin-ia";
 import { cuandoEntrega } from "@/lib/taller/entrega";
+import { NOMBRE_ESTADO, type EstadoOrden } from "@/lib/taller/estados";
 import { validarPlaca } from "@/lib/placas";
 import { CAJA, tieneAlguno, type Rol } from "@/lib/roles";
 import { pdfCaja, pdfCotizacion, pdfOrden, pdfRecibo, type Pdf } from "@/lib/pdf/documentos";
@@ -33,6 +34,20 @@ export type Entrada = {
 };
 export type Salida = { respuesta: Respuesta; resultado: string; duplicado?: boolean };
 
+/** Guarda ya (sin «¿Confirmo?») y deja el borrador como confirmado, para poder corregirlo después. */
+async function guardarAhora(ctx: Ctx, intencion: string, datos: Record<string, unknown>, borradorId?: string): Promise<{ texto: string; ok: boolean; id?: string }> {
+  // En repuestos, la lista de lo que se cargó (y qué se reconoció del inventario) va en la respuesta.
+  const lista = intencion === "recepcion" ? `${resumen(intencion, datos)}\n\n` : "";
+  let id = borradorId;
+  if (!id) {
+    const { data } = await ctx.db.from("borradores_whatsapp").insert({ empresa_id: ctx.empresa, perfil_id: ctx.perfil, intencion, datos, faltan: [], resumen: null }).select("id").single();
+    id = data?.id;
+  }
+  const r = await ejecutar(ctx, intencion, datos);
+  if (id) await ctx.db.from("borradores_whatsapp").update({ estado: r.ok ? "confirmado" : "fallido", resultado: r, datos }).eq("id", id);
+  return { texto: r.ok && CORREGIBLES.has(intencion) ? `${r.texto}${PIE_CORREGIR}` : r.ok ? `${lista}${r.texto}` : r.texto, ok: r.ok, id };
+}
+
 type Ctx = { db: SupabaseClient; empresa: string; perfil: string; nombre: string; roles: Rol[]; celular: string; hoy: string };
 type Preparado = { datos: Record<string, unknown>; faltan: string[] } | { respuesta: Respuesta; resultado?: string };
 
@@ -40,6 +55,14 @@ const hoyLima = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima
 const ahoraTexto = () =>
   new Intl.DateTimeFormat("es-PE", { timeZone: "America/Lima", weekday: "long", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
 const SI = /^(si|sí|ok|okey|dale|confirmo|confirmar|correcto|listo)\.?$/i;
+/**
+ * Lo que se guarda al toque y se avisa (la persona corrige después si hace falta).
+ * Pagos y cotizaciones se muestran antes con «Confirmar»: tocan lo que paga el cliente.
+ * Compras y comprobantes leídos por IA igual quedan «por confirmar» en la app (lo fuerza la base).
+ */
+const DIRECTAS = new Set(["nuevo_ingreso", "avance", "recepcion", "compra", "comprobante_venta", "cita"]);
+const CORREGIBLES = new Set(["nuevo_ingreso", "avance"]);
+const PIE_CORREGIR = "\n\n¿Algo que corregir? Dímelo, por ejemplo «No, el kilometraje es 58 mil».";
 const NO = /^(no|corregir|cancelar|cancela|mal)\.?$/i;
 
 export async function procesarMensaje(e: Entrada): Promise<Salida> {
@@ -151,8 +174,26 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
   }
   if (!texto && !archivo) return listo(ayuda(ctx.roles, ctx.nombre), "respondido");
 
+  // Fotos seguidas sin texto mientras se espera la placa: se juntan y no se vuelve a preguntar.
+  if (pendiente && pendiente.intencion === "avance" && pendiente.faltan.includes("placa") && archivo?.mime.startsWith("image/") && !texto) {
+    const pl = await leerPlaca(archivo);
+    if (!pl.ok || !pl.datos.placa) {
+      const temporales = [...((pendiente.datos.temporales as Temporal[] | undefined) ?? [])];
+      const t = await subirTemporal(ctx, archivo, pl.ok ? pl.datos : null);
+      if (t) temporales.push(t);
+      await ctx.db.from("borradores_whatsapp").update({ datos: { ...pendiente.datos, temporales } }).eq("id", pendiente.id);
+      extra.borrador_id = pendiente.id;
+      return listo({ texto: `📷 Van ${temporales.length} fotos.` }, "pide_dato");
+    }
+  }
+
+  // Si nombra OTRA placa, no es la respuesta a lo pendiente: se deja y se atiende como mensaje nuevo.
+  const placaNueva = normalizarPlaca(texto);
+  const placaPendiente = typeof pendiente?.datos.placa === "string" ? pendiente.datos.placa : null;
+  const otroCarro = Boolean(pendiente && placaNueva && placaPendiente && placaNueva !== placaPendiente);
+
   // ¿Completa un dato que se pidió antes?
-  if (pendiente && pendiente.faltan.length) {
+  if (pendiente && pendiente.faltan.length && !otroCarro) {
     const m0 = (pendiente.datos.m ?? mensajeVacio(pendiente.intencion as Intencion)) as MensajeInterpretado;
     const m = await completar(ctx, m0, pendiente.faltan, texto, archivo);
     // En la recepción de repuestos, «sin foto» deja seguir sin evidencia.
@@ -167,27 +208,45 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
     }
     const res = resumen(pendiente.intencion, p.datos);
     await ctx.db.from("borradores_whatsapp").update({ datos: { ...p.datos, m }, faltan: p.faltan, resumen: res }).eq("id", pendiente.id);
-    return p.faltan.length
-      ? listo({ texto: pedirDato(p.faltan[0]) }, "pide_dato")
-      : listo({ texto: `${res}\n\n¿Lo guardo?`, botones: botonesConfirmar(pendiente.id) }, "borrador");
+    if (p.faltan.length) return listo({ texto: pedirDato(p.faltan[0]) }, "pide_dato");
+    if (DIRECTAS.has(pendiente.intencion)) {
+      const g = await guardarAhora(ctx, pendiente.intencion, { ...p.datos, m }, pendiente.id);
+      return listo({ texto: g.texto }, g.ok ? "confirmado" : "error");
+    }
+    return listo({ texto: `${res}\n\n¿Lo guardo?`, botones: botonesConfirmar(pendiente.id) }, "borrador");
   }
   if (pendiente) await ctx.db.from("borradores_whatsapp").update({ estado: "corregido" }).eq("id", pendiente.id);
 
   // Foto o PDF sin texto: comprobante, placa o evidencia.
   let m: MensajeInterpretado;
   let lectura: { lectura: ComprobanteLeido; archivo?: string } | undefined;
+  let foto: PlacaLeida | null = null;
   const esDocumento = archivo && (archivo.mime === "application/pdf" || /factura|boleta|ticket|compra|comprobante/i.test(texto));
   if (archivo && e.tipo !== "video" && (esDocumento || !texto)) {
-    const pista = tieneAlguno(ctx.roles, ["almacen"]) || /factura|compra|proveedor/i.test(texto) ? "compra" : /boleta|venta|cliente/i.test(texto) ? "venta" : "compra";
-    const r = await leerComprobante(archivo, pista);
-    if (r.ok && r.datos.es_comprobante) {
+    // Una foto sola: primero se mira qué muestra (placa, tablero, daño, papel…); solo un papel se lee como comprobante.
+    if (!esDocumento && archivo.mime.startsWith("image/")) {
+      const pl = await leerPlaca(archivo);
+      foto = pl.ok ? pl.datos : null;
+    }
+    const pista = tieneAlguno(ctx.roles, ["almacen"]) || /factura|compra|proveedor/i.test(texto) ? "compra" : /boleta|venta|cliente/i.test(texto) ? "venta" : tieneAlguno(ctx.roles, ["recepcion"]) ? "venta" : "compra";
+    const r = esDocumento || foto?.tipo_foto === "documento" ? await leerComprobante(archivo, pista) : null;
+    if (r?.ok && r.datos.es_comprobante) {
       const destino = pista === "compra" ? "compras" : "ventas";
       lectura = { lectura: r.datos, archivo: await subir(ctx, "comprobantes", `${ctx.empresa}/${destino}/${randomUUID()}`, archivo) };
       m = { ...mensajeVacio(pista === "compra" ? "compra" : "comprobante_venta"), placa: normalizarPlaca(texto) ?? r.datos.placa };
     } else if (!texto) {
-      const pl = await leerPlaca(archivo);
-      m = { ...mensajeVacio("avance"), placa: pl.ok ? pl.datos.placa : null };
-      if (!m.placa) return listo({ texto: "Recibí la foto, pero no sé de qué carro es. Mándala de nuevo escribiendo la placa en el mensaje (por ejemplo «ABC123 avance»)." }, "pide_dato");
+      m = { ...mensajeVacio("avance"), placa: foto?.placa ?? null };
+      if (!m.placa) {
+        if (!tieneAlguno(ctx.roles, PERMITIDO.avance)) return listo({ texto: "Recibí la foto, pero tu rol no sube fotos a las órdenes." }, "rechazado");
+        const t = await subirTemporal(ctx, archivo, foto);
+        const { data: b } = await ctx.db
+          .from("borradores_whatsapp")
+          .insert({ empresa_id: ctx.empresa, perfil_id: ctx.perfil, intencion: "avance", datos: { temporales: t ? [t] : [], m }, faltan: ["placa"], resumen: null })
+          .select("id")
+          .single();
+        extra.borrador_id = b?.id;
+        return listo({ texto: "📷 Recibí la foto. ¿De qué placa es? Si vas a mandar más fotos del mismo carro, mándalas y al final me dices la placa." }, "pide_dato");
+      }
     } else {
       m = await interpretar(ctx, texto, archivo);
     }
@@ -214,8 +273,19 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
     return listo(d, d.documento ? "documento" : "respondido");
   }
 
-  const p = await preparar(ctx, m.intencion, m, m.intencion === "avance" || m.intencion === "recepcion" ? archivo : undefined, lectura ? { lectura: lectura.lectura, archivo: lectura.archivo } : {});
+  if (m.intencion === "correccion") {
+    const c = await corregir(ctx, m);
+    return listo({ texto: c.texto }, c.ok ? "corregido" : "respondido");
+  }
+
+  const previoBase: Record<string, unknown> = lectura ? { lectura: lectura.lectura, archivo: lectura.archivo } : foto ? { foto } : {};
+  const p = await preparar(ctx, m.intencion, m, m.intencion === "avance" || m.intencion === "recepcion" ? archivo : undefined, previoBase);
   if ("respuesta" in p) return listo(p.respuesta, p.resultado ?? "respondido");
+  if (!p.faltan.length && DIRECTAS.has(m.intencion)) {
+    const g = await guardarAhora(ctx, m.intencion, { ...p.datos, m });
+    extra.borrador_id = g.id;
+    return listo({ texto: g.texto }, g.ok ? "confirmado" : "error");
+  }
   const res = resumen(m.intencion, p.datos);
   const { data: b, error } = await ctx.db
     .from("borradores_whatsapp")
@@ -399,23 +469,45 @@ async function preparar(ctx: Ctx, intencion: Intencion, m: MensajeInterpretado, 
       return {
         datos: {
           placa: placaOk, vehiculoId, cliente, servicios, kilometraje: m.kilometraje, observaciones: m.observaciones,
+          carro: { marca: m.marca?.trim() || null, modelo: m.modelo?.trim() || null, anio: m.anio && m.anio >= 1950 && m.anio <= 2100 ? Math.round(m.anio) : null, color: m.color?.trim() || null },
           entregaPrometida: entrega?.toISOString() ?? null, entregaTexto: entrega ? cuandoEntrega(entrega) : "por definir",
         },
         faltan,
       };
     }
     case "avance": {
-      if (!placaOk) return { datos: { archivos: previo.archivos ?? [] }, faltan: ["placa"] };
+      const temporales = (previo.temporales as Temporal[] | undefined) ?? [];
+      if (!placaOk) return { datos: { temporales, m }, faltan: ["placa"] };
       const { orden } = await ordenDe(ctx, placaOk);
-      if (!orden) return { respuesta: { texto: `No encontré una orden abierta de ${placaBonita(placaOk)} que puedas actualizar.` } };
-      const archivos = [...((previo.archivos as { ruta: string; mime: string }[] | undefined) ?? [])];
+      if (!orden) {
+        const { vehiculo } = await ordenDe(ctx, placaOk, false);
+        // Quien no abre ingresos (técnico) solo ve sus órdenes: no se le ofrece abrir una.
+        if (!tieneAlguno(ctx.roles, PERMITIDO.nuevo_ingreso)) return { respuesta: { texto: `No tienes una orden abierta de ${placaBonita(placaOk)}. Revisa la placa o pregúntale al asesor.` } };
+        return { respuesta: { texto: vehiculo ? `${placaBonita(placaOk)} no tiene una orden abierta. Si volvió al taller, mándame el ingreso.` : `No tengo ningún carro con placa ${placaBonita(placaOk)} en taller. ¿Es un ingreso nuevo? Mándame los datos: «Ingresa placa ${placaBonita(placaOk)}, cliente…, por…».` } };
+      }
+      const archivos = [...((previo.archivos as Adjunto[] | undefined) ?? [])];
+      // Las fotos que llegaron antes de saber la placa pasan a la carpeta de la orden.
+      for (const t of temporales) {
+        const destino = `${ctx.empresa}/${orden.id}/${t.ruta.split("/").pop()!.replace(/^pendiente-/, "")}`;
+        const { error } = await clienteAdmin().storage.from("ordenes").move(t.ruta, destino);
+        if (!error) archivos.push({ ruta: destino, mime: t.mime, etiqueta: t.etiqueta ?? null, km: t.km ?? null });
+      }
       if (archivo) {
         const ruta = await subir(ctx, "ordenes", `${ctx.empresa}/${orden.id}/${randomUUID()}`, archivo);
-        if (ruta) archivos.push({ ruta, mime: archivo.mime });
+        const f = previo.foto as PlacaLeida | undefined;
+        if (ruta) archivos.push({ ruta, mime: archivo.mime, etiqueta: f?.tipo_foto ?? null, km: f?.kilometraje ?? null });
       }
       const texto = (m.texto_avance ?? m.observaciones ?? "").trim();
-      if (!texto && !m.nuevo_estado && !archivos.length) faltan.push("texto_avance");
-      return { datos: { placa: placaOk, ordenId: orden.id, ordenNumero: orden.numero, texto: texto || (archivos.length ? "Fotos del trabajo" : ""), estado: m.nuevo_estado, archivos }, faltan };
+      const diagnostico = m.diagnostico?.trim() || null;
+      if (!texto && !m.nuevo_estado && !archivos.length && !diagnostico) faltan.push("texto_avance");
+      const kms = archivos.map((x) => x.km).filter((k): k is number => typeof k === "number" && k > 0);
+      return {
+        datos: {
+          placa: placaOk, ordenId: orden.id, ordenNumero: orden.numero, texto: texto || (archivos.length && !diagnostico && !m.nuevo_estado ? "Fotos del carro" : ""),
+          diagnostico, estado: m.nuevo_estado, archivos, kmTablero: kms.length ? Math.max(...kms) : null,
+        },
+        faltan,
+      };
     }
     case "pago": {
       if (!placaOk) return { datos: {}, faltan: ["placa"] };
@@ -541,6 +633,76 @@ async function verHistorial(ctx: Ctx, placaCruda: string | null): Promise<Respue
 
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf", "video/mp4": "mp4", "video/3gpp": "3gp", "video/quicktime": "mov" };
 
+type Adjunto = { ruta: string; mime: string; etiqueta?: string | null; km?: number | null };
+type Temporal = Adjunto;
+const ETIQUETA_FOTO: Record<string, string> = { ingreso: "ingreso", dano: "daño", tablero: "tablero", trabajo: "trabajo", salida: "salida", repuestos: "repuestos", documento: "documento" };
+const soloConValor = (o: unknown) => Object.fromEntries(Object.entries((o ?? {}) as Record<string, unknown>).filter(([, v]) => v !== null && v !== undefined && v !== ""));
+
+/**
+ * Foto que llegó sin placa: se guarda en una carpeta de espera de esa persona
+ * (con la llave de servicio, porque aún no hay orden para revisar el permiso).
+ * Cuando dice la placa, pasa a la orden y se registra con su sesión.
+ */
+async function subirTemporal(ctx: Ctx, a: Archivo, foto: PlacaLeida | null): Promise<Temporal | undefined> {
+  if (!a.mime.startsWith("image/")) return undefined;
+  const ruta = `${ctx.empresa}/${ctx.perfil}/pendiente-${randomUUID()}.${EXT[a.mime] ?? "jpg"}`;
+  const { error } = await clienteAdmin().storage.from("ordenes").upload(ruta, a.datos, { contentType: a.mime, upsert: false });
+  return error ? undefined : { ruta, mime: a.mime, etiqueta: foto?.tipo_foto ?? null, km: foto?.kilometraje ?? null };
+}
+
+/**
+ * Corrige lo último que guardó esta persona (o la orden abierta de la placa
+ * que nombre): «No, el kilometraje es 58 mil», «el celular es 987654321».
+ */
+async function corregir(ctx: Ctx, m: MensajeInterpretado): Promise<{ ok: boolean; texto: string }> {
+  let ordenId: string | null = null;
+  const placa = m.placa ? validarPlaca(m.placa) : null;
+  if (placa && placa.estado !== "invalida") ordenId = (await ordenDe(ctx, placa.placa, false)).orden?.id ?? null;
+  if (!ordenId) {
+    const { data: ultimo } = await ctx.db
+      .from("borradores_whatsapp")
+      .select("intencion, datos, resultado")
+      .eq("perfil_id", ctx.perfil)
+      .eq("empresa_id", ctx.empresa)
+      .eq("estado", "confirmado")
+      .in("intencion", [...CORREGIBLES])
+      .gte("actualizado_en", new Date(Date.now() - 3 * 3600_000).toISOString())
+      .order("actualizado_en", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const r = ultimo?.resultado as { ids?: { orden?: string } } | null;
+    ordenId = r?.ids?.orden ?? ((ultimo?.datos as { ordenId?: string } | null)?.ordenId ?? null);
+  }
+  if (!ordenId) return { ok: false, texto: "¿De qué placa es la corrección? Por ejemplo «ABC-123 el kilometraje es 58 mil»." };
+  const { data: o } = await ctx.db.from("ordenes_trabajo").select("id, numero, vehiculo_id, cliente_id, vehiculos (placa)").eq("id", ordenId).maybeSingle();
+  if (!o) return { ok: false, texto: "No encontré esa orden, o tu rol no puede cambiarla." };
+  const hecho: string[] = [];
+  const fallo: string[] = [];
+  const intentar = async (nombre: string, accion: PromiseLike<{ error: unknown }>) => ((await accion).error ? fallo.push(nombre) : hecho.push(nombre));
+  if (m.kilometraje && m.kilometraje > 0) await intentar(`kilometraje ${Math.round(m.kilometraje).toLocaleString("es-PE")} km`, ctx.db.from("ordenes_trabajo").update({ kilometraje_ingreso: Math.round(m.kilometraje) }).eq("id", o.id));
+  if (m.observaciones) await intentar("observaciones", ctx.db.from("ordenes_trabajo").update({ observaciones_ingreso: m.observaciones.slice(0, 1000) }).eq("id", o.id));
+  if (m.entrega_prometida) {
+    const cuando = entregaPrometida(m.entrega_prometida, ctx.hoy);
+    if (cuando) await intentar(`entrega ${cuandoEntrega(cuando)}`, ctx.db.from("ordenes_trabajo").update({ entrega_prometida: cuando.toISOString() }).eq("id", o.id));
+    else fallo.push("la hora de entrega (dímela como «mañana 5pm»)");
+  }
+  if (m.diagnostico) await intentar("diagnóstico", ctx.db.rpc("registrar_diagnostico", { p_orden: o.id, p_texto: m.diagnostico }));
+  if (m.nuevo_estado) await intentar(`estado ${NOMBRE_ESTADO[m.nuevo_estado]}`, ctx.db.rpc("cambiar_estado_orden", { p_orden: o.id, p_estado: m.nuevo_estado, p_nota: "Corrección por WhatsApp" }));
+  const carro = soloConValor({ marca: m.marca, modelo: m.modelo, anio: m.anio, color: m.color });
+  if (Object.keys(carro).length) await intentar(Object.entries(carro).map(([k, v]) => `${k === "anio" ? "año" : k} ${v}`).join(", "), ctx.db.from("vehiculos").update(carro).eq("id", o.vehiculo_id));
+  const celular = m.cliente_celular ? normalizarCelular(m.cliente_celular) : null;
+  if (m.cliente_celular && !celular) fallo.push("el celular (deben ser 9 dígitos)");
+  const cliente = soloConValor({ nombre: m.cliente_nombre?.trim().slice(0, 120), celular });
+  if (Object.keys(cliente).length && o.cliente_id) await intentar(`cliente ${Object.values(cliente).join(" · ")}`, ctx.db.from("clientes").update(cliente).eq("id", o.cliente_id));
+  const v = Array.isArray(o.vehiculos) ? o.vehiculos[0] : o.vehiculos;
+  const cabeza = `${placaBonita(v?.placa ?? "")} · OT-${String(o.numero).padStart(6, "0")}`;
+  if (!hecho.length && !fallo.length) return { ok: false, texto: `¿Qué dato corrijo de ${cabeza}? Por ejemplo «el kilometraje es 58 mil» o «el celular es 987654321».` };
+  return {
+    ok: hecho.length > 0,
+    texto: [hecho.length ? `✏️ Corregido en ${cabeza}: ${hecho.join(", ")}.` : null, fallo.length ? `⚠️ No pude cambiar: ${fallo.join(", ")}.` : null].filter(Boolean).join("\n"),
+  };
+}
+
 /** Sube un archivo con la sesión de la persona (la base revisa el permiso). */
 async function subir(ctx: Ctx, bucket: "ordenes" | "comprobantes", rutaSinExtension: string, a: Archivo): Promise<string | undefined> {
   const ruta = `${rutaSinExtension}.${EXT[a.mime] ?? "bin"}`;
@@ -567,9 +729,12 @@ async function ejecutar(ctx: Ctx, intencion: string, d: Record<string, unknown>)
       }
       let vehiculoId = d.vehiculoId as string | null;
       if (!vehiculoId) {
-        const { data, error } = await db.from("vehiculos").insert({ empresa_id: empresa, placa: d.placa, cliente_id: clienteId }).select("id").single();
+        const { data, error } = await db.from("vehiculos").insert({ empresa_id: empresa, placa: d.placa, cliente_id: clienteId, ...soloConValor(d.carro) }).select("id").single();
         if (error || !data) return falla("no se pudo registrar el carro.");
         vehiculoId = data.id;
+      } else if (Object.keys(soloConValor(d.carro)).length) {
+        // Carro conocido: se actualiza lo que se dijo (por ejemplo, el color si lo pintaron).
+        await db.from("vehiculos").update(soloConValor(d.carro)).eq("id", vehiculoId);
       }
       const { data: orden, error } = await db
         .from("ordenes_trabajo")
@@ -591,24 +756,60 @@ async function ejecutar(ctx: Ctx, intencion: string, d: Record<string, unknown>)
       const promesa = d.entregaPrometida
         ? ` Entrega prometida: ${String(d.entregaTexto)}; te aviso si se acerca la hora y el carro no está listo.`
         : " La hora de entrega quedó por definir: ponla en la orden cuando la sepas.";
-      return { ok: true, texto: `✅ Orden *OT-${String(orden.numero).padStart(6, "0")}* abierta para ${placaBonita(String(d.placa))}.${promesa} Agrega las fotos del ingreso en la app o mándalas aquí con la placa.`, ids: { orden: orden.id } };
+      const carro = d.carro as { marca: string | null; modelo: string | null; anio: number | null; color: string | null } | undefined;
+      const c2 = d.cliente as { nombre: string; celular: string };
+      const lineas = [
+        `✅ Ingreso registrado — *${placaBonita(String(d.placa))}* ${[carro?.marca, carro?.modelo, carro?.anio, carro?.color].filter(Boolean).join(" ")}${d.kilometraje ? ` · ${Number(d.kilometraje).toLocaleString("es-PE")} km` : ""}`,
+        `Orden: OT-${String(orden.numero).padStart(6, "0")}`,
+        `Cliente: ${c2.nombre} · ${String(c2.celular).replace(/^\+51/, "")}`,
+        `Motivo: ${(d.servicios as string[]).join(" + ")}`,
+        promesa.trim(),
+        "Mándame las fotos del ingreso con la placa.",
+      ];
+      return { ok: true, texto: lineas.join("\n"), ids: { orden: orden.id } };
     }
     case "avance": {
       const ordenId = String(d.ordenId);
+      const ot = `OT-${String(d.ordenNumero).padStart(6, "0")}`;
+      const hecho: string[] = [];
       let avanceId: string | undefined;
+      if (d.diagnostico) {
+        const { error } = await db.rpc("registrar_diagnostico", { p_orden: ordenId, p_texto: String(d.diagnostico).slice(0, 2000) });
+        if (error) return falla("no tienes permiso para escribir el diagnóstico de esa orden.");
+        hecho.push(`Diagnóstico: ${d.diagnostico}`);
+      }
       if (d.texto) {
         const { data, error } = await db.from("orden_avances").insert({ empresa_id: empresa, orden_id: ordenId, texto: String(d.texto).slice(0, 2000), autor_id: ctx.perfil, origen: "whatsapp" }).select("id").single();
         if (error) return falla("no tienes permiso para actualizar esa orden.");
         avanceId = data?.id;
+        if (d.texto !== "Fotos del carro") hecho.push(`Avance: «${d.texto}»`);
       }
-      for (const a of (d.archivos as { ruta: string; mime: string }[] | undefined) ?? []) {
-        await db.from("archivos").insert({ empresa_id: empresa, orden_id: ordenId, avance_id: avanceId ?? null, tipo: a.mime.startsWith("video/") ? "video" : "foto", etapa: "proceso", bucket: "ordenes", ruta: a.ruta, mime: a.mime, subido_por: ctx.perfil });
+      const archivos = (d.archivos as Adjunto[] | undefined) ?? [];
+      for (const a of archivos) {
+        const etapa = a.etiqueta === "salida" ? "entrega" : a.etiqueta === "ingreso" || a.etiqueta === "dano" || a.etiqueta === "tablero" ? "ingreso" : "proceso";
+        await db.from("archivos").insert({ empresa_id: empresa, orden_id: ordenId, avance_id: avanceId ?? null, tipo: a.mime.startsWith("video/") ? "video" : "foto", etapa, etiqueta: a.etiqueta ?? null, bucket: "ordenes", ruta: a.ruta, mime: a.mime, subido_por: ctx.perfil });
+      }
+      if (archivos.length) {
+        const etiquetas = [...new Set(archivos.map((a) => ETIQUETA_FOTO[a.etiqueta ?? ""]).filter(Boolean))];
+        hecho.push(`📷 ${archivos.length} ${archivos.length === 1 ? "foto" : "fotos"} en la galería${etiquetas.length ? ` (${etiquetas.join(", ")})` : ""}`);
+      }
+      // Kilometraje leído del tablero: se pone si la orden no lo tenía; si no cuadra, se avisa.
+      if (typeof d.kmTablero === "number") {
+        const { data: o } = await db.from("ordenes_trabajo").select("kilometraje_ingreso").eq("id", ordenId).maybeSingle();
+        const km = Math.round(d.kmTablero);
+        if (o && o.kilometraje_ingreso == null) {
+          const { error } = await db.from("ordenes_trabajo").update({ kilometraje_ingreso: km }).eq("id", ordenId);
+          if (!error) hecho.push(`Kilometraje del tablero: ${km.toLocaleString("es-PE")} km`);
+        } else if (o && Math.abs(Number(o.kilometraje_ingreso) - km) > 50) {
+          hecho.push(`⚠️ El tablero marca ${km.toLocaleString("es-PE")} km y en la orden dice ${Number(o.kilometraje_ingreso).toLocaleString("es-PE")} km. Si hay que cambiarlo: «el kilometraje es ${km}».`);
+        }
       }
       if (d.estado) {
         const { error } = await db.rpc("cambiar_estado_orden", { p_orden: ordenId, p_estado: d.estado, p_nota: "Por WhatsApp" });
-        if (error) return { ok: true, texto: `Guardé el avance, pero no pude cambiar el estado: ${error.message}` };
+        if (error) hecho.push(`⚠️ No pude cambiar el estado: ${error.message}`);
+        else hecho.push(`Estado: *${NOMBRE_ESTADO[d.estado as EstadoOrden] ?? d.estado}*`);
       }
-      return { ok: true, texto: `✅ Avance guardado en OT-${String(d.ordenNumero).padStart(6, "0")}${d.estado ? ` · estado: ${String(d.estado).replace("_", " ")}` : ""}.` };
+      return { ok: true, texto: `✅ ${placaBonita(String(d.placa))} · ${ot}\n${hecho.join("\n")}`, ids: { orden: ordenId } };
     }
     case "pago": {
       const { data, error } = await db.from("pagos").insert({ empresa_id: empresa, orden_id: d.ordenId, monto: d.monto, tipo: d.tipo, medio: d.medio, origen: "whatsapp" }).select("id").single();

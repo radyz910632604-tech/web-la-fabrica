@@ -1,3 +1,4 @@
+import { NOMBRE_ESTADO } from "@/lib/taller/estados";
 import type { Rol } from "@/lib/roles";
 import type { Intencion } from "@/lib/ia/esquemas";
 
@@ -17,6 +18,7 @@ export const placaBonita = (p: string) => p.replace(/^([A-Z0-9]{3})(\d{3})$/, "$
 export const PERMITIDO: Record<Exclude<Intencion, "ayuda" | "desconocido" | "historial">, readonly Rol[]> = {
   nuevo_ingreso: ["gerencia", "administrador", "asesor"],
   avance: ["gerencia", "administrador", "asesor", "tecnico"],
+  correccion: ["gerencia", "administrador", "asesor", "tecnico"],
   compra: ["gerencia", "administrador", "almacen"],
   recepcion: ["gerencia", "administrador", "almacen"],
   documento: ["gerencia", "administrador", "asesor"],
@@ -27,8 +29,9 @@ export const PERMITIDO: Record<Exclude<Intencion, "ayuda" | "desconocido" | "his
 };
 
 const EJEMPLOS: Record<string, string> = {
-  nuevo_ingreso: "• *Ingreso:* «ingreso ABC123 Juan Pérez 987654321 para cambio de aceite, 85000 km, entrega hoy 6pm»",
-  avance: "• *Avance:* «ABC123 ya se cambió el embrague» o «ABC123 listo». Puedes mandar fotos o video con la placa escrita.",
+  nuevo_ingreso: "• *Ingreso:* «Ingresa placa ABC-123, Toyota Yaris 2018 plomo, 85 mil km, cliente Juan Pérez 987654321, por ruido en la caja, entrega mañana 5pm»",
+  avance: "• *Avances:* «ABC-123 diagnóstico: sincronizador de tercera gastado», «ABC-123 el cliente aprobó y ya pedí los repuestos», «ABC-123 listo». Fotos: mándalas con la placa escrita, o sola y te pregunto de qué carro son.",
+  correccion: "• *Corregir:* justo después de guardar, «No, el kilometraje es 58 mil» o «el celular es 987654321».",
   compra: "• *Compra:* manda la foto o el PDF de la factura del proveedor (escribe la placa si es para un carro).",
   recepcion: "• *Llegaron repuestos:* manda una nota de voz («llegaron 4 galones de aceite 10W40 de Lubricantes Demo, factura F001-123, a 85 cada uno») y después la foto de los repuestos o de la factura.",
   documento: "• *Pedir un PDF:* «recibo ABC123», «cotización ABC123», «orden ABC123» o «cierre de caja».",
@@ -49,19 +52,19 @@ export function ayuda(roles: readonly Rol[], nombre: string): Respuesta {
       ...lineas,
       ...extra,
       "• *Historial:* «historial ABC123»",
-      "Antes de guardar te muestro lo que entendí, con *Confirmar* y *Corregir*.",
+      "Guardo al toque y te digo qué guardé; si algo salió mal, me lo corriges. Pagos y cotizaciones te los muestro antes con *Confirmar*.",
     ].join("\n"),
   };
 }
 
-export const SIN_ACCESO: Respuesta = { texto: "Este número no está registrado en el sistema del taller, así que no puedo procesar el mensaje. Si trabajas en el taller, pide a administración que registre tu celular." };
+export const SIN_ACCESO: Respuesta = { texto: "Este número es de uso interno del taller." };
 
 const CAMPO: Record<string, string> = {
-  placa: "¿Cuál es la *placa*? Escríbela (por ejemplo ABC-123) o manda una foto de la placa.",
+  placa: "¿De qué placa es esto? Escríbela (por ejemplo ABC-123) o manda una foto de la placa.",
   servicios: "¿Qué *servicio* pidió el cliente?",
   cliente_celular: "Es un carro nuevo. ¿Cuál es el *celular del cliente*? (9 dígitos)",
   cliente_nombre: "¿Cuál es el *nombre del cliente*?",
-  texto_avance: "¿Qué avance quieres registrar?",
+  texto_avance: "¿Qué pasó con el carro? Cuéntame el avance, el diagnóstico o el estado.",
   monto: "¿De cuánto fue el *pago*?",
   medio_pago: "¿Cómo pagó? Efectivo, Yape, Plin, tarjeta o transferencia.",
   fecha_hora: "¿Para qué *día y hora* es la cita?",
@@ -84,7 +87,7 @@ export function botonesConfirmar(borradorId: string): Boton[] {
   ];
 }
 
-const ESTADO: Record<string, string> = { en_proceso: "En proceso", esperando_repuesto: "Esperando repuesto", listo: "Listo para entregar" };
+const ESTADO: Record<string, string> = { ...NOMBRE_ESTADO, listo: "Listo para entregar" };
 
 /** Resumen de lo que se va a guardar, para que la persona confirme. */
 export function resumen(intencion: string, d: Record<string, unknown>): string {
@@ -105,6 +108,7 @@ export function resumen(intencion: string, d: Record<string, unknown>): string {
     case "avance":
       return [
         `*Avance* ${placa}${orden}`,
+        d.diagnostico ? `Diagnóstico: ${d.diagnostico}` : null,
         d.texto ? `«${d.texto}»` : null,
         d.estado ? `Nuevo estado: ${ESTADO[d.estado as string] ?? d.estado}` : null,
         Array.isArray(d.archivos) && d.archivos.length ? `${d.archivos.length} ${d.archivos.length === 1 ? "foto o video" : "fotos o videos"} para la orden` : null,

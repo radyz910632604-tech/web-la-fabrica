@@ -24,6 +24,14 @@ function quitar(texto: string, ...partes: (string | null | undefined)[]) {
   return t.replace(/\s+/g, " ").trim();
 }
 
+/** «85 mil», «85,000 km», «58000» → kilómetros. */
+function kilometros(bajo: string): number | null {
+  const mil = /(\d{1,3}(?:[.,]\d{1,3})?)\s*mil\b/.exec(bajo);
+  if (mil) return Math.round(Number(mil[1].replace(",", ".")) * 1000);
+  const n = /(\d{1,3}(?:[.\s,]\d{3})+|\d{3,7})/.exec(bajo);
+  return n ? Number(n[1].replace(/[.\s,]/g, "")) : null;
+}
+
 export function interpretarSinIa(entrada: string): MensajeInterpretado {
   const texto = entrada.trim();
   const bajo = texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -86,7 +94,7 @@ export function interpretarSinIa(entrada: string): MensajeInterpretado {
     const entrega = /(?:,\s*|\s+)(?:se\s+|lo\s+)?(?:entrega(?:r|mos)?|recoge(?:r|n)?|prometid[oa]|listo)\s+(?:para\s+)?(.*\d.*)$/i.exec(texto);
     const cuerpo = entrega ? texto.slice(0, entrega.index) : texto;
     const cel = CELULAR.exec(cuerpo);
-    const km = /(\d{1,3}(?:[.\s]?\d{3})+|\d{3,6})\s*(?:km|kms|kilometros)/i.exec(cuerpo);
+    const km = /(\d{1,3}(?:[.\s]?\d{3})+|\d{3,6}|\d{1,3}\s*mil)\s*(?:km|kms|kilometros|kil[oó]metros)/i.exec(cuerpo);
     const resto = quitar(cuerpo.replace(/^(nuevo\s+)?ingres[oa]\s*:?/i, ""), placaCruda, cel?.[0], km?.[0]);
     const [nombreParte, ...servicioParte] = resto.split(/\s+(?:para|por|servicio:?)\s+/i);
     const servicios = (servicioParte.join(" ") || "").split(/\s*(?:,|\by\b)\s*/).map((s) => s.trim()).filter((s) => s.length > 2);
@@ -96,22 +104,52 @@ export function interpretarSinIa(entrada: string): MensajeInterpretado {
       cliente_celular: cel ? `${cel[1]}${cel[2]}${cel[3]}` : null,
       cliente_nombre: nombreParte && servicioParte.length ? nombreParte.trim() || null : null,
       servicios: servicioParte.length ? servicios : resto ? [resto] : [],
-      kilometraje: km ? Number(km[1].replace(/[.\s]/g, "")) : null,
+      kilometraje: km ? kilometros(km[1].toLowerCase()) : null,
       entrega_prometida: entrega ? entrega[1].trim() : null,
     };
   }
 
-  // Avance: "ABC123 listo", "ABC123 esperando repuesto", "avance ABC123 ya se cambió el embrague"
-  if (placa && (/\b(avance|listo|lista|terminado|termine|esperando|falta repuesto|en proceso|empece|desarm)/.test(bajo) || bajo.length > 0)) {
+  // Corrección de lo recién guardado: «No, el kilometraje es 58 mil», «el celular es 987654321», «corrige: color blanco».
+  if (/^(no\b|corrig|correcci|me equivoque|perdon|error\b)/.test(bajo) && /\b(km\b|kilometr|celular|telefono|numero|nombre|color|marca|modelo|ano\b|entrega|diagnostico)/.test(bajo)) {
+    const km = kilometros(bajo);
+    const cel = CELULAR.exec(texto);
+    const color = /\bcolor\s+(?:es\s+)?([a-z]+)/.exec(bajo)?.[1] ?? null;
+    const anio = /\bano\s+(?:es\s+)?((?:19|20)\d{2})\b/.exec(bajo)?.[1];
+    const nombre = /\bnombre\s+(?:es\s+)?(.+)$/i.exec(texto)?.[1]?.trim() ?? null;
+    const entrega = /\bentrega\s+(?:es\s+)?(?:para\s+)?(.*\d.*)$/i.exec(texto)?.[1]?.trim() ?? null;
+    const diag = /\bdiagn[oó]stico\s*(?:es|:)?\s*(.{3,})$/i.exec(texto)?.[1]?.trim() ?? null;
+    return {
+      ...mensajeVacio("correccion"),
+      placa,
+      kilometraje: /\b(km|kilometr)/.test(bajo) ? km : null,
+      cliente_celular: /\b(celular|telefono|numero)\b/.test(bajo) && cel ? `${cel[1]}${cel[2]}${cel[3]}` : null,
+      cliente_nombre: nombre,
+      color,
+      anio: anio ? Number(anio) : null,
+      entrega_prometida: entrega,
+      diagnostico: diag,
+    };
+  }
+
+  // Avance: "ABC123 listo", "ABC123 esperando repuesto", "ABC123 diagnóstico: embrague gastado", "ABC123 el cliente aprobó"
+  if (placa && (/\b(avance|listo|lista|terminado|termine|esperando|falta repuesto|en proceso|empece|desarm|diagnostico|aprob)/.test(bajo) || bajo.length > 0)) {
     const estado = /\b(listo|lista|terminado|termine)\b/.test(bajo)
       ? "listo"
-      : /\b(esperando|falta repuesto|sin repuesto)\b/.test(bajo)
-        ? "esperando_repuesto"
-        : /\b(en proceso|empece|empezamos|desarm)/.test(bajo)
-          ? "en_proceso"
-          : null;
-    const avance = quitar(texto.replace(/^avance\s*:?/i, ""), placaCruda);
-    return { ...mensajeVacio("avance"), placa, nuevo_estado: estado, texto_avance: avance || null };
+      : /\b(cliente aprobo|aprobo|aprobado|aprobaron|acepto el presupuesto)\b/.test(bajo)
+        ? "aprobado"
+        : /\b(espera(?:ndo)? aprobacion|presupuesto enviado|mande el presupuesto|envie el presupuesto)\b/.test(bajo)
+          ? "espera_aprobacion"
+          : /\b(esperando|falta repuesto|sin repuesto)\b/.test(bajo)
+            ? "esperando_repuesto"
+            : /\b(en proceso|empece|empezamos|desarm|en reparacion)/.test(bajo)
+              ? "en_proceso"
+              : /\b(revisando|en diagnostico|empece el diagnostico)\b/.test(bajo)
+                ? "en_diagnostico"
+                : null;
+    const diag = /diagn[oó]stico\s*:?\s*([^.]{3,}?)(?:\.\s+(.*))?$/i.exec(texto);
+    const sinDiag = diag ? texto.slice(0, diag.index) + (diag[2] ?? "") : texto;
+    const avance = quitar(sinDiag.replace(/^avance\s*:?/i, ""), placaCruda).replace(/^[,.:;\s-]+|[,.:;\s-]+$/g, "");
+    return { ...mensajeVacio("avance"), placa, nuevo_estado: estado, diagnostico: diag ? diag[1].trim() : null, texto_avance: avance || null };
   }
 
   return mensajeVacio("desconocido");

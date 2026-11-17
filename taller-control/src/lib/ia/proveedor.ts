@@ -165,14 +165,20 @@ export async function leerComprobante(a: Archivo, pista: "compra" | "venta"): Pr
   return p === "claude" ? conClaude(esquemaComprobante, sistema, [bloqueArchivo(a), { type: "text", text: pedido }]) : conOpenai(esquemaComprobante, sistema, pedido, a);
 }
 
-/** Lee la placa de una foto. */
+/** Modo de prueba: el nombre del archivo dice qué es («ABC123-tablero-85120.jpg»). */
+function fotoDePrueba(nombre?: string): PlacaLeida["tipo_foto"] {
+  const n = (nombre ?? "").toLowerCase();
+  return /factura|boleta|ticket|comprobante/.test(n) ? "documento" : n.includes("tablero") ? "tablero" : n.includes("dano") || n.includes("golpe") ? "dano" : n.includes("repuesto") || n.includes("vale") ? "repuestos" : n.includes("listo") || n.includes("salida") ? "salida" : null;
+}
+
+/** Lee la placa de una foto y qué muestra (tablero con su kilometraje, daño, trabajo…). */
 export async function leerPlaca(a: Archivo): Promise<Resultado<PlacaLeida>> {
   const problema = revisarArchivo(a);
   if (problema) return { ok: false, error: problema };
   const p = proveedorLectura();
-  if (p === "prueba") return { ok: true, datos: { placa: normalizarPlaca(a.nombre ?? "") ?? "PRB123", legible: "bien" }, proveedor: "prueba" };
+  if (p === "prueba") return { ok: true, datos: { placa: normalizarPlaca(a.nombre ?? "") ?? null, legible: normalizarPlaca(a.nombre ?? "") ? "bien" : "no_se_lee", tipo_foto: fotoDePrueba(a.nombre), kilometraje: /tablero[-_ ]?(\d{3,7})/i.exec(a.nombre ?? "")?.[1] ? Number(/tablero[-_ ]?(\d{3,7})/i.exec(a.nombre ?? "")![1]) : null }, proveedor: "prueba" };
   const sistema = await prompt("leer-placa");
-  const r = p === "claude" ? await conClaude(esquemaPlaca, sistema, [bloqueArchivo(a), { type: "text", text: "Lee la placa." }]) : await conOpenai(esquemaPlaca, sistema, "Lee la placa.", a);
+  const r = p === "claude" ? await conClaude(esquemaPlaca, sistema, [bloqueArchivo(a), { type: "text", text: "Lee la placa y di qué muestra la foto." }]) : await conOpenai(esquemaPlaca, sistema, "Lee la placa y di qué muestra la foto.", a);
   return r.ok ? { ...r, datos: { ...r.datos, placa: normalizarPlaca(r.datos.placa) } } : r;
 }
 

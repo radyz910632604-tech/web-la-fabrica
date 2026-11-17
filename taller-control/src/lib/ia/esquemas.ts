@@ -30,7 +30,7 @@ export const esquemaComprobante = z.object({
 });
 export type ComprobanteLeido = z.infer<typeof esquemaComprobante>;
 
-export const INTENCIONES = ["nuevo_ingreso", "avance", "compra", "recepcion", "comprobante_venta", "pago", "cita", "cotizacion", "historial", "documento", "ayuda", "desconocido"] as const;
+export const INTENCIONES = ["nuevo_ingreso", "avance", "correccion", "compra", "recepcion", "comprobante_venta", "pago", "cita", "cotizacion", "historial", "documento", "ayuda", "desconocido"] as const;
 export type Intencion = (typeof INTENCIONES)[number];
 
 export const esquemaMensaje = z.object({
@@ -43,7 +43,14 @@ export const esquemaMensaje = z.object({
   kilometraje: z.number().nullable(),
   observaciones: z.string().nullable(),
   texto_avance: z.string().nullable(),
-  nuevo_estado: z.enum(["en_proceso", "esperando_repuesto", "listo"]).nullable(),
+  /** Datos del carro dichos en el ingreso (o en una corrección). */
+  marca: z.string().nullable(),
+  modelo: z.string().nullable(),
+  anio: z.number().nullable(),
+  color: z.string().nullable(),
+  /** Lo que encontró el taller («diagnóstico: sincronizador de tercera gastado»). */
+  diagnostico: z.string().nullable(),
+  nuevo_estado: z.enum(["en_diagnostico", "espera_aprobacion", "aprobado", "en_proceso", "esperando_repuesto", "listo"]).nullable(),
   monto: z.number().nullable(),
   medio_pago: z.enum(["efectivo", "yape", "plin", "tarjeta", "transferencia"]).nullable(),
   tipo_pago: z.enum(["adelanto", "abono", "saldo"]).nullable(),
@@ -60,12 +67,21 @@ export const esquemaMensaje = z.object({
   /** Documento pedido por WhatsApp: recibo, cotización (proforma), orden o cierre de caja. */
   documento: z.enum(["recibo", "cotizacion", "orden", "caja"]).nullable(),
   dudas: z.string().nullable(),
+  /** Qué tan seguro está de lo que entendió. */
+  confianza: z.enum(["alta", "media", "baja"]).nullable(),
 });
 export type MensajeInterpretado = z.infer<typeof esquemaMensaje>;
+
+export const TIPOS_FOTO = ["ingreso", "dano", "tablero", "trabajo", "salida", "repuestos", "documento", "otro"] as const;
+export type TipoFoto = (typeof TIPOS_FOTO)[number];
 
 export const esquemaPlaca = z.object({
   placa: z.string().nullable(),
   legible: z.enum(["bien", "con_dudas", "no_se_lee"]),
+  /** Qué muestra la foto: el carro al llegar, un daño, el tablero, el trabajo, el carro listo, repuestos o un papel. */
+  tipo_foto: z.enum(TIPOS_FOTO).nullable(),
+  /** Si es el tablero y se lee el odómetro: kilómetros. */
+  kilometraje: z.number().nullable(),
 });
 export type PlacaLeida = z.infer<typeof esquemaPlaca>;
 
@@ -73,7 +89,7 @@ export type PlacaLeida = z.infer<typeof esquemaPlaca>;
 export function mensajeVacio(intencion: Intencion = "desconocido"): MensajeInterpretado {
   return {
     intencion, placa: null, cliente_nombre: null, cliente_celular: null, cliente_documento: null, servicios: [], kilometraje: null,
-    observaciones: null, texto_avance: null, nuevo_estado: null, monto: null, medio_pago: null, tipo_pago: null, fecha_hora: null,
-    entrega_prometida: null, red_origen: null, campana: null, items_cotizacion: [], proveedor: null, comprobante: null, items_compra: [], documento: null, dudas: null,
+    observaciones: null, texto_avance: null, marca: null, modelo: null, anio: null, color: null, diagnostico: null, nuevo_estado: null, monto: null, medio_pago: null, tipo_pago: null, fecha_hora: null,
+    entrega_prometida: null, red_origen: null, campana: null, items_cotizacion: [], proveedor: null, comprobante: null, items_compra: [], documento: null, dudas: null, confianza: null,
   };
 }
