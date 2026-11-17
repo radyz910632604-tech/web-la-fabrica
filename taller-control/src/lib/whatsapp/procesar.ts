@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { normalizarCelular } from "@/lib/celulares";
 import { desdeTotal, montoNeto, montosLinea, redondear, saldo as calcularSaldo, sumarMontos } from "@/lib/dinero";
 import { mensajeVacio, type ComprobanteLeido, type Intencion, type MensajeInterpretado, type PlacaLeida } from "@/lib/ia/esquemas";
-import { interpretarMensaje, leerComprobante, leerPlaca, transcribirAudio, type Archivo } from "@/lib/ia/proveedor";
+import { interpretarMensaje, leerComprobante, leerPlaca, leerRepuestos, transcribirAudio, type Archivo } from "@/lib/ia/proveedor";
 import { fechaHoraDesdeTexto, interpretarSinIa, itemsDesdeTexto, normalizarPlaca } from "@/lib/ia/sin-ia";
 import { cuandoEntrega } from "@/lib/taller/entrega";
 import { NOMBRE_ESTADO, type EstadoOrden } from "@/lib/taller/estados";
@@ -60,7 +60,7 @@ const SI = /^(si|sí|ok|okey|dale|confirmo|confirmar|correcto|listo)\.?$/i;
  * Pagos y cotizaciones se muestran antes con «Confirmar»: tocan lo que paga el cliente.
  * Compras y comprobantes leídos por IA igual quedan «por confirmar» en la app (lo fuerza la base).
  */
-const DIRECTAS = new Set(["nuevo_ingreso", "avance", "recepcion", "compra", "comprobante_venta", "cita"]);
+const DIRECTAS = new Set(["nuevo_ingreso", "avance", "repuestos", "recepcion", "compra", "comprobante_venta", "cita"]);
 const CORREGIBLES = new Set(["nuevo_ingreso", "avance"]);
 const PIE_CORREGIR = "\n\n¿Algo que corregir? Dímelo, por ejemplo «No, el kilometraje es 58 mil».";
 const NO = /^(no|corregir|cancelar|cancela|mal)\.?$/i;
@@ -154,7 +154,7 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
       await ctx.db.from("borradores_whatsapp").update({ estado: "corregido" }).eq("id", id);
       return listo({ texto: "Listo, no guardé nada. Manda el mensaje corregido." }, "corregido");
     }
-    if ((b.faltan ?? []).length) return listo({ texto: pedirDato(b.faltan[0]) }, "pide_dato");
+    if ((b.faltan ?? []).length) return listo({ texto: pedirDato(b.faltan[0], b.datos as Record<string, unknown>) }, "pide_dato");
     const r = await ejecutar(ctx, b.intencion, b.datos as Record<string, unknown>);
     await ctx.db.from("borradores_whatsapp").update({ estado: r.ok ? "confirmado" : "fallido", resultado: r }).eq("id", id);
     extra.intencion = b.intencion;
@@ -198,7 +198,7 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
     const m = await completar(ctx, m0, pendiente.faltan, texto, archivo);
     // En la recepción de repuestos, «sin foto» deja seguir sin evidencia.
     const previoDatos = pendiente.intencion === "recepcion" && /\bsin foto\b|no tengo foto/i.test(texto) ? { ...pendiente.datos, sinFoto: true } : pendiente.datos;
-    const conArchivo = archivo && (pendiente.intencion === "avance" || pendiente.intencion === "recepcion") ? archivo : undefined;
+    const conArchivo = archivo && ["avance", "recepcion", "repuestos"].includes(pendiente.intencion) ? archivo : undefined;
     const p = await preparar(ctx, pendiente.intencion as Intencion, m, conArchivo, previoDatos);
     extra.borrador_id = pendiente.id;
     extra.intencion = pendiente.intencion;
@@ -208,7 +208,7 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
     }
     const res = resumen(pendiente.intencion, p.datos);
     await ctx.db.from("borradores_whatsapp").update({ datos: { ...p.datos, m }, faltan: p.faltan, resumen: res }).eq("id", pendiente.id);
-    if (p.faltan.length) return listo({ texto: pedirDato(p.faltan[0]) }, "pide_dato");
+    if (p.faltan.length) return listo({ texto: pedirDato(p.faltan[0], p.datos) }, "pide_dato");
     if (DIRECTAS.has(pendiente.intencion)) {
       const g = await guardarAhora(ctx, pendiente.intencion, { ...p.datos, m }, pendiente.id);
       return listo({ texto: g.texto }, g.ok ? "confirmado" : "error");
@@ -222,12 +222,21 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
   let lectura: { lectura: ComprobanteLeido; archivo?: string } | undefined;
   let foto: PlacaLeida | null = null;
   const esDocumento = archivo && (archivo.mime === "application/pdf" || /factura|boleta|ticket|compra|comprobante/i.test(texto));
-  if (archivo && e.tipo !== "video" && (esDocumento || !texto)) {
-    // Una foto sola: primero se mira qué muestra (placa, tablero, daño, papel…); solo un papel se lee como comprobante.
-    if (!esDocumento && archivo.mime.startsWith("image/")) {
-      const pl = await leerPlaca(archivo);
-      foto = pl.ok ? pl.datos : null;
-    }
+  // Toda foto se mira primero: qué muestra (placa, tablero, daño, repuestos, un papel…).
+  if (archivo && e.tipo !== "video" && !esDocumento && archivo.mime.startsWith("image/")) {
+    const pl = await leerPlaca(archivo);
+    foto = pl.ok ? pl.datos : null;
+  }
+  const esRepuestos = archivo && foto?.tipo_foto === "repuestos" && tieneAlguno(ctx.roles, PERMITIDO.repuestos) && !/llegaron|lleg[oó]|proveedor|factura|compr/i.test(texto);
+  if (esRepuestos) {
+    const v = await leerRepuestos(archivo!);
+    const extraTexto = texto ? (await interpretar(ctx, texto)).items_compra : [];
+    m = {
+      ...mensajeVacio("repuestos"),
+      placa: normalizarPlaca(texto) ?? (v.ok ? v.datos.placa : null) ?? foto?.placa ?? null,
+      items_compra: [...(v.ok ? v.datos.items.map((i) => ({ descripcion: [i.codigo, i.descripcion].filter(Boolean).join(" "), cantidad: i.cantidad, precio_unitario: null })) : []), ...extraTexto],
+    };
+  } else if (archivo && e.tipo !== "video" && (esDocumento || !texto)) {
     const pista = tieneAlguno(ctx.roles, ["almacen"]) || /factura|compra|proveedor/i.test(texto) ? "compra" : /boleta|venta|cliente/i.test(texto) ? "venta" : tieneAlguno(ctx.roles, ["recepcion"]) ? "venta" : "compra";
     const r = esDocumento || foto?.tipo_foto === "documento" ? await leerComprobante(archivo, pista) : null;
     if (r?.ok && r.datos.es_comprobante) {
@@ -279,7 +288,7 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
   }
 
   const previoBase: Record<string, unknown> = lectura ? { lectura: lectura.lectura, archivo: lectura.archivo } : foto ? { foto } : {};
-  const p = await preparar(ctx, m.intencion, m, m.intencion === "avance" || m.intencion === "recepcion" ? archivo : undefined, previoBase);
+  const p = await preparar(ctx, m.intencion, m, ["avance", "recepcion", "repuestos"].includes(m.intencion) ? archivo : undefined, previoBase);
   if ("respuesta" in p) return listo(p.respuesta, p.resultado ?? "respondido");
   if (!p.faltan.length && DIRECTAS.has(m.intencion)) {
     const g = await guardarAhora(ctx, m.intencion, { ...p.datos, m });
@@ -295,7 +304,7 @@ async function atender(ctx: Ctx, e: Entrada): Promise<{ salida: Salida; extra: R
   if (error || !b) return listo({ texto: "No pude preparar el registro. Intenta otra vez." }, "error");
   extra.borrador_id = b.id;
   return p.faltan.length
-    ? listo({ texto: pedirDato(p.faltan[0]) }, "pide_dato")
+    ? listo({ texto: pedirDato(p.faltan[0], p.datos) }, "pide_dato")
     : listo({ texto: `${res}\n\n¿Lo guardo?`, botones: botonesConfirmar(b.id) }, "borrador");
 }
 
@@ -350,6 +359,11 @@ async function completar(ctx: Ctx, m: MensajeInterpretado, faltan: string[], tex
     if (campo === "items_cotizacion") n.items_cotizacion = ia.items_cotizacion.length ? ia.items_cotizacion : itemsDesdeTexto(texto);
     if (campo === "items_compra") n.items_compra = ia.items_compra.length ? ia.items_compra : interpretarSinIa(`llegaron: ${texto}`).items_compra;
     if (campo === "proveedor" && /[a-záéíóúñ]{2}/i.test(texto)) n.proveedor = ia.proveedor ?? texto.trim().slice(0, 160);
+    if (campo.startsWith("costo:")) {
+      const i = Number(campo.slice(6));
+      const valor = Number((/(\d+(?:[.,]\d{1,2})?)/.exec(texto)?.[1] ?? "").replace(",", "."));
+      n.items_compra = itemsValidos(n).map((x, j) => (j === i && valor > 0 ? { ...x, precio_unitario: valor } : x));
+    }
   }
   return n;
 }
@@ -544,6 +558,42 @@ async function preparar(ctx: Ctx, intencion: Intencion, m: MensajeInterpretado, 
       if (!items.length) faltan.push("items_cotizacion");
       return { datos: { placa: placaOk, ordenId: orden.id, ordenNumero: orden.numero, items }, faltan };
     }
+    case "repuestos": {
+      const temporales = (previo.temporales as Temporal[] | undefined) ?? [];
+      if (!placaOk) {
+        const t = archivo ? await subirTemporal(ctx, archivo, { placa: null, legible: "no_se_lee", tipo_foto: "repuestos", kilometraje: null }) : undefined;
+        return { datos: { temporales: t ? [...temporales, t] : temporales, m }, faltan: ["placa"] };
+      }
+      const { orden } = await ordenDe(ctx, placaOk);
+      if (!orden) return { respuesta: { texto: `No tengo ningún carro con placa ${placaBonita(placaOk)} en taller. Revisa la placa.` } };
+      const items = itemsValidos(m);
+      if (!items.length) faltan.push("items_compra");
+      const { data: inventario } = await ctx.db.from("repuestos").select("id, codigo, nombre, stock, costo_promedio_sin_igv").eq("empresa_id", ctx.empresa).eq("activo", true);
+      const lista = (inventario ?? []) as RepuestoInventario[];
+      const filas = items.map((i, idx) => {
+        const r = emparejarRepuesto(i.descripcion, lista);
+        // Si no alcanza el stock, se trata como repuesto comprado aparte.
+        const usa = r && Number(r.stock) >= i.cantidad ? r : null;
+        const costo = usa ? redondear(Number(usa.costo_promedio_sin_igv) * 1.18) : i.precio_unitario;
+        if (!usa && (costo === null || !(costo > 0))) faltan.push(`costo:${idx}`);
+        return { descripcion: i.descripcion.slice(0, 200), cantidad: i.cantidad, repuestoId: usa?.id ?? null, repuesto: usa ? `${usa.codigo} ${usa.nombre}` : null, costo: costo ?? null, stock: r ? Number(r.stock) : null };
+      });
+      const archivos: Adjunto[] = [];
+      for (const t of temporales) {
+        const destino = `${ctx.empresa}/${orden.id}/${t.ruta.split("/").pop()!.replace(/^pendiente-/, "")}`;
+        const { error } = await clienteAdmin().storage.from("ordenes").move(t.ruta, destino);
+        if (!error) archivos.push({ ruta: destino, mime: t.mime, etiqueta: "repuestos" });
+      }
+      for (const a of (previo.archivos as Adjunto[] | undefined) ?? []) archivos.push(a);
+      if (archivo?.mime.startsWith("image/")) {
+        // El almacén no sube fotos a las órdenes con su sesión; la evidencia del vale la guarda el
+        // servidor, solo si esa persona ve la orden (ordenDe ya lo revisó con su sesión).
+        const ruta = `${ctx.empresa}/${orden.id}/${randomUUID()}.${EXT[archivo.mime] ?? "jpg"}`;
+        const { error } = await clienteAdmin().storage.from("ordenes").upload(ruta, archivo.datos, { contentType: archivo.mime, upsert: false });
+        if (!error) archivos.push({ ruta, mime: archivo.mime, etiqueta: "repuestos" });
+      }
+      return { datos: { placa: placaOk, ordenId: orden.id, ordenNumero: orden.numero, items: filas, archivos }, faltan };
+    }
     case "recepcion": {
       const items = m.items_compra.map((i) => ({ ...i, descripcion: i.descripcion.trim() })).filter((i) => i.descripcion.length >= 2 && i.cantidad > 0).slice(0, 30);
       if (!items.length) faltan.push("items_compra");
@@ -634,6 +684,28 @@ async function verHistorial(ctx: Ctx, placaCruda: string | null): Promise<Respue
 const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf", "video/mp4": "mp4", "video/3gpp": "3gp", "video/quicktime": "mov" };
 
 type Adjunto = { ruta: string; mime: string; etiqueta?: string | null; km?: number | null };
+type RepuestoInventario = { id: string; codigo: string; nombre: string; stock: number | string; costo_promedio_sin_igv: number | string };
+const soles = (n: number) => `S/ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** Ítems que sirven (con nombre y cantidad), en el mismo orden siempre: el «costo:N» que se pregunta apunta a este orden. */
+function itemsValidos(m: MensajeInterpretado) {
+  return m.items_compra.map((i) => ({ ...i, descripcion: i.descripcion.trim() })).filter((i) => i.descripcion.length >= 2 && i.cantidad > 0).slice(0, 30);
+}
+
+/** Busca un repuesto del inventario por código o por las palabras de su nombre. */
+function emparejarRepuesto<T extends { codigo: string; nombre: string }>(desc: string, lista: T[]): T | null {
+  const simple = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+  const d = simple(desc);
+  const palabras = d.split(" ").filter((w) => w.length >= 3);
+  let mejor: (T & { puntos: number }) | null = null;
+  for (const r of lista) {
+    const nombre = simple(r.nombre);
+    if (simple(r.codigo) && d.includes(simple(r.codigo))) return r;
+    const puntos = palabras.filter((w) => nombre.includes(w)).length;
+    if (puntos >= Math.min(2, palabras.length) && (!mejor || puntos > mejor.puntos)) mejor = { ...r, puntos };
+  }
+  return mejor;
+}
 type Temporal = Adjunto;
 const ETIQUETA_FOTO: Record<string, string> = { ingreso: "ingreso", dano: "daño", tablero: "tablero", trabajo: "trabajo", salida: "salida", repuestos: "repuestos", documento: "documento" };
 const soloConValor = (o: unknown) => Object.fromEntries(Object.entries((o ?? {}) as Record<string, unknown>).filter(([, v]) => v !== null && v !== undefined && v !== ""));
@@ -810,6 +882,45 @@ async function ejecutar(ctx: Ctx, intencion: string, d: Record<string, unknown>)
         else hecho.push(`Estado: *${NOMBRE_ESTADO[d.estado as EstadoOrden] ?? d.estado}*`);
       }
       return { ok: true, texto: `✅ ${placaBonita(String(d.placa))} · ${ot}\n${hecho.join("\n")}`, ids: { orden: ordenId } };
+    }
+    case "repuestos": {
+      const ordenId = String(d.ordenId);
+      const filas = d.items as { descripcion: string; cantidad: number; repuestoId: string | null; costo: number | null }[];
+      const lineas: string[] = [];
+      const fallas: string[] = [];
+      // Del inventario: salen del stock para la orden (el costo lo pone el kardex).
+      for (const f of filas.filter((x) => x.repuestoId)) {
+        const { error } = await db.from("movimientos_inventario").insert({ empresa_id: empresa, repuesto_id: f.repuestoId, tipo: "salida", cantidad: -f.cantidad, orden_id: ordenId, nota: "Por WhatsApp" });
+        if (error) fallas.push(f.descripcion);
+        else lineas.push(`• ${f.cantidad}× ${f.descripcion}${f.costo ? ` — ${soles(f.costo)}${f.cantidad !== 1 ? " c/u" : ""}` : ""} (inventario)`);
+      }
+      // Repuestos nuevos: compra directa para la orden, por confirmar.
+      const nuevos = filas.filter((x) => !x.repuestoId && x.costo);
+      if (nuevos.length) {
+        const items = nuevos.map((x) => {
+          const mm = montosLinea({ cantidad: x.cantidad, precioUnitario: Number(x.costo), incluyeIgv: true }, 0);
+          return { descripcion: x.descripcion, cantidad: x.cantidad, precio_sin_igv: redondear(mm.sinIgv / x.cantidad), sin_igv: mm.sinIgv, igv: mm.igv, total: mm.total, orden: ordenId, repuesto: null };
+        });
+        const t = sumarMontos(items.map((i) => ({ sinIgv: i.sin_igv, igv: i.igv, total: i.total })));
+        const { error } = await db.rpc("registrar_compra", {
+          p_empresa: empresa,
+          p_proveedor: { ruc: null, razon_social: "Compra directa (WhatsApp)" },
+          p_compra: { tipo: "sin_comprobante", serie: null, numero: null, fecha: ctx.hoy, moneda: "PEN", tipo_cambio: 1, tasa_igv: 0, sin_igv: t.sinIgv, igv: t.igv, total: t.total, origen: "ia", archivo: null },
+          p_items: items,
+        });
+        if (error) fallas.push(...nuevos.map((x) => x.descripcion));
+        else lineas.push(...nuevos.map((x) => `• ${x.cantidad}× ${x.descripcion} — ${soles(Number(x.costo))}${x.cantidad !== 1 ? " c/u" : ""} (nuevo, compra por confirmar)`));
+      }
+      if (!lineas.length) return falla(fallas.length ? "tu rol no carga repuestos a las órdenes." : "no había repuestos para cargar.");
+      // La foto del vale queda en la galería de la orden como evidencia (ver preparar).
+      for (const a of (d.archivos as Adjunto[] | undefined) ?? []) {
+        await clienteAdmin().from("archivos").insert({ empresa_id: empresa, orden_id: ordenId, tipo: "foto", etapa: "proceso", etiqueta: "repuestos", bucket: "ordenes", ruta: a.ruta, mime: a.mime, subido_por: ctx.perfil });
+      }
+      return {
+        ok: true,
+        texto: [`📦 Repuestos cargados a *${placaBonita(String(d.placa))}* (OT-${String(d.ordenNumero).padStart(6, "0")}):`, ...lineas, fallas.length ? `⚠️ No pude cargar: ${fallas.join(", ")}.` : null, "¿Correcto? Si algo está mal, anúlalo en la orden → Repuestos."].filter(Boolean).join("\n"),
+        ids: { orden: ordenId },
+      };
     }
     case "pago": {
       const { data, error } = await db.from("pagos").insert({ empresa_id: empresa, orden_id: d.ordenId, monto: d.monto, tipo: d.tipo, medio: d.medio, origen: "whatsapp" }).select("id").single();

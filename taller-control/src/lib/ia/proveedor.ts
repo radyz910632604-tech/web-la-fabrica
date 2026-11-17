@@ -6,7 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { BetaContentBlockParam } from "@anthropic-ai/sdk/resources/beta/messages/messages";
 import { z } from "zod";
-import { esquemaComprobante, esquemaMensaje, esquemaPlaca, type ComprobanteLeido, type MensajeInterpretado, type PlacaLeida } from "./esquemas";
+import { esquemaComprobante, esquemaMensaje, esquemaPlaca, esquemaVale, type ComprobanteLeido, type MensajeInterpretado, type PlacaLeida, type ValeLeido } from "./esquemas";
 import { interpretarSinIa, normalizarPlaca } from "./sin-ia";
 
 /**
@@ -179,6 +179,22 @@ export async function leerPlaca(a: Archivo): Promise<Resultado<PlacaLeida>> {
   if (p === "prueba") return { ok: true, datos: { placa: normalizarPlaca(a.nombre ?? "") ?? null, legible: normalizarPlaca(a.nombre ?? "") ? "bien" : "no_se_lee", tipo_foto: fotoDePrueba(a.nombre), kilometraje: /tablero[-_ ]?(\d{3,7})/i.exec(a.nombre ?? "")?.[1] ? Number(/tablero[-_ ]?(\d{3,7})/i.exec(a.nombre ?? "")![1]) : null }, proveedor: "prueba" };
   const sistema = await prompt("leer-placa");
   const r = p === "claude" ? await conClaude(esquemaPlaca, sistema, [bloqueArchivo(a), { type: "text", text: "Lee la placa y di qué muestra la foto." }]) : await conOpenai(esquemaPlaca, sistema, "Lee la placa y di qué muestra la foto.", a);
+  return r.ok ? { ...r, datos: { ...r.datos, placa: normalizarPlaca(r.datos.placa) } } : r;
+}
+
+/** Lee los repuestos de una foto (repuestos sobre la mesa o vale de salida de almacén). */
+export async function leerRepuestos(a: Archivo): Promise<Resultado<ValeLeido>> {
+  const problema = revisarArchivo(a);
+  if (problema) return { ok: false, error: problema };
+  const p = proveedorLectura();
+  if (p === "prueba") {
+    // Modo de prueba: el nombre del archivo trae la lista («vale ABC123 1 sincronizador 3ra, 4 aceite ATF.png»).
+    const nombre = (a.nombre ?? "").replace(/\.[a-z0-9]+$/i, "");
+    const items = [...nombre.matchAll(/(\d+(?:[.,]\d+)?)\s+([^,\d][^,]*)/g)].map((x) => ({ descripcion: x[2].trim(), codigo: null, cantidad: Number(x[1].replace(",", ".")) }));
+    return { ok: true, datos: { placa: normalizarPlaca(nombre), items, legible: items.length ? "bien" : "no_se_lee" }, proveedor: "prueba" };
+  }
+  const sistema = await prompt("leer-repuestos");
+  const r = p === "claude" ? await conClaude(esquemaVale, sistema, [bloqueArchivo(a), { type: "text", text: "Lee los repuestos." }]) : await conOpenai(esquemaVale, sistema, "Lee los repuestos.", a);
   return r.ok ? { ...r, datos: { ...r.datos, placa: normalizarPlaca(r.datos.placa) } } : r;
 }
 

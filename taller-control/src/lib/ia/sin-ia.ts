@@ -71,6 +71,20 @@ export function interpretarSinIa(entrada: string): MensajeInterpretado {
     };
   }
 
+  // Repuestos que van a un carro: «ABC123 salieron 1 sincronizador de tercera, 4 aceite ATF a 25».
+  if (placa && /\b(salieron|salio|saque|sacamos|vale|cargar?|cargue|use|usamos|se pusieron|se puso)\b/.test(bajo)) {
+    const lista = quitar(texto, placaCruda).replace(/^.*?\b(salieron|salió|salio|saqué|saque|sacamos|vale|cargar|carga|cargué|cargue|usé|use|usamos|se pusieron|se puso)\b\s*:?/i, "");
+    const items_compra = lista
+      .split(/[,;\n]+|\s+y\s+(?=\d)/)
+      .map((parte) => {
+        const m = /^\s*(\d+(?:[.,]\d+)?)\s+(?:litros?\s+de\s+|galones?\s+de\s+|unidades?\s+de\s+)?(.+?)(?:\s+(?:a|x|por)\s*(?:s\/\.?\s*)?(\d+(?:[.,]\d{1,2})?))?\s*$/i.exec(parte.trim());
+        if (!m || m[2].trim().length < 2) return null;
+        return { descripcion: m[2].trim(), cantidad: Number(m[1].replace(",", ".")), precio_unitario: m[3] ? Number(m[3].replace(",", ".")) : null };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+    if (items_compra.length) return { ...mensajeVacio("repuestos"), placa, items_compra };
+  }
+
   // Pago: "pago ABC123 150 yape abono"
   if (/\b(pag[oa]|pagado|yape|plin|abono|abon[oó]|adelanto|cancel[oó]|cobr[eé])\b/.test(bajo)) {
     const m = MONTO.exec(texto) ?? MONTO_SUELTO.exec(quitar(texto, placaCruda));

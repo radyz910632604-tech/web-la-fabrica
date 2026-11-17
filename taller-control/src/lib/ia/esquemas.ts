@@ -30,7 +30,7 @@ export const esquemaComprobante = z.object({
 });
 export type ComprobanteLeido = z.infer<typeof esquemaComprobante>;
 
-export const INTENCIONES = ["nuevo_ingreso", "avance", "correccion", "compra", "recepcion", "comprobante_venta", "pago", "cita", "cotizacion", "historial", "documento", "ayuda", "desconocido"] as const;
+export const INTENCIONES = ["nuevo_ingreso", "avance", "correccion", "repuestos", "compra", "recepcion", "comprobante_venta", "pago", "cita", "cotizacion", "historial", "documento", "ayuda", "desconocido"] as const;
 export type Intencion = (typeof INTENCIONES)[number];
 
 export const esquemaMensaje = z.object({
@@ -71,6 +71,14 @@ export const esquemaMensaje = z.object({
   confianza: z.enum(["alta", "media", "baja"]).nullable(),
 });
 export type MensajeInterpretado = z.infer<typeof esquemaMensaje>;
+
+/** Foto de repuestos o de un vale de salida de almacén: qué se cargó a qué carro. */
+export const esquemaVale = z.object({
+  placa: z.string().nullable(),
+  items: z.array(z.object({ descripcion: z.string(), codigo: z.string().nullable(), cantidad: z.number() })),
+  legible: z.enum(["bien", "con_dudas", "no_se_lee"]),
+});
+export type ValeLeido = z.infer<typeof esquemaVale>;
 
 export const TIPOS_FOTO = ["ingreso", "dano", "tablero", "trabajo", "salida", "repuestos", "documento", "otro"] as const;
 export type TipoFoto = (typeof TIPOS_FOTO)[number];
