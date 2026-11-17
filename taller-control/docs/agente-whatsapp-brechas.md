@@ -15,22 +15,22 @@ Comparación de la especificación del agente (texto del usuario, 17/11/2026) co
 - ✅ Resúmenes de mediodía y cierre, entrega por vencer y atrasada, horarios configurables.
 - ✅ Auditoría de cada mensaje: original, transcripción, intención, respuesta.
 
-## Falta o difiere
-1. ❌ Estados de la orden: hoy son En taller → En proceso → Espera repuesto → Listo → Entregado.
-   Faltan En diagnóstico, Espera aprobación, Aprobado y Facturado.
-2. 🟡 Confirmación: hoy el agente pregunta «¿Confirmo?» ANTES de guardar. La especificación pide
-   guardar y luego permitir corregir («No, el kilometraje es 58 mil»).
-3. ❌ Diagnóstico como campo propio de la orden (hoy va como avance).
-4. ❌ Corrección de lo ya guardado por voz o texto.
-5. ❌ Varias cosas en un mensaje («aprobó el cliente y ya pedí los repuestos»).
-6. ❌ Varias fotos seguidas sin texto: agruparlas y preguntar la placa una sola vez.
-7. 🟡 Fotos: falta etiqueta automática (ingreso / daño / tablero / trabajo / salida) y leer el kilometraje del tablero.
-8. ❌ Almacén: vale de SALIDA del inventario por foto (hoy solo compras al proveedor);
-   tomar costo y precio del catálogo y preguntar el costo si el repuesto es nuevo.
-9. ❌ Al llegar a «Listo», enviar a caja el resumen para facturar.
-10. ❌ Comparar el monto del comprobante con el total de la orden y avisar si no cuadra.
-11. ❌ Alertas por WhatsApp: carro sin movimiento, esperando aprobación más de X horas,
-    listo sin facturar, repuesto sin costo, comprobante que no cuadra.
-12. ❌ PDF del historial del carro y resumen para facturar.
-13. 🟡 Respuesta de la IA con «nivel de confianza».
-14. ❌ Conexión real: número de Meta, llaves de IA, flujos de n8n importados y prueba con mensajes reales.
+## Hecho el 17/11/2026 (probado con mensajes simulados)
+1. ✅ Estados: Ingresado → En diagnóstico → Espera aprobación → Aprobado → En reparación → Espera repuestos → Listo → Entregado.
+   «Facturado» lo marca la base (`ordenes_trabajo.facturado_en`) al tener boleta, factura o recibo vigente (migraciones 0014 y 0015).
+2. ✅ Guardar y avisar: ingreso, avances, fotos, repuestos, compras, comprobantes y citas se guardan al toque y se responde el resumen.
+   Pagos y cotizaciones siguen con «Confirmar». Lo leído por IA con dinero igual queda «por confirmar» en la app.
+3. ✅ Diagnóstico como campo de la orden (`registrar_diagnostico`), en pantalla, en el PDF y por voz.
+4. ✅ Corrección por voz o texto de lo último guardado («No, el kilometraje es 58 mil»).
+5. ✅ Varias cosas en un mensaje (diagnóstico + estado + avance).
+6. ✅ Fotos seguidas sin texto: se juntan y se pregunta la placa una sola vez.
+7. ✅ Etiqueta de cada foto (ingreso, daño, tablero, trabajo, salida, repuestos) y kilometraje leído del tablero.
+8. ✅ Almacén por foto del vale o nota de voz: salida del inventario con su costo; repuesto nuevo → pregunta el costo → compra por confirmar.
+9. ✅ Resumen para facturar a caja al quedar «Listo».
+10. ✅ Cuadre del comprobante con lo aprobado (al recibirlo por WhatsApp y en el ciclo de avisos).
+11. ✅ Alertas configurables: sin movimiento, espera aprobación, listo sin facturar, comprobante que no cuadra, repuesto sin costo.
+12. ✅ PDF del historial del carro y resumen para facturar (app y WhatsApp).
+13. ✅ Campo «confianza» en lo que devuelve la IA.
+
+## Falta
+14. ❌ Conexión real: número de Meta, llaves de IA (OpenAI para voz, Claude para fotos), flujos de n8n importados y prueba con mensajes reales.
