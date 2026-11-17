@@ -70,6 +70,8 @@ const esquemaReglas = z.object({
   dias_cliente_inactivo: entero(30, 1095, "los días"),
   horas_orden_sin_cambio: entero(1, 720, "las horas"),
   minutos_aviso_entrega: entero(15, 1440, "los minutos"),
+  horas_espera_aprobacion: entero(1, 720, "las horas"),
+  horas_listo_sin_facturar: entero(1, 720, "las horas"),
   recibo_inicial: entero(1, 99_999_999, "el número"),
   margen_minimo_pct: z.coerce.number().min(0, "Mínimo 0.").max(100, "Máximo 100."),
   igv_pct: z.coerce.number().min(0, "Mínimo 0.").max(50, "Máximo 50."),

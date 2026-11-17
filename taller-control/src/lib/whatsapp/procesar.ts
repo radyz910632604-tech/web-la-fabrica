@@ -8,6 +8,7 @@ import { interpretarMensaje, leerComprobante, leerPlaca, leerRepuestos, transcri
 import { fechaHoraDesdeTexto, interpretarSinIa, itemsDesdeTexto, normalizarPlaca } from "@/lib/ia/sin-ia";
 import { cuandoEntrega } from "@/lib/taller/entrega";
 import { NOMBRE_ESTADO, type EstadoOrden } from "@/lib/taller/estados";
+import { cuadreComprobante } from "@/lib/avisos/textos";
 import { validarPlaca } from "@/lib/placas";
 import { CAJA, tieneAlguno, type Rol } from "@/lib/roles";
 import { pdfCaja, pdfCotizacion, pdfOrden, pdfRecibo, type Pdf } from "@/lib/pdf/documentos";
@@ -1010,7 +1011,15 @@ async function ejecutar(ctx: Ctx, intencion: string, d: Record<string, unknown>)
         detalle: l.lineas.map((x) => `${x.cantidad} × ${x.descripcion}`).join("\n").slice(0, 2000) || null, origen_datos: "ia", archivo_path: d.archivo ?? null,
       });
       if (error) return falla(error.code === "23505" ? "ese comprobante ya estaba registrado." : "tu rol no registra comprobantes.");
-      return { ok: true, texto: "✅ Comprobante registrado. Queda *por confirmar*: revísalo en Caja → Comprobantes." };
+      // Se compara al toque con lo aprobado en la orden.
+      let aviso = "";
+      if (d.ordenId) {
+        const { data: cots } = await db.from("cotizaciones").select("total").eq("orden_id", String(d.ordenId)).eq("estado", "aprobada");
+        const aprobado = cots?.length ? redondear(cots.reduce((a, c) => a + Number(c.total), 0)) : null;
+        const c = cuadreComprobante(m.total, aprobado);
+        aviso = aprobado === null ? "\n⚠️ La orden no tiene cotización aprobada: no pude comparar el monto." : c.cuadra ? `\nCuadra con lo aprobado en la orden (${soles(aprobado)}).` : `\n⚠️ No cuadra: la orden aprobó ${soles(aprobado)} y el comprobante es por ${soles(m.total)} (${c.diferencia > 0 ? "sobran" : "faltan"} ${soles(Math.abs(c.diferencia))}). Le aviso a gerencia.`;
+      }
+      return { ok: true, texto: `✅ Comprobante ${serie}-${numero} registrado por ${soles(m.total)}. Queda *por confirmar* en Caja → Comprobantes.${aviso}` };
     }
     default:
       return falla("no sé cómo guardar esto.");

@@ -96,7 +96,8 @@ create index ordenes_entrega_abiertas on public.ordenes_trabajo (empresa_id, ent
 
 -- 3. Umbral de espera de aprobación ----------------------------------------
 alter table public.configuracion_empresa
-  add column horas_espera_aprobacion integer not null default 24 check (horas_espera_aprobacion between 1 and 720);
+  add column horas_espera_aprobacion integer not null default 24 check (horas_espera_aprobacion between 1 and 720),
+  add column horas_listo_sin_facturar integer not null default 4 check (horas_listo_sin_facturar between 1 and 720);
 
 -- 4. Tipos de aviso nuevos -------------------------------------------------
 alter table public.config_avisos drop constraint config_avisos_tipo_check;

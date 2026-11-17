@@ -93,6 +93,8 @@ type ValoresReglas = {
   dias_cliente_inactivo: number;
   horas_orden_sin_cambio: number;
   minutos_aviso_entrega: number;
+  horas_espera_aprobacion: number;
+  horas_listo_sin_facturar: number;
   margen_minimo_pct: number;
   igv_pct: number;
   hora_resumen_mediodia: string;
@@ -124,6 +126,8 @@ export function FormReglas({ valores }: { valores: ValoresReglas }) {
         <Numero nombre="horas_orden_sin_cambio" etiqueta="Avisar si una orden no avanza en" unidad="horas" valor={valores.horas_orden_sin_cambio} error={e.horas_orden_sin_cambio} />
         <Numero nombre="dias_cliente_inactivo" etiqueta="Cliente inactivo después de" unidad="días" valor={valores.dias_cliente_inactivo} error={e.dias_cliente_inactivo} />
         <Numero nombre="minutos_aviso_entrega" etiqueta="Avisar antes de la hora prometida" unidad="minutos" valor={valores.minutos_aviso_entrega} error={e.minutos_aviso_entrega} paso={15} />
+        <Numero nombre="horas_espera_aprobacion" etiqueta="Avisar si el cliente no aprueba en" unidad="horas" valor={valores.horas_espera_aprobacion} error={e.horas_espera_aprobacion} />
+        <Numero nombre="horas_listo_sin_facturar" etiqueta="Avisar si un carro listo no se factura en" unidad="horas" valor={valores.horas_listo_sin_facturar} error={e.horas_listo_sin_facturar} />
         <Numero nombre="recibo_inicial" etiqueta="Seguir los recibos desde el número" unidad="N°" valor={valores.recibo_inicial} error={e.recibo_inicial} />
         <Numero nombre="margen_minimo_pct" etiqueta="Margen mínimo por orden" unidad="%" valor={valores.margen_minimo_pct} error={e.margen_minimo_pct} paso={0.5} />
         <Numero nombre="igv_pct" etiqueta="IGV" unidad="%" valor={valores.igv_pct} error={e.igv_pct} paso={0.01} />

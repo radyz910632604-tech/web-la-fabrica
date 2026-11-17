@@ -64,6 +64,8 @@ export default async function Configuracion() {
             dias_cliente_inactivo: config.dias_cliente_inactivo,
             horas_orden_sin_cambio: config.horas_orden_sin_cambio,
             minutos_aviso_entrega: config.minutos_aviso_entrega,
+            horas_espera_aprobacion: config.horas_espera_aprobacion,
+            horas_listo_sin_facturar: config.horas_listo_sin_facturar,
             margen_minimo_pct: Number(config.margen_minimo_pct),
             igv_pct: Math.round(Number(config.tasa_igv) * 10000) / 100,
             hora_resumen_mediodia: String(config.hora_resumen_mediodia).slice(0, 5),

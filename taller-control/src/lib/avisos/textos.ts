@@ -70,6 +70,57 @@ export function entregaAtrasada(d: DatosEntrega): { titulo: string; texto: strin
   };
 }
 
+type Aviso = { titulo: string; texto: string };
+
+/** Un carro que no cambia de estado hace horas. */
+export function sinMovimiento(d: { placa: string; estado: string; horas: number }): Aviso {
+  return { titulo: `Sin movimiento: ${d.placa}`, texto: `${d.placa} lleva ${d.horas} h en «${d.estado}» sin cambios. Cuéntame cómo va: «${d.placa} …».` };
+}
+
+/** El cliente no responde el presupuesto. */
+export function esperaAprobacion(d: { placa: string; cliente: string; celular: string; horas: number }): Aviso {
+  return { titulo: `Espera aprobación: ${d.placa}`, texto: `${d.cliente} no aprueba el presupuesto de ${d.placa} hace ${d.horas} h. Llámalo: ${d.celular}. Cuando apruebe: «${d.placa} el cliente aprobó».` };
+}
+
+/** Al quedar listo: lo que caja necesita para emitir la boleta o factura. */
+export function resumenParaCaja(d: { placa: string; ot: string; cliente: string; servicios: string[]; repuestos: string[]; total: number | null }): Aviso {
+  const soles = (n: number) => `S/ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return {
+    titulo: `Listo para facturar: ${d.placa}`,
+    texto: [
+      `${d.placa} (${d.ot}) de ${d.cliente} está listo.`,
+      d.servicios.length ? `Servicios: ${d.servicios.join(", ")}.` : null,
+      d.repuestos.length ? `Repuestos: ${d.repuestos.join(", ")}.` : null,
+      d.total !== null ? `Total aprobado: ${soles(d.total)} con IGV.` : "Todavía no tiene cotización aprobada: revisa los montos antes de facturar.",
+      "Cuando emitas la boleta o factura, mándame la foto con la placa.",
+    ].filter(Boolean).join(" "),
+  };
+}
+
+export function listoSinFacturar(d: { placa: string; ot: string; horas: number }): Aviso {
+  return { titulo: `Listo sin facturar: ${d.placa}`, texto: `${d.placa} (${d.ot}) está listo hace ${d.horas} h y no tiene boleta, factura ni recibo.` };
+}
+
+/** Diferencia entre lo cobrado en el comprobante y lo aprobado en la orden (más de S/ 1 no cuadra). */
+export function cuadreComprobante(totalComprobante: number, totalOrden: number | null): { cuadra: boolean; diferencia: number } {
+  if (totalOrden === null) return { cuadra: true, diferencia: 0 };
+  const diferencia = Math.round((totalComprobante - totalOrden) * 100) / 100;
+  return { cuadra: Math.abs(diferencia) <= 1, diferencia };
+}
+
+export function comprobanteNoCuadra(d: { placa: string; ot: string; comprobante: string; totalComprobante: number; totalOrden: number }): Aviso {
+  const soles = (n: number) => `S/ ${n.toLocaleString("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const dif = d.totalComprobante - d.totalOrden;
+  return {
+    titulo: `Comprobante no cuadra: ${d.placa}`,
+    texto: `${d.comprobante} de ${d.placa} (${d.ot}) es por ${soles(d.totalComprobante)} y lo aprobado en la orden suma ${soles(d.totalOrden)} (${dif > 0 ? "sobran" : "faltan"} ${soles(Math.abs(dif))}). Revísalo.`,
+  };
+}
+
+export function repuestoSinCosto(d: { descripcion: string; placa: string | null; proveedor: string }): Aviso {
+  return { titulo: "Repuesto sin costo", texto: `«${d.descripcion}»${d.placa ? ` de ${d.placa}` : ""} (${d.proveedor}) se cargó sin costo. Complétalo en Compras → Por confirmar para que la ganancia salga bien.` };
+}
+
 /** Las variables de una plantilla de WhatsApp no pueden tener saltos de línea. */
 export function aUnaLinea(texto: string): string {
   return texto.replace(/\s*\n+\s*/g, " · ").replace(/\s{4,}/g, "   ").slice(0, 1000);

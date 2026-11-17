@@ -6,9 +6,12 @@ import { formatearPlaca } from "@/lib/placas";
 import type { Rol } from "@/lib/roles";
 import { clienteAdmin } from "@/lib/supabase/admin";
 import { cuandoEntrega, duracion } from "@/lib/taller/entrega";
-import { NOMBRE_ESTADO, type EstadoOrden, ESTADOS_EN_TRABAJO } from "@/lib/taller/estados";
+import { enTrabajo, ESTADOS_ABIERTOS, ESTADOS_EN_TRABAJO, NOMBRE_ESTADO, numeroOrden, type EstadoOrden } from "@/lib/taller/estados";
 import { pushAPersona, pushConfigurado } from "./push";
-import { aUnaLinea, citaNoLlego, citasDelDia, entregaAtrasada, entregaPorVencer, resumenDelDia, type DatosPersona } from "./textos";
+import {
+  aUnaLinea, citaNoLlego, citasDelDia, comprobanteNoCuadra, cuadreComprobante, entregaAtrasada, entregaPorVencer, esperaAprobacion, listoSinFacturar,
+  repuestoSinCosto, resumenDelDia, resumenParaCaja, sinMovimiento, type DatosPersona,
+} from "./textos";
 
 /**
  * Ciclo de avisos: n8n lo llama cada 15 minutos. Arma lo que toca a esa
@@ -20,7 +23,9 @@ import { aUnaLinea, citaNoLlego, citasDelDia, entregaAtrasada, entregaPorVencer,
  * regla de la base; no toca dinero ni órdenes.
  */
 
-type TipoPersonal = "resumen_mediodia" | "resumen_cierre" | "citas_del_dia" | "cita_no_llego" | "entrega_por_vencer" | "entrega_atrasada";
+type TipoPersonal =
+  | "resumen_mediodia" | "resumen_cierre" | "citas_del_dia" | "cita_no_llego" | "entrega_por_vencer" | "entrega_atrasada"
+  | "sin_movimiento" | "espera_aprobacion" | "resumen_para_caja" | "listo_sin_facturar" | "comprobante_no_cuadra" | "repuesto_sin_costo";
 type Canal = "push" | "whatsapp" | "ambos" | "apagado";
 
 const diaLima = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(d);
@@ -28,7 +33,10 @@ const horaLima = (d: Date) => new Intl.DateTimeFormat("en-GB", { timeZone: "Amer
 const inicioDia = (dia: string) => new Date(`${dia}T00:00:00-05:00`);
 const uno = <T,>(x: T | T[] | null | undefined): T | null => (Array.isArray(x) ? (x[0] ?? null) : (x ?? null));
 
-type Empresa = { id: string; nombre: string; telefono: string | null; mediodia: string; cierre: string; horasSinCambio: number; tolerancia: number; minutosEntrega: number; canales: Map<string, Canal> };
+type Empresa = {
+  id: string; nombre: string; telefono: string | null; mediodia: string; cierre: string; horasSinCambio: number; tolerancia: number; minutosEntrega: number;
+  horasAprobacion: number; horasSinFacturar: number; canales: Map<string, Canal>;
+};
 
 export type AvisoWhatsapp = { id: string; celular: string; plantilla: string | null; idioma: string; variables: string[]; botones: { id: string; titulo: string }[]; texto: string };
 
@@ -55,17 +63,21 @@ async function cicloReal(ahora: Date, origen: OrigenCiclo) {
   const hora = horaLima(ahora);
   const { data: filas } = await admin
     .from("empresas")
-    .select("id, nombre, telefono, configuracion_empresa (hora_resumen_mediodia, hora_cierre, horas_orden_sin_cambio, tolerancia_cita_minutos, minutos_aviso_entrega), config_avisos (tipo, canal)")
+    .select("id, nombre, telefono, configuracion_empresa (hora_resumen_mediodia, hora_cierre, horas_orden_sin_cambio, tolerancia_cita_minutos, minutos_aviso_entrega, horas_espera_aprobacion, horas_listo_sin_facturar), config_avisos (tipo, canal)")
     .eq("activa", true);
   const creados: Record<string, number> = {};
   const sumar = (k: string, n = 1) => (creados[k] = (creados[k] ?? 0) + n);
 
   for (const f of filas ?? []) {
-    const cfg = uno(f.configuracion_empresa as never) as { hora_resumen_mediodia: string; hora_cierre: string; horas_orden_sin_cambio: number; tolerancia_cita_minutos: number; minutos_aviso_entrega: number } | null;
+    const cfg = uno(f.configuracion_empresa as never) as {
+      hora_resumen_mediodia: string; hora_cierre: string; horas_orden_sin_cambio: number; tolerancia_cita_minutos: number; minutos_aviso_entrega: number;
+      horas_espera_aprobacion?: number; horas_listo_sin_facturar?: number;
+    } | null;
     const e: Empresa = {
       id: f.id, nombre: f.nombre, telefono: f.telefono,
       mediodia: (cfg?.hora_resumen_mediodia ?? "12:00").slice(0, 5), cierre: (cfg?.hora_cierre ?? "19:00").slice(0, 5),
       horasSinCambio: cfg?.horas_orden_sin_cambio ?? 48, tolerancia: cfg?.tolerancia_cita_minutos ?? 30, minutosEntrega: cfg?.minutos_aviso_entrega ?? 120,
+      horasAprobacion: cfg?.horas_espera_aprobacion ?? 24, horasSinFacturar: cfg?.horas_listo_sin_facturar ?? 4,
       canales: new Map(((f.config_avisos ?? []) as { tipo: string; canal: Canal }[]).map((c) => [c.tipo, c.canal])),
     };
     sumar("cita_no_llego", await citasSinLlegada(admin, e, ahora));
@@ -73,6 +85,7 @@ async function cicloReal(ahora: Date, origen: OrigenCiclo) {
     sumar("entrega_por_vencer", entregas.porVencer);
     sumar("entrega_atrasada", entregas.atrasadas);
     sumar("recordatorio_mantenimiento", await recordatoriosQueTocan(admin, e, hoy));
+    for (const [k, v] of Object.entries(await alertasDelAgente(admin, e, ahora))) sumar(k, v);
     if (hora >= e.mediodia && hora < e.cierre) sumar("resumen_mediodia", await resumenes(admin, e, "mediodia", hoy, ahora));
     if (hora >= e.cierre) sumar("resumen_cierre", await resumenes(admin, e, "cierre", hoy, ahora));
     if (hora >= "07:30") sumar("citas_del_dia", await citasDeHoy(admin, e, hoy));
@@ -229,6 +242,119 @@ async function entregasQueVencen(admin: SupabaseClient, e: Empresa, ahora: Date)
     }
   }
   return cuenta;
+}
+
+/**
+ * Alertas del agente (especificación): carro sin movimiento, esperando
+ * aprobación, resumen para facturar al quedar listo, listo sin facturar,
+ * comprobante que no cuadra y repuesto sin costo. Cada una sale una sola vez
+ * por situación (la clave única lo asegura) y su canal se elige en Configuración.
+ */
+async function alertasDelAgente(admin: SupabaseClient, e: Empresa, ahora: Date): Promise<Record<string, number>> {
+  const cuenta: Record<string, number> = {};
+  const sumar = (k: string, n: number) => (cuenta[k] = (cuenta[k] ?? 0) + n);
+  const { data: abiertas } = await admin
+    .from("ordenes_trabajo")
+    .select("id, numero, estado, estado_cambiado_en, listo_en, facturado_en, creado_por, clientes (nombre, celular), vehiculos (placa)")
+    .eq("empresa_id", e.id)
+    .eq("anulada", false)
+    .in("estado", [...ESTADOS_ABIERTOS])
+    .limit(300);
+  const gente = await personal(admin, e.id);
+  const porId = new Map(gente.map((p) => [p.id, p]));
+  const con = (...roles: Rol[]) => gente.filter((p) => p.roles.some((r) => roles.includes(r)));
+  const gerencia = con("gerencia");
+  const caja = con("recepcion").length ? con("recepcion") : con("administrador", "gerencia");
+  const unicos = <T extends { id: string }>(l: T[]) => [...new Map(l.map((p) => [p.id, p])).values()];
+  const responsables = (creadoPor: string | null) => {
+    const c = creadoPor ? porId.get(creadoPor) : undefined;
+    if (c && c.roles.some((r) => r === "asesor" || r === "gerencia" || r === "administrador")) return [c];
+    return con("asesor").length ? con("asesor") : gerencia;
+  };
+  const horasDesde = (iso: string | null) => (iso ? Math.floor((ahora.getTime() - new Date(iso).getTime()) / 3_600_000) : 0);
+
+  for (const o of abiertas ?? []) {
+    const v = uno(o.vehiculos as never) as { placa: string } | null;
+    const c = uno(o.clientes as never) as { nombre: string; celular: string } | null;
+    if (!v) continue;
+    const placa = formatearPlaca(v.placa);
+    const ot = numeroOrden(o.numero);
+    const enlace = `/ordenes/${o.id}`;
+    const horas = horasDesde(o.estado_cambiado_en);
+    if (o.estado === "espera_aprobacion" && horas >= e.horasAprobacion && c) {
+      for (const p of responsables(o.creado_por)) sumar("espera_aprobacion", await avisoPersonal(admin, e, "espera_aprobacion", p, { ...esperaAprobacion({ placa, cliente: c.nombre, celular: formatearCelular(c.celular), horas }), enlace }, `espera_aprobacion:${o.id}:${o.estado_cambiado_en}:${p.id}`));
+    } else if (enTrabajo(o.estado) && horas >= e.horasSinCambio) {
+      for (const p of responsables(o.creado_por)) sumar("sin_movimiento", await avisoPersonal(admin, e, "sin_movimiento", p, { ...sinMovimiento({ placa, estado: NOMBRE_ESTADO[o.estado as EstadoOrden] ?? o.estado, horas }), enlace }, `sin_movimiento:${o.id}:${o.estado_cambiado_en}:${p.id}`));
+    }
+    if (o.estado === "listo" && !o.facturado_en && o.listo_en) {
+      // Apenas queda listo: el resumen para facturar a caja.
+      const resumen = await resumenDeOrden(admin, o.id);
+      for (const p of caja) sumar("resumen_para_caja", await avisoPersonal(admin, e, "resumen_para_caja", p, { ...resumenParaCaja({ placa, ot, cliente: c?.nombre ?? "—", ...resumen }), enlace }, `resumen_para_caja:${o.id}:${o.listo_en}:${p.id}`));
+      const h = horasDesde(o.listo_en);
+      if (h >= e.horasSinFacturar) {
+        for (const p of unicos([...caja, ...responsables(o.creado_por)])) sumar("listo_sin_facturar", await avisoPersonal(admin, e, "listo_sin_facturar", p, { ...listoSinFacturar({ placa, ot, horas: h }), enlace }, `listo_sin_facturar:${o.id}:${o.listo_en}:${p.id}`));
+      }
+    }
+  }
+
+  // Comprobantes de los últimos 7 días que no cuadran con lo aprobado en la orden.
+  const { data: comps } = await admin
+    .from("comprobantes_venta")
+    .select("id, tipo, serie, numero, total, orden_id, ordenes_trabajo (numero, vehiculos (placa))")
+    .eq("empresa_id", e.id)
+    .neq("estado", "anulado")
+    .not("orden_id", "is", null)
+    .gte("creado_en", new Date(ahora.getTime() - 7 * 86_400_000).toISOString())
+    .limit(200);
+  for (const cp of comps ?? []) {
+    const total = await totalAprobado(admin, cp.orden_id!);
+    const cuadre = cuadreComprobante(Number(cp.total), total);
+    if (cuadre.cuadra || total === null) continue;
+    const o = uno(cp.ordenes_trabajo as never) as { numero: number; vehiculos: { placa: string } | { placa: string }[] | null } | null;
+    const pl = formatearPlaca(uno(o?.vehiculos as never as { placa: string } | null)?.placa ?? "");
+    const aviso = comprobanteNoCuadra({ placa: pl, ot: numeroOrden(o?.numero ?? 0), comprobante: `${cp.tipo === "factura" ? "Factura" : "Boleta"} ${cp.serie}-${cp.numero}`, totalComprobante: Number(cp.total), totalOrden: total });
+    for (const p of unicos([...gerencia, ...caja])) sumar("comprobante_no_cuadra", await avisoPersonal(admin, e, "comprobante_no_cuadra", p, { ...aviso, enlace: `/ordenes/${cp.orden_id}` }, `comprobante_no_cuadra:${cp.id}:${p.id}`));
+  }
+
+  // Repuestos cargados sin costo (compras por confirmar con líneas en cero).
+  const { data: sinCosto } = await admin
+    .from("compra_items")
+    .select("id, descripcion, orden_id, compras!inner (estado, empresa_id, proveedores (razon_social)), ordenes_trabajo (vehiculos (placa))")
+    .eq("compras.empresa_id", e.id)
+    .eq("compras.estado", "por_confirmar")
+    .eq("subtotal_sin_igv", 0)
+    .limit(100);
+  const almacen = con("almacen").length ? con("almacen") : con("administrador", "gerencia");
+  for (const it of sinCosto ?? []) {
+    const compra = uno(it.compras as never) as { proveedores: { razon_social: string } | { razon_social: string }[] | null } | null;
+    const ord = uno(it.ordenes_trabajo as never) as { vehiculos: { placa: string } | { placa: string }[] | null } | null;
+    const pl = uno(ord?.vehiculos as never as { placa: string } | null)?.placa;
+    const aviso = repuestoSinCosto({ descripcion: it.descripcion, placa: pl ? formatearPlaca(pl) : null, proveedor: uno(compra?.proveedores as never as { razon_social: string } | null)?.razon_social ?? "sin proveedor" });
+    for (const p of almacen) sumar("repuesto_sin_costo", await avisoPersonal(admin, e, "repuesto_sin_costo", p, { ...aviso, enlace: "/compras" }, `repuesto_sin_costo:${it.id}:${p.id}`));
+  }
+  return cuenta;
+}
+
+/** Total con IGV de las cotizaciones aprobadas de una orden (null si no tiene). */
+async function totalAprobado(admin: SupabaseClient, ordenId: string): Promise<number | null> {
+  const { data } = await admin.from("cotizaciones").select("total").eq("orden_id", ordenId).eq("estado", "aprobada");
+  if (!data?.length) return null;
+  return Math.round(data.reduce((a, c) => a + Number(c.total), 0) * 100) / 100;
+}
+
+/** Servicios, repuestos y total de una orden, para el resumen que va a caja. */
+async function resumenDeOrden(admin: SupabaseClient, ordenId: string): Promise<{ servicios: string[]; repuestos: string[]; total: number | null }> {
+  const [{ data: serv }, { data: comp }, { data: sal }, total] = await Promise.all([
+    admin.from("orden_servicios").select("descripcion").eq("orden_id", ordenId),
+    admin.from("compra_items").select("descripcion, cantidad").eq("orden_id", ordenId),
+    admin.from("movimientos_inventario").select("cantidad, repuestos (nombre)").eq("orden_id", ordenId).eq("tipo", "salida").eq("estado", "vigente"),
+    totalAprobado(admin, ordenId),
+  ]);
+  const repuestos = [
+    ...(comp ?? []).map((x) => `${Number(x.cantidad)}× ${x.descripcion}`),
+    ...(sal ?? []).map((x) => `${-Number(x.cantidad)}× ${(uno(x.repuestos as never) as { nombre: string } | null)?.nombre ?? "repuesto"}`),
+  ];
+  return { servicios: (serv ?? []).map((x) => x.descripcion), repuestos: repuestos.slice(0, 12), total };
 }
 
 async function recordatoriosQueTocan(admin: SupabaseClient, e: Empresa, hoy: string): Promise<number> {
