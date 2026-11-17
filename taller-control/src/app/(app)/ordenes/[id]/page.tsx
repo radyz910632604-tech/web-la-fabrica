@@ -18,7 +18,9 @@ import { COLOR_ESTADO, COMBUSTIBLES, etiquetaOrden, NOMBRE_ESTADO, numeroOrden, 
 import { listarRepuestos } from "@/lib/taller/inventario-consultas";
 import { colorSituacion, cuandoEntrega, partesLima, situacionEntrega, textoSituacion } from "@/lib/taller/entrega";
 import { SacarDelInventario } from "../../inventario/controles";
+import { FirmarCliente } from "@/components/taller/firma-cliente";
 import { AgregarServicio, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, SubirFotos } from "./controles";
+import { guardarFirma } from "./firma-acciones";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await clienteServidor();
@@ -37,7 +39,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
   const { data: o } = await supabase
     .from("ordenes_trabajo")
     .select(
-      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, es_reingreso_garantia, orden_garantia_origen_id, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
+      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, es_reingreso_garantia, orden_garantia_origen_id, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
     )
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
@@ -54,9 +56,11 @@ export default async function Orden({ params, searchParams }: { params: Promise<
     tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]) ? catalogo(ctx.taller.id) : Promise.resolve([]),
   ]);
 
-  const rutas = (archivos ?? []).map((a) => a.ruta);
+  const rutasFirma = [o.firma_ingreso_ruta, o.firma_entrega_ruta].filter(Boolean) as string[];
+  const rutas = [...(archivos ?? []).map((a) => a.ruta), ...rutasFirma];
   const firmadas = rutas.length ? (await supabase.storage.from("ordenes").createSignedUrls(rutas, 60 * 60)).data ?? [] : [];
   const fotos = (archivos ?? []).map((a, i) => ({ id: a.id, etapa: a.etapa, url: firmadas[i]?.signedUrl ?? null }));
+  const urlDe = (ruta: string | null) => (ruta ? (firmadas.find((f) => f.path === ruta)?.signedUrl ?? null) : null);
 
   const v = Array.isArray(o.vehiculos) ? o.vehiculos[0] : o.vehiculos;
   const c = Array.isArray(o.clientes) ? o.clientes[0] : o.clientes;
@@ -116,6 +120,47 @@ export default async function Orden({ params, searchParams }: { params: Promise<
         {gestiona && (estado === "en_taller" || estado === "en_proceso" || estado === "esperando_repuesto") ? (
           <CambiarEntrega ordenId={o.id} actual={prometida ? partesLima(prometida) : null} ahora={ahora.toISOString()} cliente={c?.nombre.split(" ")[0] ?? "el cliente"} />
         ) : null}
+      </Tarjeta>
+    ) : null;
+
+  // Firma del cliente: al dejar el carro la toma el asesor; al recogerlo, quien entrega (asesor o recepción).
+  const tomaIngreso = gestiona && !o.firma_ingreso_ruta && estado !== "entregado";
+  const tomaEntrega = verDinero && !o.firma_entrega_ruta && (estado === "listo" || estado === "entregado");
+  const filasFirma = [
+    { clave: "ingreso", titulo: "Al dejar el carro", ruta: o.firma_ingreso_ruta, en: o.firma_ingreso_en },
+    { clave: "entrega", titulo: "Al recoger el carro", ruta: o.firma_entrega_ruta, en: o.firma_entrega_en },
+  ].filter((f) => f.ruta || (f.clave === "ingreso" ? tomaIngreso : tomaEntrega));
+  const tarjetaFirmas =
+    filasFirma.length && c ? (
+      <Tarjeta aria-labelledby="t-firmas">
+        <CabeceraTarjeta id="t-firmas" titulo="Firma del cliente" detalle="Sale en la orden y en el recibo en PDF." />
+        <ul className="flex flex-col gap-3">
+          {filasFirma.map((f) => (
+            <li key={f.clave} className="rounded-2xl bg-interna p-4">
+              <p className="text-[15px] font-medium">{f.titulo}</p>
+              {f.ruta ? (
+                <>
+                  {urlDe(f.ruta) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={urlDe(f.ruta)!} alt={`Firma de ${c.nombre} ${f.titulo.toLowerCase()}`} className="mt-2 h-20 w-full max-w-72 rounded-xl bg-white object-contain p-1" />
+                  ) : null}
+                  <p className="mt-1.5 text-[13px] text-tinta-3">Firmó {formatearMomento(new Date(f.en!), ahora).toLowerCase()}</p>
+                </>
+              ) : (
+                <div className="mt-2 flex flex-col gap-2">
+                  <p className="text-sm text-tinta-2">{f.clave === "ingreso" ? "Que confirme el estado del carro y lo que pidió." : "Que confirme que recibe su carro conforme."}</p>
+                  <FirmarCliente
+                    etiqueta={f.clave === "ingreso" ? "Firma de ingreso" : "Firma de entrega"}
+                    titulo={f.clave === "ingreso" ? `Firma de ${c.nombre}` : `${c.nombre} recibe su carro`}
+                    texto={f.clave === "ingreso" ? "Pásale el celular al cliente para que firme con el dedo." : "Pásale el celular al cliente para que firme que recibe su carro conforme."}
+                    accion={guardarFirma.bind(null, o.id, f.clave as "ingreso" | "entrega")}
+                    variante={f.clave === "entrega" && estado === "listo" ? "primario" : "secundario"}
+                  />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
       </Tarjeta>
     ) : null;
 
@@ -279,6 +324,8 @@ export default async function Orden({ params, searchParams }: { params: Promise<
               <p className="text-[15px]">{o.tecnico_id ? (nombres.get(o.tecnico_id) ?? "Asignado") : "Sin asignar"}</p>
             )}
           </Tarjeta>
+
+          {tarjetaFirmas}
 
           <Tarjeta aria-labelledby="t-historial">
             <CabeceraTarjeta
