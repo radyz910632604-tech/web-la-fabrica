@@ -4,7 +4,7 @@ import { Placa } from "@/components/marca/placa";
 import { Estado } from "@/components/ui/estado";
 import { formatearMomento } from "@/lib/formato";
 import { cuandoEntrega, situacionEntrega, type SituacionEntrega } from "@/lib/taller/entrega";
-import { COLOR_ESTADO, NOMBRE_ESTADO, numeroOrden } from "@/lib/taller/estados";
+import { COLOR_ESTADO, nombreEstado, numeroOrden } from "@/lib/taller/estados";
 import { cn } from "@/lib/utils";
 import type { FilaOrden } from "@/lib/taller/consultas";
 
@@ -68,7 +68,7 @@ export function ListaOrdenes({
                 </td>
                 {verTecnico ? <td className="truncate px-3 text-tinta-2">{o.tecnico ?? "Sin asignar"}</td> : null}
                 <td className="px-3">
-                  <Estado color={COLOR_ESTADO[o.estado]} texto={NOMBRE_ESTADO[o.estado]} />
+                  <Estado color={COLOR_ESTADO[o.estado]} texto={nombreEstado(o.estado, o.facturadoEn)} />
                   {entrega(o)}
                 </td>
                 <td className="num px-3 text-right whitespace-nowrap text-tinta-2">{momento(o)}</td>
@@ -95,7 +95,7 @@ export function ListaOrdenes({
                 </p>
                 <p className="truncate text-[13px] text-tinta-2">{detalle(o)}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 text-[13px] text-tinta-2">
-                  <Estado color={COLOR_ESTADO[o.estado]} texto={NOMBRE_ESTADO[o.estado]} />
+                  <Estado color={COLOR_ESTADO[o.estado]} texto={nombreEstado(o.estado, o.facturadoEn)} />
                   {entrega(o)}
                 </div>
               </div>

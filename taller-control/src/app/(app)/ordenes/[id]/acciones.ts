@@ -34,6 +34,18 @@ export async function agregarAvance(ordenId: string, texto: string): Promise<Res
   return { ok: "Avance guardado." };
 }
 
+export async function guardarDiagnostico(ordenId: string, texto: string): Promise<Resultado> {
+  await obtenerContexto();
+  const limpio = texto.trim();
+  if (limpio.length < 3) return { error: "Escribe qué encontraron." };
+  if (limpio.length > 2000) return { error: "Máximo 2000 letras." };
+  const supabase = await clienteServidor();
+  const { error } = await supabase.rpc("registrar_diagnostico", { p_orden: ordenId, p_texto: limpio });
+  if (error) return { error: "No puedes escribir el diagnóstico de esta orden." };
+  revalidatePath(`/ordenes/${ordenId}`);
+  return { ok: "Diagnóstico guardado." };
+}
+
 export async function asignarTecnico(ordenId: string, tecnicoId: string): Promise<Resultado> {
   await obtenerContexto();
   const supabase = await clienteServidor();

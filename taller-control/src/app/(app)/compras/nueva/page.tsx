@@ -5,7 +5,7 @@ import { clienteServidor } from "@/lib/supabase/servidor";
 import { diaEnLima } from "@/lib/formato";
 import { listarOrdenes } from "@/lib/taller/consultas";
 import { configDinero } from "@/lib/taller/dinero-consultas";
-import { etiquetaOrden } from "@/lib/taller/estados";
+import { etiquetaOrden, ESTADOS_ABIERTOS } from "@/lib/taller/estados";
 import { estadoIa } from "@/lib/ia/proveedor";
 import { FormularioCompra } from "./formulario";
 
@@ -18,7 +18,7 @@ export default async function NuevaCompra({ searchParams }: { searchParams: Prom
   const supabase = await clienteServidor();
   const [{ data: proveedores }, ordenes, config, { data: repuestos }] = await Promise.all([
     supabase.from("proveedores").select("id, ruc, razon_social").eq("empresa_id", ctx.taller.id).eq("activo", true).order("razon_social"),
-    listarOrdenes(ctx.taller.id, { estados: ["en_taller", "en_proceso", "esperando_repuesto", "listo"], limite: 200, orden: "ingreso" }),
+    listarOrdenes(ctx.taller.id, { estados: [...ESTADOS_ABIERTOS], limite: 200, orden: "ingreso" }),
     configDinero(ctx.taller.id),
     supabase.from("repuestos").select("id, codigo, nombre").eq("empresa_id", ctx.taller.id).eq("activo", true).order("nombre").limit(500),
   ]);

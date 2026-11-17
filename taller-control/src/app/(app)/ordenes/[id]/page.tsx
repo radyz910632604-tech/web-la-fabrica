@@ -14,12 +14,12 @@ import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { catalogo, nombresPersonal, personalConRol } from "@/lib/taller/consultas";
 import { configDinero, dineroDeOrden } from "@/lib/taller/dinero-consultas";
-import { COLOR_ESTADO, COMBUSTIBLES, etiquetaOrden, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "@/lib/taller/estados";
+import { COLOR_ESTADO, COMBUSTIBLES, enTrabajo, etiquetaOrden, nombreEstado, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "@/lib/taller/estados";
 import { listarRepuestos } from "@/lib/taller/inventario-consultas";
 import { colorSituacion, cuandoEntrega, partesLima, situacionEntrega, textoSituacion } from "@/lib/taller/entrega";
 import { SacarDelInventario } from "../../inventario/controles";
 import { FirmarCliente } from "@/components/taller/firma-cliente";
-import { AgregarServicio, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, SubirFotos } from "./controles";
+import { AgregarServicio, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, FormDiagnostico, SubirFotos } from "./controles";
 import { guardarFirma } from "./firma-acciones";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -39,7 +39,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
   const { data: o } = await supabase
     .from("ordenes_trabajo")
     .select(
-      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, es_reingreso_garantia, orden_garantia_origen_id, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
+      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, es_reingreso_garantia, orden_garantia_origen_id, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, diagnostico, diagnostico_en, facturado_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
     )
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
@@ -117,7 +117,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
         ) : (
           <p className="text-[15px] text-tinta-2">Todavía no hay hora prometida. Ponla apenas la sepas: así el sistema te avisa antes de que venza.</p>
         )}
-        {gestiona && (estado === "en_taller" || estado === "en_proceso" || estado === "esperando_repuesto") ? (
+        {gestiona && enTrabajo(estado) ? (
           <CambiarEntrega ordenId={o.id} actual={prometida ? partesLima(prometida) : null} ahora={ahora.toISOString()} cliente={c?.nombre.split(" ")[0] ?? "el cliente"} />
         ) : null}
       </Tarjeta>
@@ -174,7 +174,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
         <div className="flex flex-wrap items-center gap-3">
           <Placa placa={v?.placa ?? ""} className="h-9 px-3 text-[17px]" />
           <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.025em] md:text-[32px]">{numeroOrden(o.numero)}</h1>
-          <Estado color={COLOR_ESTADO[estado]} texto={NOMBRE_ESTADO[estado]} className="rounded-full bg-tarjeta px-3 py-1.5 text-[15px] shadow-reposo" />
+          <Estado color={COLOR_ESTADO[estado]} texto={nombreEstado(estado, o.facturado_en)} className="rounded-full bg-tarjeta px-3 py-1.5 text-[15px] shadow-reposo" />
           {o.es_reingreso_garantia ? <GarantiaChip /> : null}
           {prometida && estado !== "entregado" ? (
             <Estado
@@ -231,6 +231,20 @@ export default async function Orden({ params, searchParams }: { params: Promise<
             ) : null}
           </Tarjeta>
 
+          <Tarjeta aria-labelledby="t-diagnostico">
+            <CabeceraTarjeta
+              id="t-diagnostico"
+              titulo="Diagnóstico"
+              detalle={o.diagnostico_en ? `Actualizado ${formatearMomento(new Date(o.diagnostico_en), ahora).toLowerCase()}` : "Lo que encontró el taller"}
+            />
+            {o.diagnostico ? (
+              <p className="text-[15px] whitespace-pre-line">{o.diagnostico}</p>
+            ) : !puedeTrabajar ? (
+              <p className="text-sm text-tinta-2">Todavía no hay diagnóstico.</p>
+            ) : null}
+            {puedeTrabajar && estado !== "entregado" ? <FormDiagnostico ordenId={o.id} actual={o.diagnostico} /> : null}
+          </Tarjeta>
+
           <Tarjeta aria-labelledby="t-fotos">
             <CabeceraTarjeta id="t-fotos" titulo="Fotos" detalle={`${fotos.length} ${fotos.length === 1 ? "foto" : "fotos"}`} />
             {fotos.length > 0 ? (
@@ -250,7 +264,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
             ) : (
               <p className="rounded-2xl border border-dashed border-control px-4 py-4 text-sm text-tinta-2">Todavía no hay fotos de este carro.</p>
             )}
-            {puedeTrabajar ? <SubirFotos ordenId={o.id} etapa={estado === "en_taller" ? "ingreso" : estado === "listo" || estado === "entregado" ? "entrega" : "proceso"} /> : null}
+            {puedeTrabajar ? <SubirFotos ordenId={o.id} etapa={estado === "en_taller" || estado === "en_diagnostico" ? "ingreso" : estado === "listo" || estado === "entregado" ? "entrega" : "proceso"} /> : null}
           </Tarjeta>
 
           <Tarjeta aria-labelledby="t-avances">

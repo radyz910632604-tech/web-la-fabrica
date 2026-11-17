@@ -39,13 +39,15 @@ describe("para pegar a mano", () => {
   it("corta el bloque después de agregar un valor a un tipo", () => {
     const pendientes = archivos.map((archivo) => ({ archivo, sql: readFileSync(`supabase/migrations/${archivo}`, "utf8") }));
     const bloques = enBloques(pendientes);
-    expect(bloques).toHaveLength(2);
+    // Se corta después de la 0005 (rol recepción) y de la 0014 (estados nuevos).
+    expect(bloques).toHaveLength(3);
     expect(bloques[0].archivos).toEqual(archivos.slice(0, 5));
-    expect(bloques[1].archivos).toEqual(archivos.slice(5));
+    expect(bloques[1].archivos).toEqual(archivos.slice(5, 14));
+    expect(bloques[2].archivos).toEqual(archivos.slice(14));
   });
-  it("lo que falta en producción hoy cabe en un solo bloque", () => {
-    const pendientes = archivos.slice(10).map((archivo) => ({ archivo, sql: readFileSync(`supabase/migrations/${archivo}`, "utf8") }));
-    expect(enBloques(pendientes)).toHaveLength(1);
+  it("desde la versión 13, lo que falta va en dos pasos (los estados nuevos primero)", () => {
+    const pendientes = archivos.slice(13).map((archivo) => ({ archivo, sql: readFileSync(`supabase/migrations/${archivo}`, "utf8") }));
+    expect(enBloques(pendientes).map((b) => b.archivos.length)).toEqual([1, 1]);
   });
   it("revisando solo con la API: sabe qué versiones faltan", () => {
     const existe = new Map(VERSIONES.filter((v) => v.rest).map((v, i) => [v.version, i < 8]));

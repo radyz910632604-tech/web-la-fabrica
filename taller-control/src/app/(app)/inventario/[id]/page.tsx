@@ -11,7 +11,7 @@ import { tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { listarOrdenes } from "@/lib/taller/consultas";
 import { configDinero } from "@/lib/taller/dinero-consultas";
-import { etiquetaOrden, numeroOrden } from "@/lib/taller/estados";
+import { etiquetaOrden, numeroOrden, ESTADOS_ABIERTOS } from "@/lib/taller/estados";
 import { kardex, repuesto } from "@/lib/taller/inventario-consultas";
 import { cn } from "@/lib/utils";
 import { anularMovimiento } from "../acciones";
@@ -32,7 +32,7 @@ export default async function FichaRepuesto({ params, searchParams }: { params: 
   const [movs, { tasaIgv }, ordenes] = await Promise.all([
     kardex(ctx.taller.id, id),
     configDinero(ctx.taller.id),
-    mueve ? listarOrdenes(ctx.taller.id, { estados: ["en_taller", "en_proceso", "esperando_repuesto", "listo"], limite: 200, orden: "reciente" }) : Promise.resolve([]),
+    mueve ? listarOrdenes(ctx.taller.id, { estados: [...ESTADOS_ABIERTOS], limite: 200, orden: "reciente" }) : Promise.resolve([]),
   ]);
   const precioConIgv = r.precioSinIgv === null ? null : desdeSinIgv(r.precioSinIgv, tasaIgv).total;
   const datos = [

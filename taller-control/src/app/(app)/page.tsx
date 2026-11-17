@@ -14,10 +14,11 @@ import { limitesDiaLima, listarCitas, listarOrdenes, type FilaOrden } from "@/li
 import { situacionEntrega } from "@/lib/taller/entrega";
 import { totalesPeriodo, type ResumenMesDinero } from "@/lib/taller/dinero-consultas";
 import { mesesHasta, reporteMensual } from "@/lib/taller/reportes";
+import { ESTADOS_ABIERTOS } from "@/lib/taller/estados";
 
 export const metadata = { title: "Panel" };
 
-const ACTIVOS = ["en_taller", "en_proceso", "esperando_repuesto", "listo"] as const;
+const ACTIVOS = [...ESTADOS_ABIERTOS] as const;
 
 /*
  * Cuadrícula de computadora: 12 columnas, 16 px entre bloques.

@@ -3,6 +3,7 @@ import { ListaOrdenes } from "@/components/taller/lista-ordenes";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { obtenerContexto } from "@/lib/sesion";
 import { listarOrdenes } from "@/lib/taller/consultas";
+import { ESTADOS_ABIERTOS } from "@/lib/taller/estados";
 
 export const metadata = { title: "Mis trabajos" };
 
@@ -10,7 +11,7 @@ export default async function MisTrabajos() {
   const ctx = await obtenerContexto();
   if (!ctx.roles.includes("tecnico")) notFound();
   const [activas, entregadas] = await Promise.all([
-    listarOrdenes(ctx.taller.id, { tecnicoId: ctx.perfil.id, estados: ["en_taller", "en_proceso", "esperando_repuesto", "listo"], orden: "ingreso" }),
+    listarOrdenes(ctx.taller.id, { tecnicoId: ctx.perfil.id, estados: [...ESTADOS_ABIERTOS], orden: "ingreso" }),
     listarOrdenes(ctx.taller.id, { tecnicoId: ctx.perfil.id, estados: ["entregado"], limite: 10 }),
   ]);
   return (

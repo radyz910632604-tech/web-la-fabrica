@@ -6,7 +6,7 @@ import { formatearPlaca } from "@/lib/placas";
 import type { Rol } from "@/lib/roles";
 import { clienteAdmin } from "@/lib/supabase/admin";
 import { cuandoEntrega, duracion } from "@/lib/taller/entrega";
-import { NOMBRE_ESTADO, type EstadoOrden } from "@/lib/taller/estados";
+import { NOMBRE_ESTADO, type EstadoOrden, ESTADOS_EN_TRABAJO } from "@/lib/taller/estados";
 import { pushAPersona, pushConfigurado } from "./push";
 import { aUnaLinea, citaNoLlego, citasDelDia, entregaAtrasada, entregaPorVencer, resumenDelDia, type DatosPersona } from "./textos";
 
@@ -194,7 +194,7 @@ async function entregasQueVencen(admin: SupabaseClient, e: Empresa, ahora: Date)
     .select("id, estado, entrega_prometida, creado_por, clientes (nombre, celular), vehiculos (placa)")
     .eq("empresa_id", e.id)
     .eq("anulada", false)
-    .in("estado", ["en_taller", "en_proceso", "esperando_repuesto"])
+    .in("estado", [...ESTADOS_EN_TRABAJO])
     .not("entrega_prometida", "is", null)
     .lte("entrega_prometida", new Date(ahora.getTime() + e.minutosEntrega * 60_000).toISOString())
     .gt("entrega_prometida", new Date(ahora.getTime() - 7 * 86_400_000).toISOString())
@@ -286,9 +286,10 @@ async function resumenes(admin: SupabaseClient, e: Empresa, momento: "mediodia" 
   const limite = ahora.getTime() - e.horasSinCambio * 3600_000;
   const t = {
     taller: e.nombre,
-    enTaller: lista.filter((o) => o.estado === "en_taller").length,
-    enProceso: lista.filter((o) => o.estado === "en_proceso").length,
+    enTaller: lista.filter((o) => o.estado === "en_taller" || o.estado === "en_diagnostico").length,
+    enProceso: lista.filter((o) => o.estado === "en_proceso" || o.estado === "aprobado").length,
     esperandoRepuesto: lista.filter((o) => o.estado === "esperando_repuesto").length,
+    esperaAprobacion: lista.filter((o) => o.estado === "espera_aprobacion").length,
     listos: lista.filter((o) => o.estado === "listo").length,
     entregadosHoy: entregadosHoy ?? 0,
     atrasados: lista.filter((o) => o.estado !== "listo" && new Date(o.estado_cambiado_en).getTime() < limite).length,
@@ -302,7 +303,7 @@ async function resumenes(admin: SupabaseClient, e: Empresa, momento: "mediodia" 
     else if (p.roles.includes("tecnico")) {
       const suyas = lista.filter((o) => o.tecnico_id === p.id);
       const listosHoy = ((entregadasHoy ?? []) as { ordenes_trabajo: { tecnico_id: string } | { tecnico_id: string }[] }[]).filter((x) => uno(x.ordenes_trabajo)?.tecnico_id === p.id).length;
-      datos = { tipo: "tecnico", pendientes: suyas.filter((o) => o.estado === "en_taller").length, enProceso: suyas.filter((o) => o.estado === "en_proceso").length, esperandoRepuesto: suyas.filter((o) => o.estado === "esperando_repuesto").length, listosHoy };
+      datos = { tipo: "tecnico", pendientes: suyas.filter((o) => ["en_taller", "en_diagnostico", "espera_aprobacion", "aprobado"].includes(o.estado)).length, enProceso: suyas.filter((o) => o.estado === "en_proceso").length, esperandoRepuesto: suyas.filter((o) => o.estado === "esperando_repuesto").length, listosHoy };
     } else if (p.roles.includes("almacen")) datos = { tipo: "almacen", esperandoRepuesto: t.esperandoRepuesto, stockBajo: bajos };
     else if (p.roles.includes("vendedor_redes")) {
       const suyas = (citas ?? []).filter((c) => c.vendedor_id === p.id);

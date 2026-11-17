@@ -23,6 +23,7 @@ export type FilaOrden = {
   estadoCambiadoEn: string;
   garantia: boolean;
   entregaPrometida: string | null;
+  facturadoEn: string | null;
   listoEn: string | null;
 };
 
@@ -35,6 +36,7 @@ type OrdenCruda = {
   estado_cambiado_en: string;
   es_reingreso_garantia: boolean;
   entrega_prometida: string | null;
+  facturado_en: string | null;
   listo_en: string | null;
   vehiculos: { placa: string; marca: string | null; modelo: string | null } | null;
   clientes: { nombre: string } | null;
@@ -42,7 +44,7 @@ type OrdenCruda = {
 };
 
 const SELECCION_ORDEN =
-  "id, numero, estado, tecnico_id, ingresado_en, estado_cambiado_en, es_reingreso_garantia, entrega_prometida, listo_en, vehiculos (placa, marca, modelo), clientes (nombre), orden_servicios (descripcion)";
+  "id, numero, estado, tecnico_id, ingresado_en, estado_cambiado_en, es_reingreso_garantia, entrega_prometida, listo_en, facturado_en, vehiculos (placa, marca, modelo), clientes (nombre), orden_servicios (descripcion)";
 
 /** Nombres del personal del taller (para mostrar el técnico de cada orden). */
 export const nombresPersonal = cache(async (empresaId: string): Promise<Map<string, string>> => {
@@ -67,6 +69,7 @@ function aFila(o: OrdenCruda, nombres: Map<string, string>): FilaOrden {
     estadoCambiadoEn: o.estado_cambiado_en,
     garantia: o.es_reingreso_garantia,
     entregaPrometida: o.entrega_prometida,
+    facturadoEn: o.facturado_en,
     listoEn: o.listo_en,
   };
 }

@@ -8,6 +8,8 @@ export type DatosTaller = {
   enTaller: number;
   enProceso: number;
   esperandoRepuesto: number;
+  /** Esperando que el cliente apruebe el presupuesto. */
+  esperaAprobacion?: number;
   listos: number;
   entregadosHoy: number;
   atrasados: number;
@@ -32,7 +34,7 @@ export function resumenDelDia(momento: "mediodia" | "cierre", nombre: string, t:
     lineas = [`${primer}, tus citas de hoy: ${p.citasHoy}; llegaron ${p.llegaron} y no llegaron ${p.noLlegaron}.`];
   } else {
     lineas = [
-      `En taller ${t.enTaller + t.enProceso + t.esperandoRepuesto} (esperando repuesto ${t.esperandoRepuesto}) · Listos ${t.listos} · Entregados hoy ${t.entregadosHoy}.`,
+      `En taller ${t.enTaller + t.enProceso + t.esperandoRepuesto + (t.esperaAprobacion ?? 0)} (${t.esperaAprobacion ? `esperando aprobación ${t.esperaAprobacion}, ` : ""}esperando repuesto ${t.esperandoRepuesto}) · Listos ${t.listos} · Entregados hoy ${t.entregadosHoy}.`,
       t.atrasados ? `${t.atrasados} ${t.atrasados === 1 ? "orden lleva" : "órdenes llevan"} más de ${t.horasSinCambio} h sin avance.` : "Ninguna orden atrasada.",
     ];
   }

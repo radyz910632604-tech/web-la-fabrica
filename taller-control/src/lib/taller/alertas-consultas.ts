@@ -4,7 +4,7 @@ import { enSoles, manoObra, montoNeto, redondear, saldo as calcularSaldo, utilid
 import { clienteServidor } from "../supabase/servidor";
 import { listarOrdenes } from "./consultas";
 import { configDinero, costosVigentes } from "./dinero-consultas";
-import { numeroOrden } from "./estados";
+import { numeroOrden, ESTADOS_ABIERTOS } from "./estados";
 import { formatearPlaca } from "../placas";
 
 type Num = number | string | null;
@@ -23,7 +23,7 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
   const hace120 = new Date(ahora.getTime() - 120 * 24 * 3600 * 1000).toISOString().slice(0, 10);
 
   const [abiertas, entregadas, config] = await Promise.all([
-    listarOrdenes(empresaId, { estados: ["en_taller", "en_proceso", "esperando_repuesto", "listo"], limite: 150, orden: "reciente" }),
+    listarOrdenes(empresaId, { estados: [...ESTADOS_ABIERTOS], limite: 150, orden: "reciente" }),
     listarOrdenes(empresaId, { estados: ["entregado"], limite: 120, orden: "reciente" }),
     configDinero(empresaId),
   ]);

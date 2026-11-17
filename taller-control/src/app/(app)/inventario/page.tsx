@@ -12,7 +12,7 @@ import { tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { listarOrdenes } from "@/lib/taller/consultas";
 import { configDinero } from "@/lib/taller/dinero-consultas";
-import { etiquetaOrden } from "@/lib/taller/estados";
+import { etiquetaOrden, ESTADOS_ABIERTOS } from "@/lib/taller/estados";
 import { listarRepuestos } from "@/lib/taller/inventario-consultas";
 import { cn } from "@/lib/utils";
 import { MoverStock, NuevoRepuesto } from "./controles";
@@ -28,7 +28,7 @@ export default async function Inventario({ searchParams }: { searchParams: Promi
   const [todos, { tasaIgv }, ordenes] = await Promise.all([
     listarRepuestos(ctx.taller.id, { buscar: q, incluirInactivos: verInactivos }),
     configDinero(ctx.taller.id),
-    mueve ? listarOrdenes(ctx.taller.id, { estados: ["en_taller", "en_proceso", "esperando_repuesto", "listo"], limite: 200, orden: "reciente" }) : Promise.resolve([]),
+    mueve ? listarOrdenes(ctx.taller.id, { estados: [...ESTADOS_ABIERTOS], limite: 200, orden: "reciente" }) : Promise.resolve([]),
   ]);
   const activos = todos.filter((r) => r.activo);
   const bajos = activos.filter((r) => r.bajo);

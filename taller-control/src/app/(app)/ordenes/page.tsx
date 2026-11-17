@@ -7,14 +7,14 @@ import { Tarjeta } from "@/components/ui/tarjeta";
 import { tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { listarOrdenes } from "@/lib/taller/consultas";
-import { ESTADOS_ORDEN, NOMBRE_ESTADO, type EstadoOrden } from "@/lib/taller/estados";
+import { ESTADOS_ORDEN, NOMBRE_ESTADO, type EstadoOrden, ESTADOS_ABIERTOS, ESTADOS_EN_TRABAJO } from "@/lib/taller/estados";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Órdenes" };
 
 const PESTANAS: { clave: string; nombre: string; estados: EstadoOrden[] }[] = [
-  { clave: "taller", nombre: "En el taller", estados: ["en_taller", "en_proceso", "esperando_repuesto", "listo"] },
-  { clave: "entregas", nombre: "Por hora de entrega", estados: ["en_taller", "en_proceso", "esperando_repuesto"] },
+  { clave: "taller", nombre: "En el taller", estados: [...ESTADOS_ABIERTOS] },
+  { clave: "entregas", nombre: "Por hora de entrega", estados: [...ESTADOS_EN_TRABAJO] },
   ...ESTADOS_ORDEN.map((e) => ({ clave: e, nombre: NOMBRE_ESTADO[e], estados: [e] })),
 ];
 

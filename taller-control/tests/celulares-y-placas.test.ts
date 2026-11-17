@@ -65,7 +65,12 @@ describe("órdenes", () => {
     expect(siguientesEstados("entregado", true)).toEqual([]);
   });
   it("cada estado ofrece el siguiente paso lógico", () => {
-    expect(siguientesEstados("en_taller", false)[0].estado).toBe("en_proceso");
+    expect(siguientesEstados("en_taller", false).map((p) => p.estado)).toEqual(["en_diagnostico", "en_proceso"]);
+    expect(siguientesEstados("en_diagnostico", false)[0].estado).toBe("espera_aprobacion");
+    expect(siguientesEstados("espera_aprobacion", false)[0].estado).toBe("aprobado");
+    // El técnico no registra la aprobación del cliente ni la entrega
+    expect(siguientesEstados("en_diagnostico", true).map((p) => p.estado)).toEqual(["en_proceso"]);
+    expect(siguientesEstados("espera_aprobacion", true).map((p) => p.estado)).toEqual(["en_diagnostico"]);
     expect(siguientesEstados("esperando_repuesto", false)[0].estado).toBe("en_proceso");
   });
 });

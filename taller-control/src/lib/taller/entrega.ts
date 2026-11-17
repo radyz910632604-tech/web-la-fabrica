@@ -1,4 +1,5 @@
 import { ZONA, diaEnLima } from "@/lib/formato";
+import { ESTADOS_EN_TRABAJO } from "@/lib/taller/estados";
 
 /**
  * Hora de entrega prometida al cliente: cómo va cada orden respecto a lo que
@@ -13,7 +14,7 @@ export type SituacionEntrega =
   | { tipo: "cumplida" } // quedó listo antes de la hora
   | { tipo: "tarde"; minutos: number }; // quedó listo, pero después de la hora
 
-const ABIERTOS = new Set(["en_taller", "en_proceso", "esperando_repuesto"]);
+const ABIERTOS = new Set<string>(ESTADOS_EN_TRABAJO);
 
 export function situacionEntrega(
   o: { entregaPrometida: Date | null; estado: string; listoEn?: Date | null },

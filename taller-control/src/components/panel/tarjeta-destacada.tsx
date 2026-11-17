@@ -66,7 +66,7 @@ function Placas({ carros, etiqueta }: { carros: Carro[]; etiqueta: string }) {
   );
 }
 
-const contar = (carros: Carro[], e: EstadoOrden) => carros.filter((c) => c.estado === e).length;
+const contar = (carros: Carro[], ...e: EstadoOrden[]) => carros.filter((c) => e.includes(c.estado)).length;
 
 export function TarjetaTaller({ enTaller, acciones }: { enTaller: Carro[]; acciones: { nuevoIngreso: boolean; registrarPago: boolean } }) {
   return (
@@ -77,10 +77,10 @@ export function TarjetaTaller({ enTaller, acciones }: { enTaller: Carro[]; accio
       <Cifra valor={enTaller.length} uno="carro" varios="carros" />
       <Conteo
         filas={[
-          ["En proceso", contar(enTaller, "en_proceso")],
+          ["En reparación", contar(enTaller, "en_proceso", "aprobado")],
           ["Listos", contar(enTaller, "listo")],
-          ["Esperan repuesto", contar(enTaller, "esperando_repuesto")],
-          ["Sin empezar", contar(enTaller, "en_taller")],
+          ["Esperando", contar(enTaller, "esperando_repuesto", "espera_aprobacion")],
+          ["En diagnóstico", contar(enTaller, "en_taller", "en_diagnostico")],
         ]}
       />
       {enTaller.length === 0 ? <p className="mt-4 text-[15px]">No hay carros en el taller. Registra el primer ingreso.</p> : null}
@@ -113,9 +113,12 @@ export function TarjetaTaller({ enTaller, acciones }: { enTaller: Carro[]; accio
 export function resumirEstados(carros: { estado: EstadoOrden }[]): string {
   const partes: [EstadoOrden, string, string][] = [
     ["listo", "listo", "listos"],
-    ["en_proceso", "en proceso", "en proceso"],
-    ["esperando_repuesto", "espera repuesto", "esperan repuesto"],
-    ["en_taller", "sin empezar", "sin empezar"],
+    ["en_proceso", "en reparación", "en reparación"],
+    ["aprobado", "aprobado", "aprobados"],
+    ["espera_aprobacion", "espera aprobación", "esperan aprobación"],
+    ["esperando_repuesto", "espera repuestos", "esperan repuestos"],
+    ["en_diagnostico", "en diagnóstico", "en diagnóstico"],
+    ["en_taller", "recién ingresado", "recién ingresados"],
   ];
   return (
     partes

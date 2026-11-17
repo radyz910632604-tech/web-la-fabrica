@@ -3,19 +3,42 @@
  * Colores de estado (especificación): verde completado, amarillo en proceso, rojo pendiente.
  */
 
-export const ESTADOS_ORDEN = ["en_taller", "en_proceso", "esperando_repuesto", "listo", "entregado"] as const;
+// Orden de la especificación del agente: Ingresado → En diagnóstico → Espera aprobación → Aprobado →
+// En reparación → Espera repuestos → Listo → Entregado. «Facturado» no es un estado aparte: lo marca
+// la base (facturado_en) cuando la orden tiene boleta, factura o recibo; ver nombreEstado().
+export const ESTADOS_ORDEN = ["en_taller", "en_diagnostico", "espera_aprobacion", "aprobado", "en_proceso", "esperando_repuesto", "listo", "entregado"] as const;
 export type EstadoOrden = (typeof ESTADOS_ORDEN)[number];
 
+/** Carros que siguen en el taller (incluye los listos que esperan al cliente). */
+export const ESTADOS_ABIERTOS = ["en_taller", "en_diagnostico", "espera_aprobacion", "aprobado", "en_proceso", "esperando_repuesto", "listo"] as const satisfies readonly EstadoOrden[];
+/** Carros en los que todavía se trabaja (no listos). */
+export const ESTADOS_EN_TRABAJO = ["en_taller", "en_diagnostico", "espera_aprobacion", "aprobado", "en_proceso", "esperando_repuesto"] as const satisfies readonly EstadoOrden[];
+export const esAbierto = (e: string) => (ESTADOS_ABIERTOS as readonly string[]).includes(e);
+export const enTrabajo = (e: string) => (ESTADOS_EN_TRABAJO as readonly string[]).includes(e);
+
 export const NOMBRE_ESTADO: Record<EstadoOrden, string> = {
-  en_taller: "En taller",
-  en_proceso: "En proceso",
-  esperando_repuesto: "Espera repuesto",
+  en_taller: "Ingresado",
+  en_diagnostico: "En diagnóstico",
+  espera_aprobacion: "Espera aprobación",
+  aprobado: "Aprobado",
+  en_proceso: "En reparación",
+  esperando_repuesto: "Espera repuestos",
   listo: "Listo",
   entregado: "Entregado",
 };
 
+/** Nombre a mostrar: un carro entregado con comprobante se ve como «Facturado». */
+export function nombreEstado(estado: EstadoOrden, facturadoEn?: string | null): string {
+  if (facturadoEn && estado === "entregado") return "Facturado";
+  if (facturadoEn && estado === "listo") return "Listo · facturado";
+  return NOMBRE_ESTADO[estado];
+}
+
 export const COLOR_ESTADO: Record<EstadoOrden, "gris" | "amarillo" | "rojo" | "verde"> = {
   en_taller: "gris",
+  en_diagnostico: "amarillo",
+  espera_aprobacion: "rojo",
+  aprobado: "amarillo",
   en_proceso: "amarillo",
   esperando_repuesto: "rojo",
   listo: "verde",
@@ -79,10 +102,25 @@ export function numeroOrden(numero: number): string {
  */
 export function siguientesEstados(actual: EstadoOrden, esTecnico: boolean): { estado: EstadoOrden; texto: string }[] {
   const pasos: Record<EstadoOrden, { estado: EstadoOrden; texto: string }[]> = {
-    en_taller: [{ estado: "en_proceso", texto: "Empezar trabajo" }],
+    en_taller: [
+      { estado: "en_diagnostico", texto: "Empezar diagnóstico" },
+      { estado: "en_proceso", texto: "Empezar reparación" },
+    ],
+    en_diagnostico: [
+      { estado: "espera_aprobacion", texto: "Enviar a aprobación" },
+      { estado: "en_proceso", texto: "Empezar reparación" },
+    ],
+    espera_aprobacion: [
+      { estado: "aprobado", texto: "El cliente aprobó" },
+      { estado: "en_diagnostico", texto: "Volver a diagnóstico" },
+    ],
+    aprobado: [
+      { estado: "en_proceso", texto: "Empezar reparación" },
+      { estado: "esperando_repuesto", texto: "Espera repuestos" },
+    ],
     en_proceso: [
       { estado: "listo", texto: "Marcar listo" },
-      { estado: "esperando_repuesto", texto: "Espera repuesto" },
+      { estado: "esperando_repuesto", texto: "Espera repuestos" },
     ],
     esperando_repuesto: [{ estado: "en_proceso", texto: "Llegó el repuesto" }],
     listo: [
@@ -91,7 +129,9 @@ export function siguientesEstados(actual: EstadoOrden, esTecnico: boolean): { es
     ],
     entregado: esTecnico ? [] : [{ estado: "en_proceso", texto: "Reabrir orden" }],
   };
-  return pasos[actual].filter((p) => !(esTecnico && p.estado === "entregado"));
+  // El técnico no registra la aprobación del cliente ni la entrega.
+  const soloAsesor: EstadoOrden[] = ["espera_aprobacion", "aprobado", "entregado"];
+  return pasos[actual].filter((p) => !(esTecnico && soloAsesor.includes(p.estado)));
 }
 
 /** "OT-000012 · ABC-123 · Juan Pérez" para listas de órdenes. */

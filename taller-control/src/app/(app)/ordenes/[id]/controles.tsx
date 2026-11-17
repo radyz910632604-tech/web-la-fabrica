@@ -9,7 +9,7 @@ import { Entrada, Selector } from "@/components/ui/campo";
 import { siguientesEstados, type EstadoOrden } from "@/lib/taller/estados";
 import { reducirFoto } from "@/lib/taller/fotos";
 import { subirFoto } from "../nueva/acciones";
-import { agregarAvance, agregarServicio, asignarTecnico, cambiarEntrega, cambiarEstado, type Resultado } from "./acciones";
+import { agregarAvance, agregarServicio, guardarDiagnostico, asignarTecnico, cambiarEntrega, cambiarEstado, type Resultado } from "./acciones";
 
 function Mensaje({ r }: { r: Resultado }) {
   if (r.error) return <p role="alert" className="mt-3 text-sm text-negativo">{r.error}</p>;
@@ -57,6 +57,53 @@ export function BotonesEstado({ ordenId, estado, esTecnico, soloEntregar = false
       />
       <Mensaje r={r} />
     </div>
+  );
+}
+
+/** Diagnóstico de la orden: se escribe aquí o se dicta por WhatsApp («ABC-123 diagnóstico: …»). */
+export function FormDiagnostico({ ordenId, actual }: { ordenId: string; actual: string | null }) {
+  const [editando, setEditando] = useState(!actual);
+  const [texto, setTexto] = useState(actual ?? "");
+  const [r, setR] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  if (!editando) {
+    return (
+      <Boton type="button" variante="secundario" tamano="chico" className="mt-3" onClick={() => setEditando(true)}>
+        Cambiar diagnóstico
+      </Boton>
+    );
+  }
+  return (
+    <form
+      className="mt-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        iniciar(async () => {
+          const res = await guardarDiagnostico(ordenId, texto);
+          setR(res);
+          if (res.ok) setEditando(false);
+        });
+      }}
+    >
+      <label htmlFor="diagnostico" className="sr-only">
+        Diagnóstico
+      </label>
+      <textarea
+        id="diagnostico"
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+        rows={3}
+        maxLength={2000}
+        placeholder="Ejemplo: Sincronizador de tercera gastado, hay que bajar la caja."
+        className="w-full rounded-2xl border border-borde bg-tarjeta px-4 py-3 text-[15px] outline-none focus-visible:border-tinta focus-visible:ring-4 focus-visible:ring-acento/15"
+      />
+      <div className="mt-2 flex justify-end">
+        <Boton type="submit" disabled={pendiente || texto.trim().length < 3} className="w-full sm:w-auto">
+          {pendiente ? "Guardando…" : "Guardar diagnóstico"}
+        </Boton>
+      </div>
+      <Mensaje r={r} />
+    </form>
   );
 }
 

@@ -151,7 +151,7 @@ export async function pdfOrden(ctx: Contexto, id: string, verDinero: boolean): P
   const supabase = await clienteServidor();
   const { data: o } = await supabase
     .from("ordenes_trabajo")
-    .select("id, numero, estado, tecnico_id, creado_por, entregado_en, listo_en, entrega_prometida, nivel_combustible, kilometraje_ingreso, observaciones_ingreso, ingresado_en, es_reingreso_garantia, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision, carroceria), clientes (nombre, celular, tipo_documento, numero_documento)")
+    .select("id, numero, estado, tecnico_id, creado_por, entregado_en, listo_en, entrega_prometida, nivel_combustible, kilometraje_ingreso, observaciones_ingreso, ingresado_en, es_reingreso_garantia, diagnostico, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision, carroceria), clientes (nombre, celular, tipo_documento, numero_documento)")
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
     .maybeSingle();
@@ -229,6 +229,7 @@ export async function pdfOrden(ctx: Contexto, id: string, verDinero: boolean): P
     );
   }
   if (o.observaciones_ingreso) d.nota(o.observaciones_ingreso, "Observaciones de ingreso");
+  if (o.diagnostico) d.nota(o.diagnostico, "Diagnóstico");
   if (o.es_reingreso_garantia) d.nota("Reingreso por garantía de un trabajo anterior.", "Garantía");
   if ((avances ?? []).length) {
     d.seccion("Avances");

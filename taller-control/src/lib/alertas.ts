@@ -1,5 +1,6 @@
 import { normalizarDescripcion } from "./dinero";
 import { cuandoEntrega, duracion, situacionEntrega } from "./taller/entrega";
+import { enTrabajo } from "@/lib/taller/estados";
 
 /**
  * Las 9 alertas de la especificación (5.8). Función pura: recibe los datos
@@ -99,7 +100,7 @@ export function calcularAlertas(d: {
     if (!entregada && new Date(o.estadoCambiadoEn).getTime() < limite) {
       alertas.push({ tipo: "orden_estancada", severidad: "atencion", ordenId: o.id, mensaje: `${o.numero} lleva más de ${d.horasSinCambio} horas sin cambiar de estado.` });
     }
-    if (o.entregaPrometida !== undefined && ["en_taller", "en_proceso", "esperando_repuesto"].includes(o.estado)) {
+    if (o.entregaPrometida !== undefined && enTrabajo(o.estado)) {
       const carro = o.placa ? `${o.numero} (${o.placa})` : o.numero;
       if (!o.entregaPrometida) {
         alertas.push({ tipo: "entrega_sin_hora", severidad: "info", ordenId: o.id, mensaje: `${carro} no tiene hora de entrega prometida al cliente.` });
@@ -117,7 +118,7 @@ export function calcularAlertas(d: {
       const falta = [o.fotos === 0 ? "fotos" : null, o.servicios === 0 ? "servicios" : null].filter(Boolean).join(" ni ");
       alertas.push({ tipo: "ingreso_incompleto", severidad: "info", ordenId: o.id, mensaje: `${o.numero} no tiene ${falta}.` });
     }
-    if (o.adicionales > 0 && o.cotizacionesAdicionalesAprobadas === 0 && o.estado !== "en_taller") {
+    if (o.adicionales > 0 && o.cotizacionesAdicionalesAprobadas === 0 && !["en_taller", "en_diagnostico", "espera_aprobacion"].includes(o.estado)) {
       alertas.push({ tipo: "adicional_sin_aprobacion", severidad: "atencion", ordenId: o.id, mensaje: `${o.numero} tiene trabajos adicionales sin cotización aprobada por el cliente.` });
     }
     if (!d.verDinero) continue;
