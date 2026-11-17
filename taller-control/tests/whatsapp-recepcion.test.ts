@@ -44,7 +44,7 @@ describe("WhatsApp: pedir documentos en PDF", () => {
   it("«cotiza ABC123 pastillas 180» sigue siendo armar una cotización", () => {
     expect(interpretarSinIa("cotiza ABC123 pastillas 180").intencion).toBe("cotizacion");
   });
-  it("solo gerencia, administración y asesores", () => {
-    expect(PERMITIDO.documento).toEqual(["gerencia", "administrador", "asesor"]);
+  it("gerencia, administración, asesores y caja (para el resumen de facturar)", () => {
+    expect(PERMITIDO.documento).toEqual(["gerencia", "administrador", "asesor", "recepcion"]);
   });
 });
