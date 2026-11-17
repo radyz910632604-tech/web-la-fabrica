@@ -32,7 +32,24 @@ type Empresa = { id: string; nombre: string; telefono: string | null; mediodia: 
 
 export type AvisoWhatsapp = { id: string; celular: string; plantilla: string | null; idioma: string; variables: string[]; botones: { id: string; titulo: string }[]; texto: string };
 
-export async function cicloDeAvisos(ahora = new Date()) {
+export type OrigenCiclo = "n8n" | "interno";
+
+// Un ciclo a la vez: el reloj interno y n8n no se pisan (cada aviso sale una sola vez).
+// En globalThis porque el reloj y la API se empaquetan aparte y no comparten variables del archivo.
+const turnos = globalThis as { __cicloTaller?: Promise<unknown> };
+
+/**
+ * `origen` dice quién lo pidió. El reloj interno arma los avisos y envía los
+ * push, pero NO reserva los WhatsApp: esos solo se entregan a n8n, que es
+ * quien puede mandarlos.
+ */
+export function cicloDeAvisos(ahora = new Date(), origen: OrigenCiclo = "n8n") {
+  const turno = (turnos.__cicloTaller ?? Promise.resolve()).then(() => cicloReal(ahora, origen));
+  turnos.__cicloTaller = turno.catch(() => {});
+  return turno;
+}
+
+async function cicloReal(ahora: Date, origen: OrigenCiclo) {
   const admin = clienteAdmin();
   const hoy = diaLima(ahora);
   const hora = horaLima(ahora);
@@ -71,7 +88,7 @@ export async function cicloDeAvisos(ahora = new Date()) {
   }
 
   // WhatsApp pendientes: los manda n8n. Se reservan 10 minutos para no mandarlos dos veces.
-  const { data: wa } = await admin
+  const { data: wa } = origen !== "n8n" ? { data: [] } : await admin
     .from("avisos")
     .select("id, celular, plantilla, variables, botones, texto, intentos")
     .eq("canal", "whatsapp")
@@ -86,6 +103,11 @@ export async function cicloDeAvisos(ahora = new Date()) {
     await admin.from("avisos").update({ intentos: a.intentos + 1, programado_para: new Date(ahora.getTime() + 10 * 60_000).toISOString() }).eq("id", a.id);
     whatsapp.push({ id: a.id, celular: a.celular.replace(/^\+/, ""), plantilla: a.plantilla, idioma: "es", variables: (a.variables as unknown[]).map(String), botones: a.botones as AvisoWhatsapp["botones"], texto: a.texto });
   }
+  // Para «Estado del sistema»: cuándo corrió cada uno por última vez (si la tabla aún no existe, no pasa nada).
+  await admin
+    .from("estado_sistema")
+    .upsert({ clave: origen === "n8n" ? "ciclo_n8n" : "ciclo_interno", valor: { creados, push: pushEnviados, whatsapp: whatsapp.length }, actualizado_en: new Date().toISOString() })
+    .then(() => {}, () => {});
   return { creados, push: { enviados: pushEnviados }, whatsapp };
 }
 
