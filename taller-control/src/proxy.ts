@@ -25,6 +25,8 @@ export async function proxy(request: NextRequest) {
   const conSesion = Boolean(data?.claims?.sub);
   const ruta = request.nextUrl.pathname;
   const esIngreso = ruta === "/ingresar";
+  // La instalación (primera vez) no tiene a nadie con sesión todavía: se protege con su propia clave.
+  if (ruta === "/instalar") return respuesta;
 
   if (!conSesion && !esIngreso) {
     return redirigir(request, respuesta, "/ingresar");

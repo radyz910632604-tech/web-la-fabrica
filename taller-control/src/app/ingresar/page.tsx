@@ -7,6 +7,7 @@ export const metadata = { title: "Ingresar" };
 const MOTIVOS: Record<string, string> = {
   inactivo: "Tu acceso está desactivado. Habla con administración.",
   "sin-taller": "Todavía no tienes un taller asignado. Pide a administración que te asigne uno.",
+  instalado: "¡Listo! El taller quedó creado. Entra con tu celular y la contraseña que acabas de poner.",
 };
 
 export default async function Ingresar({ searchParams }: { searchParams: Promise<{ motivo?: string }> }) {
@@ -43,7 +44,10 @@ export default async function Ingresar({ searchParams }: { searchParams: Promise
           <h1 className="text-[30px] leading-tight font-semibold tracking-[-0.025em]">Ingresar</h1>
           <p className="mt-2 text-[15px] text-tinta-2">Con tu celular y la contraseña que te dio administración.</p>
           {aviso ? (
-            <p role="alert" className="mt-5 rounded-2xl border border-aviso-borde bg-aviso-fondo px-4 py-3 text-sm text-aviso">
+            <p
+              role={motivo === "instalado" ? "status" : "alert"}
+              className={motivo === "instalado" ? "mt-5 rounded-2xl bg-positivo-fondo px-4 py-3 text-sm text-positivo" : "mt-5 rounded-2xl border border-aviso-borde bg-aviso-fondo px-4 py-3 text-sm text-aviso"}
+            >
               {aviso}
             </p>
           ) : null}
