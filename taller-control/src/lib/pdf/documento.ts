@@ -1,5 +1,6 @@
 import "server-only";
 import { degrees, PDFDocument, rgb, StandardFonts, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
+import { create as crearQr } from "qrcode";
 
 /**
  * Documentos PDF del taller (recibo, proforma, orden de reparación, arqueo,
@@ -19,6 +20,9 @@ export type DatosTaller = {
   lema?: string | null;
   logo?: { bytes: Uint8Array; tipo: "png" | "jpg" } | null;
 };
+
+/** Una casilla de firma: el rótulo y, si ya firmaron en pantalla, la imagen y cuándo. */
+export type Casilla = { nombre: string; imagen?: PDFImage | null; detalle?: string | null };
 
 export type Columna = { titulo: string; ancho: number; alinear?: "izq" | "der" };
 
@@ -386,7 +390,7 @@ export class Documento {
    * Cierre del documento: a la izquierda la firma y el agradecimiento; a la
    * derecha el recuadro de totales (grupos separados por líneas y el total).
    */
-  cierre(firma: string, grupos: [string, string][][], total: [string, string], opciones: { gracias?: boolean; colorTotal?: "tinta" | "rojo" } = {}) {
+  cierre(firma: string, grupos: [string, string][][], total: [string, string], opciones: { gracias?: boolean; colorTotal?: "tinta" | "rojo"; firmaImagen?: PDFImage | null; firmaDetalle?: string | null } = {}) {
     const w = 235;
     const x = ANCHO - MARGEN - w;
     const filas = grupos.reduce((a, g) => a + g.length, 0);
@@ -410,10 +414,19 @@ export class Documento {
 
     // Firma y agradecimiento, centrados en el espacio de la izquierda.
     const ancho = UTIL - w - 30;
-    const yf = this.y - alto / 2 + 4;
+    // Con la firma tomada en pantalla, la línea baja para que la firma quepa encima.
+    const img = firma ? opciones.firmaImagen : null;
+    const yf = img ? base + 36 : this.y - alto / 2 + 4;
+    if (img) {
+      const escala = Math.min(150 / img.width, Math.max(18, this.y - (yf + 13) - 2) / img.height);
+      const iw = img.width * escala;
+      const ih = img.height * escala;
+      this.pagina.drawImage(img, { x: MARGEN + (ancho - iw) / 2, y: yf + 13, width: iw, height: ih });
+    }
     if (firma) this.pagina.drawLine({ start: { x: MARGEN + ancho / 2 - 75, y: yf + 12 }, end: { x: MARGEN + ancho / 2 + 75, y: yf + 12 }, thickness: 0.75, color: TINTA_2 });
-    if (firma) this.partir(firma, 8.5, 170).forEach((l, i) => this.escribir(l, MARGEN, yf - i * 11, 8.5, { alinear: "centro", ancho, color: TINTA_2 }));
-    if (opciones.gracias !== false) this.escribir("*** GRACIAS POR SU PREFERENCIA ***", MARGEN, yf - (firma ? this.partir(firma, 8.5, 170).length * 11 + 8 : 0), 8, { alinear: "centro", ancho, color: TINTA_2 });
+    const rotulo = firma && img && opciones.firmaDetalle ? `${firma} · ${opciones.firmaDetalle}` : firma;
+    if (firma) this.partir(rotulo, 8.5, img ? 260 : 170).forEach((l, i) => this.escribir(l, MARGEN, yf - i * 11, 8.5, { alinear: "centro", ancho, color: TINTA_2 }));
+    if (opciones.gracias !== false) this.escribir("*** GRACIAS POR SU PREFERENCIA ***", MARGEN, yf - (firma ? this.partir(rotulo, 8.5, img ? 260 : 170).length * 11 + 8 : 0), 8, { alinear: "centro", ancho, color: TINTA_2 });
     this.y = base - 14;
   }
 
@@ -446,17 +459,75 @@ export class Documento {
     this.y -= 6;
   }
 
-  /** Líneas para firmar (cliente, taller). */
-  firmas(nombres: string[]) {
-    this.espacio(70);
-    this.y -= 40;
-    const w = (UTIL - 40 * (nombres.length - 1)) / nombres.length;
-    nombres.forEach((n, i) => {
+  /** Imagen lista para dibujar (la firma del cliente). Si falta o está dañada, null: el documento sale igual. */
+  async imagen(bytes: Uint8Array | null | undefined): Promise<PDFImage | null> {
+    if (!bytes?.length) return null;
+    try {
+      return bytes[0] === 0x89 && bytes[1] === 0x50 ? await this.pdf.embedPng(bytes) : await this.pdf.embedJpg(bytes);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Líneas para firmar (cliente, taller). Si ya firmaron en pantalla, la firma va sobre la línea con su fecha. */
+  firmas(casillas: (string | Casilla)[]) {
+    const lista = casillas.map((c) => (typeof c === "string" ? { nombre: c } : c));
+    const conImagen = lista.some((c) => c.imagen);
+    const conDetalle = lista.some((c) => c.detalle);
+    const arriba = conImagen ? 58 : 40;
+    this.espacio(arriba + 30 + (conDetalle ? 10 : 0));
+    this.y -= arriba;
+    const w = (UTIL - 40 * (lista.length - 1)) / lista.length;
+    lista.forEach((c, i) => {
       const x = MARGEN + i * (w + 40);
+      if (c.imagen) {
+        const escala = Math.min(Math.min(w - 10, 170) / c.imagen.width, 42 / c.imagen.height);
+        const iw = c.imagen.width * escala;
+        const ih = c.imagen.height * escala;
+        this.pagina.drawImage(c.imagen, { x: x + (w - iw) / 2, y: this.y + 13, width: iw, height: ih });
+      }
       this.pagina.drawLine({ start: { x, y: this.y + 12 }, end: { x: x + w, y: this.y + 12 }, thickness: 0.75, color: TINTA_3 });
-      this.escribir(n, x, this.y, 8.5, { color: TINTA_2, alinear: "centro", ancho: w });
+      this.escribir(c.nombre, x, this.y, 8.5, { color: TINTA_2, alinear: "centro", ancho: w });
+      if (c.detalle) this.escribir(c.detalle, x, this.y - 10, 7, { color: TINTA_3, alinear: "centro", ancho: w });
     });
-    this.y -= 18;
+    this.y -= 18 + (conDetalle ? 10 : 0);
+  }
+
+  /**
+   * Texto pequeño a la izquierda y, a la derecha, un código QR que abre el
+   * documento en el sistema (la orden impresa va en el carro: quien la
+   * escanea con su celular llega directo a la orden). Sin dirección, solo el texto.
+   */
+  avisoConQr(texto: string, url: string | null, leyenda = "Abrir en el sistema") {
+    if (!url) return this.parrafo(texto, { tam: 7.5, color: "tenue" });
+    let qr: ReturnType<typeof crearQr>;
+    try {
+      qr = crearQr(url, { errorCorrectionLevel: "M" });
+    } catch {
+      return this.parrafo(texto, { tam: 7.5, color: "tenue" });
+    }
+    const lado = 66;
+    const lineas = this.partir(texto, 7.5, UTIL - lado - 40);
+    const alto = Math.max(lado + 12, lineas.length * 10);
+    this.espacio(alto + 8);
+    lineas.forEach((l, i) => this.escribir(l, MARGEN, this.y - i * 10, 7.5, { color: TINTA_3 }));
+    const x = ANCHO - MARGEN - lado - 4;
+    const yQr = this.y - lado + 8;
+    const n = qr.modules.size;
+    const celda = lado / n;
+    this.pagina.drawRectangle({ x: x - 4, y: yQr - 4, width: lado + 8, height: lado + 8, color: BLANCO });
+    for (let fila = 0; fila < n; fila++) {
+      // Los cuadros negros seguidos se dibujan de una sola vez.
+      for (let col = 0; col < n; col++) {
+        if (!qr.modules.get(fila, col)) continue;
+        let fin = col;
+        while (fin + 1 < n && qr.modules.get(fila, fin + 1)) fin++;
+        this.pagina.drawRectangle({ x: x + col * celda, y: yQr + (n - 1 - fila) * celda, width: (fin - col + 1) * celda + 0.05, height: celda + 0.05, color: TINTA });
+        col = fin;
+      }
+    }
+    this.escribir(leyenda, x - 12, yQr - 12, 6.5, { color: TINTA_3, alinear: "centro", ancho: lado + 24 });
+    this.y -= alto + 8;
   }
 
   async bytes(): Promise<Uint8Array> {

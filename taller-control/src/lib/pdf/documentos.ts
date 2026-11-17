@@ -14,6 +14,7 @@ import { mesesHasta, personalDelMes, reporteMensual, sumarFilas } from "../talle
 import { cantidadTexto, valorStock } from "../inventario";
 import { kardex, listarRepuestos, repuesto } from "../taller/inventario-consultas";
 import { montoEnLetras } from "../letras";
+import { urlPublica } from "../origen";
 import { Documento, fechaCorta, fechaHora, fechaHoraLarga, importe, soles, type DatosTaller } from "./documento";
 
 /**
@@ -29,6 +30,14 @@ export type Pdf = { bytes: Uint8Array; archivo: string } | null;
 
 const DOC: Record<string, string> = { dni: "DNI", ruc: "RUC", ce: "C.E." };
 const DOC_LARGO: Record<string, string> = { dni: "DOCUMENTO NACIONAL DE IDENTIDAD (DNI)", ruc: "R.U.C.", ce: "CARNÉ DE EXTRANJERÍA" };
+
+/** La firma del cliente guardada en la orden (bucket «ordenes»), lista para el PDF. Se lee con la sesión de quien pide. */
+async function firma(d: Documento, ruta: string | null | undefined) {
+  if (!ruta) return null;
+  const supabase = await clienteServidor();
+  const { data } = await supabase.storage.from("ordenes").download(ruta);
+  return data ? d.imagen(new Uint8Array(await data.arrayBuffer())) : null;
+}
 
 /** Datos del taller para la cabecera, con su logo si lo subieron en Configuración. */
 async function base(ctx: Contexto): Promise<{ taller: DatosTaller; pie: string }> {
@@ -142,7 +151,7 @@ export async function pdfOrden(ctx: Contexto, id: string, verDinero: boolean): P
   const supabase = await clienteServidor();
   const { data: o } = await supabase
     .from("ordenes_trabajo")
-    .select("id, numero, estado, tecnico_id, creado_por, entregado_en, listo_en, entrega_prometida, nivel_combustible, kilometraje_ingreso, observaciones_ingreso, ingresado_en, es_reingreso_garantia, vehiculos (placa, marca, modelo, anio, color, combustible, transmision, carroceria), clientes (nombre, celular, tipo_documento, numero_documento)")
+    .select("id, numero, estado, tecnico_id, creado_por, entregado_en, listo_en, entrega_prometida, nivel_combustible, kilometraje_ingreso, observaciones_ingreso, ingresado_en, es_reingreso_garantia, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision, carroceria), clientes (nombre, celular, tipo_documento, numero_documento)")
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
     .maybeSingle();
@@ -232,8 +241,15 @@ export async function pdfOrden(ctx: Contexto, id: string, verDinero: boolean): P
       (avances ?? []).map((a) => [fechaHora(a.creado_en), a.texto, nombres.get(a.autor_id ?? "") ?? ""]),
     );
   }
-  d.parrafo("El cliente declara que el vehículo se recibió en el estado descrito. El taller no se responsabiliza por objetos de valor no declarados.", { tam: 7.5, color: "tenue" });
-  d.firmas(["Firma del cliente", "Recibido por el taller"]);
+  // La orden impresa va en el carro: el QR la abre en el celular de quien la escanea (pide iniciar sesión).
+  const direccion = await urlPublica();
+  d.avisoConQr("El cliente declara que el vehículo se recibió en el estado descrito. El taller no se responsabiliza por objetos de valor no declarados.", direccion ? `${direccion}/ordenes/${o.id}` : null);
+  const [firmaIngreso, firmaEntrega] = await Promise.all([firma(d, o.firma_ingreso_ruta), firma(d, o.firma_entrega_ruta)]);
+  d.firmas([
+    { nombre: "Firma del cliente", imagen: firmaIngreso, detalle: firmaIngreso && o.firma_ingreso_en ? `Firmó en pantalla el ${fechaHora(o.firma_ingreso_en)}` : null },
+    "Recibido por el taller",
+    ...(firmaEntrega ? [{ nombre: "Recibió su vehículo conforme", imagen: firmaEntrega, detalle: o.firma_entrega_en ? `Firmó en pantalla el ${fechaHora(o.firma_entrega_en)}` : null }] : []),
+  ]);
   return { bytes: await d.bytes(), archivo: `orden-${numeroOrden(o.numero)}.pdf` };
 }
 
@@ -250,7 +266,7 @@ export async function pdfRecibo(ctx: Contexto, id: string): Promise<Pdf> {
     .maybeSingle();
   if (!r) return null;
   const [{ data: o }, { data: cots }, { data: pagos }, nombres] = await Promise.all([
-    supabase.from("ordenes_trabajo").select("numero, creado_por, kilometraje_ingreso, vehiculos (placa, marca, modelo, anio, color, carroceria), clientes (nombre, celular, tipo_documento, numero_documento)").eq("id", r.orden_id).maybeSingle(),
+    supabase.from("ordenes_trabajo").select("numero, creado_por, kilometraje_ingreso, firma_entrega_ruta, firma_entrega_en, vehiculos (placa, marca, modelo, anio, color, carroceria), clientes (nombre, celular, tipo_documento, numero_documento)").eq("id", r.orden_id).maybeSingle(),
     supabase.from("cotizaciones").select("cotizacion_items (tipo, descripcion, cantidad, precio_unitario_total, subtotal_sin_igv, total)").eq("orden_id", r.orden_id).eq("estado", "aprobada").order("version"),
     supabase.from("pagos").select("medio, tipo").eq("orden_id", r.orden_id).eq("estado", "confirmado").neq("tipo", "devolucion"),
     nombresPersonal(ctx.taller.id),
@@ -284,7 +300,12 @@ export async function pdfRecibo(ctx: Contexto, id: string): Promise<Pdf> {
   const items = (cots ?? []).flatMap((c) => (c.cotizacion_items ?? []) as ItemCot[]);
   d.tabla(COLUMNAS_DETALLE, filasDetalle(items, tasa, false));
   d.ultimaLinea();
-  d.cierre("Recibe conforme (Cliente)", gruposTotales(n(r.subtotal_sin_igv), n(r.igv), n(r.total), tasa), ["Total", soles(n(r.total))]);
+  // Si el cliente firmó en pantalla al recibir su carro, esa firma va en el recibo.
+  const firmaCliente = r.estado === "anulado" ? null : await firma(d, o?.firma_entrega_ruta);
+  d.cierre("Recibe conforme (Cliente)", gruposTotales(n(r.subtotal_sin_igv), n(r.igv), n(r.total), tasa), ["Total", soles(n(r.total))], {
+    firmaImagen: firmaCliente,
+    firmaDetalle: firmaCliente && o?.firma_entrega_en ? fechaCorta(o.firma_entrega_en) : null,
+  });
   const medios = [...new Set((pagos ?? []).map((p) => MEDIOS[p.medio as MedioPago]))];
   d.lineasEnRecuadro([
     ["Método de pago", medios.length ? medios.join(" + ") : "Pendiente de pago"],
