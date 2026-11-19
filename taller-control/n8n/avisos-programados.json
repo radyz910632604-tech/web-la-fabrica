@@ -1,0 +1,95 @@
+{
+  "name": "Taller Control · Avisos programados",
+  "nodes": [
+    {
+      "id": "5a1d7c10-2e3f-4b5a-8c9d-0e1f2a3b4001",
+      "name": "Cada 15 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 15 }] } }
+    },
+    {
+      "id": "5a1d7c10-2e3f-4b5a-8c9d-0e1f2a3b4002",
+      "name": "Ciclo de avisos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TALLER_URL }}/api/interna/avisos/ciclo",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "timeout": 120000 }
+      },
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Taller Control API" } }
+    },
+    {
+      "id": "5a1d7c10-2e3f-4b5a-8c9d-0e1f2a3b4003",
+      "name": "Un mensaje por aviso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 0],
+      "parameters": {
+        "jsCode": "// La app ya armó los avisos; aquí se arma el mensaje de plantilla de Meta.\n// Los botones de respuesta rápida llevan su código (payload) para que la respuesta vuelva a la app.\nconst avisos = $input.first().json.whatsapp ?? [];\nreturn avisos.map((a) => ({\n  json: {\n    id: a.id,\n    mensaje: a.plantilla\n      ? {\n          messaging_product: 'whatsapp', to: a.celular, type: 'template',\n          template: {\n            name: a.plantilla, language: { code: a.idioma || 'es' },\n            components: [\n              { type: 'body', parameters: (a.variables ?? []).map((v) => ({ type: 'text', text: String(v).slice(0, 1000) })) },\n              ...(a.botones ?? []).map((b, i) => ({ type: 'button', sub_type: 'quick_reply', index: String(i), parameters: [{ type: 'payload', payload: b.id }] })),\n            ],\n          },\n        }\n      : { messaging_product: 'whatsapp', to: a.celular, type: 'text', text: { body: a.texto } },\n  },\n}));"
+      }
+    },
+    {
+      "id": "5a1d7c10-2e3f-4b5a-8c9d-0e1f2a3b4004",
+      "name": "Enviar por WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.mensaje) }}",
+        "options": {}
+      },
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "WhatsApp Cloud API" } }
+    },
+    {
+      "id": "5a1d7c10-2e3f-4b5a-8c9d-0e1f2a3b4005",
+      "name": "Resultado de cada envío",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 0],
+      "parameters": {
+        "jsCode": "const enviados = $('Un mensaje por aviso').all();\nconst resultados = $input.all().map((it, i) => {\n  const error = it.json.error ? String(it.json.error.message ?? it.json.error).slice(0, 400) : undefined;\n  return { id: enviados[i].json.id, ok: !error && Boolean(it.json.messages?.length), error };\n});\nreturn [{ json: { resultados } }];"
+      }
+    },
+    {
+      "id": "5a1d7c10-2e3f-4b5a-8c9d-0e1f2a3b4006",
+      "name": "Avisar el resultado a la app",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TALLER_URL }}/api/interna/avisos/resultado",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ resultados: $json.resultados }) }}",
+        "options": {}
+      },
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Taller Control API" } }
+    }
+  ],
+  "connections": {
+    "Cada 15 minutos": { "main": [[{ "node": "Ciclo de avisos", "type": "main", "index": 0 }]] },
+    "Ciclo de avisos": { "main": [[{ "node": "Un mensaje por aviso", "type": "main", "index": 0 }]] },
+    "Un mensaje por aviso": { "main": [[{ "node": "Enviar por WhatsApp", "type": "main", "index": 0 }]] },
+    "Enviar por WhatsApp": { "main": [[{ "node": "Resultado de cada envío", "type": "main", "index": 0 }]] },
+    "Resultado de cada envío": { "main": [[{ "node": "Avisar el resultado a la app", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "pinData": {}
+}

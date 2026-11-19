@@ -1,0 +1,266 @@
+@import "tailwindcss";
+
+/* Modo oscuro por clase (lo pone next-themes en <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =====================================================================
+   Tokens de Taller Control (especificación, sección 3)
+   ---------------------------------------------------------------------
+   Claro: suelo gris #EDEDED, lienzo redondeado, tarjetas blancas, tarjetas
+   internas #F5F5F5, acento naranja #F2542D, negro #1A1A1A.
+   Contraste: todo texto con palabras llega a 4.5:1 sobre su superficie.
+   Sobre el naranja se escribe en negro (5.0:1); el blanco solo da 3.4:1.
+   ===================================================================== */
+:root {
+  --suelo: #ededed;
+  --lienzo: #f6f6f6;
+  --tarjeta: #ffffff;
+  --interna: #f5f5f5;
+  --hundida: #ececec; /* pista de barras, píldoras secundarias en reposo */
+  --borde: #e8e8e8;
+  --regla: #f0f0f0;
+  --control: #d4d4d4;
+
+  --tinta: #1a1a1a;
+  --tinta-2: #5c5c5c; /* 6.6:1 en blanco */
+  --tinta-3: #6b6b6b; /* 5.3:1 en blanco, 4.8:1 en #F5F5F5 */
+
+  --primario: #1a1a1a;
+  --primario-tinta: #ffffff;
+
+  --acento: #f2542d;
+  --acento-hondo: #e0461f; /* fin del degradado de la tarjeta destacada */
+  --acento-tinta: #1a1a1a;
+  --acento-suave: #fde4dc;
+
+  --serie-1: #1a1a1a; /* costos */
+  --serie-2: #f2542d; /* utilidad, con trama */
+  --rejilla: #e9e9e9;
+
+  --positivo: #1f7a4a;
+  --positivo-fondo: #dcf5e6;
+  --negativo: #c4242a;
+  --negativo-fondo: #ffe7e3;
+  --aviso: #92400e;
+  --aviso-fondo: #fff6e0;
+  --aviso-borde: #f5d78a;
+
+  --punto-verde: #1f9d55;
+  --punto-amarillo: #e3a008;
+  --punto-rojo: #d93025;
+  --punto-gris: #9a9a9a;
+
+  --sombra-reposo: 0 1px 2px rgb(0 0 0 / 0.03), 0 4px 16px rgb(0 0 0 / 0.025);
+  --sombra-flotante: 0 8px 28px rgb(0 0 0 / 0.12), 0 2px 6px rgb(0 0 0 / 0.06);
+
+  --ease-salida: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-cajon: cubic-bezier(0.32, 0.72, 0, 1);
+
+  color-scheme: light;
+}
+
+.dark {
+  --suelo: #0b0b0b;
+  --lienzo: #121212;
+  --tarjeta: #1b1b1b;
+  --interna: #232323;
+  --hundida: #2a2a2a;
+  --borde: #2a2a2a;
+  --regla: #242424;
+  --control: #3d3d3d;
+
+  --tinta: #f3f3f3;
+  --tinta-2: #b4b4b4;
+  --tinta-3: #9c9c9c;
+
+  --primario: #f3f3f3;
+  --primario-tinta: #121212;
+
+  --acento: #f2542d;
+  --acento-hondo: #e0461f;
+  --acento-tinta: #1a1a1a;
+  --acento-suave: #3a1d14;
+
+  --serie-1: #e6e6e6;
+  --serie-2: #f2542d;
+  --rejilla: #2a2a2a;
+
+  --positivo: #4cc287;
+  --positivo-fondo: #15291e;
+  --negativo: #f07a6f;
+  --negativo-fondo: #2e1716;
+  --aviso: #f0c46a;
+  --aviso-fondo: #2a2112;
+  --aviso-borde: #5a4718;
+
+  --punto-gris: #8a8a8a;
+
+  --sombra-reposo: none;
+  --sombra-flotante: 0 10px 32px rgb(0 0 0 / 0.5);
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-suelo: var(--suelo);
+  --color-lienzo: var(--lienzo);
+  --color-tarjeta: var(--tarjeta);
+  --color-interna: var(--interna);
+  --color-hundida: var(--hundida);
+  --color-borde: var(--borde);
+  --color-regla: var(--regla);
+  --color-control: var(--control);
+  --color-tinta: var(--tinta);
+  --color-tinta-2: var(--tinta-2);
+  --color-tinta-3: var(--tinta-3);
+  --color-primario: var(--primario);
+  --color-primario-tinta: var(--primario-tinta);
+  --color-acento: var(--acento);
+  --color-acento-hondo: var(--acento-hondo);
+  --color-acento-tinta: var(--acento-tinta);
+  --color-acento-suave: var(--acento-suave);
+  --color-positivo: var(--positivo);
+  --color-positivo-fondo: var(--positivo-fondo);
+  --color-negativo: var(--negativo);
+  --color-negativo-fondo: var(--negativo-fondo);
+  --color-aviso: var(--aviso);
+  --color-aviso-fondo: var(--aviso-fondo);
+  --color-aviso-borde: var(--aviso-borde);
+
+  --font-sans: "Inter Variable", "Inter", system-ui, sans-serif;
+
+  --radius-tarjeta: 24px;
+  --radius-interna: 18px;
+  --radius-lienzo: 32px;
+
+  --shadow-reposo: var(--sombra-reposo);
+  --shadow-flotante: var(--sombra-flotante);
+
+  --ease-salida: var(--ease-salida);
+  --ease-cajon: var(--ease-cajon);
+}
+
+/* ---------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------- */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--suelo);
+  color: var(--tinta);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv11", "ss01"; /* Inter: 1 y a más legibles */
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--acento) 28%, transparent);
+  color: var(--tinta);
+}
+
+input,
+textarea {
+  caret-color: var(--acento);
+}
+
+:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--control) transparent;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Botones y elementos que se presionan: responden al toque. */
+.presionable {
+  transition:
+    transform 160ms var(--ease-salida),
+    background-color 160ms ease,
+    color 160ms ease;
+}
+.presionable:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Trama diagonal (barras de utilidad y lo que falta de la meta). Es una trama, no un
+   degradado: la pide la especificación (sección 3). taste-skill-ignore */
+.trama-acento {
+  background-image: repeating-linear-gradient( /* taste-skill-ignore: trama de la especificación */
+    -45deg,
+    var(--acento) 0 3px,
+    color-mix(in srgb, var(--acento) 35%, transparent) 3px 7px
+  );
+}
+.trama-gris {
+  background-image: repeating-linear-gradient( /* taste-skill-ignore: trama de la especificación */
+    -45deg,
+    var(--hundida) 0 3px,
+    transparent 3px 7px
+  );
+}
+
+/* Menús y ventanas: entran desde su origen, salen rápido. */
+.flotante {
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin, var(--radix-popover-content-transform-origin, center));
+  animation: entrar-flotante 170ms var(--ease-salida);
+}
+@keyframes entrar-flotante {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presionable:active:not(:disabled) {
+    transform: none;
+  }
+  .flotante {
+    animation: aparecer 120ms ease;
+  }
+}
+@keyframes aparecer {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes subir {
+  from {
+    transform: translateY(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-state="open"] {
+    animation-name: aparecer !important;
+  }
+}
+
+/* Pantalla de carga: aparece solo si la página tarda más de un instante (sin parpadeo). */
+.cargando {
+  animation: aparecer 200ms var(--ease-salida) 140ms both;
+}
+.cargando .hueso {
+  background: var(--hundida);
+  animation: respirar 1.4s ease-in-out infinite;
+}
+@keyframes respirar {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cargando .hueso {
+    animation: none;
+  }
+}

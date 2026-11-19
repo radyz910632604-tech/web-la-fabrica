@@ -1,0 +1,26 @@
+/** Tipos de aviso y canales posibles (al cliente solo por WhatsApp). */
+export const TIPOS_AVISO = [
+  { tipo: "resumen_mediodia", nombre: "Resumen del mediodía", detalle: "A cada persona según su rol.", destino: "personal", defecto: "push" },
+  { tipo: "resumen_cierre", nombre: "Resumen del cierre", detalle: "Al final del día, según su rol.", destino: "personal", defecto: "push" },
+  { tipo: "citas_del_dia", nombre: "Citas del día", detalle: "Cada mañana, para confirmación.", destino: "personal", defecto: "push" },
+  { tipo: "cita_no_llego", nombre: "Cita que no llegó", detalle: "Al vendedor que la agendó.", destino: "personal", defecto: "push" },
+  { tipo: "entrega_por_vencer", nombre: "Entrega por vencer", detalle: "Al asesor, antes de la hora prometida si el carro no está listo.", destino: "personal", defecto: "push" },
+  { tipo: "entrega_atrasada", nombre: "Entrega atrasada", detalle: "Al asesor y a gerencia, si pasó la hora prometida.", destino: "personal", defecto: "push" },
+  { tipo: "sin_movimiento", nombre: "Carro sin movimiento", detalle: "Al asesor, si un carro no cambia de estado en las horas de «orden sin cambio».", destino: "personal", defecto: "push" },
+  { tipo: "espera_aprobacion", nombre: "Esperando aprobación", detalle: "Al asesor, si el cliente no aprueba el presupuesto a tiempo.", destino: "personal", defecto: "push" },
+  { tipo: "resumen_para_caja", nombre: "Listo para facturar", detalle: "A caja, cuando un carro queda listo: servicios, repuestos y total.", destino: "personal", defecto: "push" },
+  { tipo: "listo_sin_facturar", nombre: "Listo sin facturar", detalle: "A caja y al asesor, si un carro listo sigue sin comprobante.", destino: "personal", defecto: "push" },
+  { tipo: "comprobante_no_cuadra", nombre: "Comprobante que no cuadra", detalle: "A gerencia y caja, si la boleta o factura no coincide con lo aprobado.", destino: "personal", defecto: "push" },
+  { tipo: "repuesto_sin_costo", nombre: "Repuesto sin costo", detalle: "Al almacén, si se cargó un repuesto sin precio.", destino: "personal", defecto: "push" },
+  { tipo: "carro_listo", nombre: "Carro listo", detalle: "Al cliente, si aceptó mensajes.", destino: "cliente", defecto: "whatsapp" },
+  { tipo: "cotizacion", nombre: "Cotización", detalle: "Al cliente, con botones para aprobar.", destino: "cliente", defecto: "whatsapp" },
+  { tipo: "encuesta", nombre: "Encuesta de satisfacción", detalle: "Al cliente, 3 horas después de entregar.", destino: "cliente", defecto: "whatsapp" },
+  { tipo: "recordatorio_mantenimiento", nombre: "Recordatorio de mantenimiento", detalle: "Al cliente, cuando toca el servicio.", destino: "cliente", defecto: "whatsapp" },
+] as const;
+
+export const CANALES_PERMITIDOS: Record<"personal" | "cliente", string[]> = {
+  personal: ["push", "whatsapp", "ambos", "apagado"],
+  cliente: ["whatsapp", "apagado"],
+};
+
+export const NOMBRE_CANAL: Record<string, string> = { push: "Aviso en el celular (gratis)", whatsapp: "WhatsApp (cuesta)", ambos: "Celular y WhatsApp", apagado: "Apagado" };

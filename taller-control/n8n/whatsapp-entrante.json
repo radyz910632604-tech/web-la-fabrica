@@ -1,0 +1,206 @@
+{
+  "name": "Taller Control · WhatsApp entrante",
+  "nodes": [
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1001",
+      "name": "Meta verifica el webhook (GET)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "7f2c4f7e-6b0a-4a8e-8f61-1a2b3c4d5e01",
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "whatsapp-taller",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1002",
+      "name": "Revisar token de verificación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0],
+      "parameters": {
+        "jsCode": "// Meta manda hub.verify_token: debe ser igual a WHATSAPP_VERIFY_TOKEN.\nconst q = $input.first().json.query ?? {};\nconst ok = q['hub.mode'] === 'subscribe' && q['hub.verify_token'] === $env.WHATSAPP_VERIFY_TOKEN;\nreturn [{ json: { ok, challenge: ok ? String(q['hub.challenge'] ?? '') : 'token incorrecto' } }];"
+      }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1003",
+      "name": "Responder a Meta",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [480, 0],
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.challenge }}",
+        "options": { "responseCode": "={{ $json.ok ? 200 : 403 }}" }
+      }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1004",
+      "name": "Mensaje de WhatsApp (POST)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "7f2c4f7e-6b0a-4a8e-8f61-1a2b3c4d5e02",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-taller",
+        "responseMode": "onReceived",
+        "options": { "rawBody": true }
+      }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1005",
+      "name": "Validar firma y separar mensajes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "parameters": {
+        "jsCode": "// 1) Firma de Meta: HMAC-SHA256 del cuerpo exacto con el App Secret.\n//    Sin firma válida no se procesa nada.\nconst crypto = require('crypto');\nconst entrada = $input.first();\nconst firma = String(entrada.json.headers?.['x-hub-signature-256'] ?? '');\nconst crudo = await this.helpers.getBinaryDataBuffer(0, 'data');\nconst esperada = 'sha256=' + crypto.createHmac('sha256', $env.META_APP_SECRET).update(crudo).digest('hex');\nconst valida = firma.length === esperada.length && crypto.timingSafeEqual(Buffer.from(firma), Buffer.from(esperada));\nif (!valida) throw new Error('Firma de Meta no válida: mensaje descartado.');\n\n// 2) Un ítem por mensaje (se ignoran los avisos de entregado/leído).\nconst cuerpo = JSON.parse(crudo.toString('utf8'));\nconst salida = [];\nfor (const e of cuerpo.entry ?? []) {\n  for (const c of e.changes ?? []) {\n    const v = c.value ?? {};\n    for (const m of v.messages ?? []) {\n      const contacto = (v.contacts ?? []).find((x) => x.wa_id === m.from);\n      const base = { wa_id: m.id, celular: m.from, nombre: contacto?.profile?.name ?? '' };\n      let tipo = 'otro', texto = '', boton_id = '', media_id = '', mime = '', archivo = '';\n      if (m.type === 'text') { tipo = 'texto'; texto = m.text?.body ?? ''; }\n      else if (m.type === 'audio') { tipo = 'audio'; media_id = m.audio.id; mime = m.audio.mime_type; archivo = 'audio.ogg'; }\n      else if (m.type === 'image') { tipo = 'imagen'; media_id = m.image.id; mime = m.image.mime_type; texto = m.image.caption ?? ''; archivo = 'foto.jpg'; }\n      else if (m.type === 'document') { tipo = 'documento'; media_id = m.document.id; mime = m.document.mime_type; texto = m.document.caption ?? ''; archivo = m.document.filename ?? 'documento.pdf'; }\n      else if (m.type === 'video') { tipo = 'video'; media_id = m.video.id; mime = m.video.mime_type; texto = m.video.caption ?? ''; archivo = 'video.mp4'; }\n      else if (m.type === 'interactive') { tipo = 'boton'; boton_id = m.interactive?.button_reply?.id ?? m.interactive?.list_reply?.id ?? ''; texto = m.interactive?.button_reply?.title ?? m.interactive?.list_reply?.title ?? ''; }\n      else if (m.type === 'button') { tipo = 'boton'; boton_id = m.button?.payload ?? ''; texto = m.button?.text ?? ''; }\n      salida.push({ json: { ...base, tipo, texto, boton_id, media_id, mime, archivo } });\n    }\n  }\n}\nreturn salida;"
+      }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1006",
+      "name": "¿Trae archivo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "b1c2d3e4-0000-4000-8000-000000000001",
+              "leftValue": "={{ $json.media_id }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1007",
+      "name": "Pedir enlace del archivo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v21.0/{{ $json.media_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "WhatsApp Cloud API" } }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1008",
+      "name": "Descargar archivo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "response": { "response": { "responseFormat": "file", "outputPropertyName": "archivo" } } }
+      },
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "WhatsApp Cloud API" } }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1009",
+      "name": "Armar mensaje con archivo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 200],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const m = $('Validar firma y separar mensajes').item.json;\nconst datos = await this.helpers.getBinaryDataBuffer($itemIndex, 'archivo');\nreturn { json: { cuerpo: { wa_id: m.wa_id, celular: m.celular, nombre: m.nombre, tipo: m.tipo, texto: m.texto || undefined, media: { base64: datos.toString('base64'), mime: m.mime, nombre: m.archivo } } } };"
+      }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1010",
+      "name": "Armar mensaje sin archivo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 420],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const m = $json;\nreturn { json: { cuerpo: { wa_id: m.wa_id, celular: m.celular, nombre: m.nombre, tipo: m.tipo, texto: m.texto || undefined, boton_id: m.boton_id || undefined } } };"
+      }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1011",
+      "name": "Enviar a Taller Control",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1440, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.TALLER_URL }}/api/interna/whatsapp/mensaje",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.cuerpo) }}",
+        "options": { "timeout": 120000 }
+      },
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "Taller Control API" } }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1012",
+      "name": "Armar respuesta de WhatsApp",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1680, 300],
+      "parameters": {
+        "jsCode": "// La app dice qué responder; aquí se arma el formato de Meta.\n// Hasta 3 botones: botones. De 4 a 10: lista. Con PDF: documento (el texto va de pie).\n// Mensaje repetido: no se responde.\nconst salida = [];\nfor (const it of $input.all()) {\n  const r = it.json;\n  if (r.duplicado || !r.respuesta?.texto) continue;\n  const botones = r.respuesta.botones ?? [];\n  let mensaje;\n  if (r.respuesta.documento?.url) {\n    // El enlace lo arma la app y vence en una hora: Meta lo descarga al enviar.\n    mensaje = { messaging_product: 'whatsapp', to: r.para, type: 'document', document: { link: r.respuesta.documento.url, filename: r.respuesta.documento.nombre, caption: r.respuesta.texto.slice(0, 1024) } };\n  } else if (botones.length >= 1 && botones.length <= 3) {\n    mensaje = { messaging_product: 'whatsapp', to: r.para, type: 'interactive', interactive: { type: 'button', body: { text: r.respuesta.texto.slice(0, 1024) }, action: { buttons: botones.map((b) => ({ type: 'reply', reply: { id: b.id, title: b.titulo.slice(0, 20) } })) } } };\n  } else if (botones.length > 3) {\n    mensaje = { messaging_product: 'whatsapp', to: r.para, type: 'interactive', interactive: { type: 'list', body: { text: r.respuesta.texto.slice(0, 1024) }, action: { button: 'Elegir', sections: [{ title: 'Opciones', rows: botones.slice(0, 10).map((b) => ({ id: b.id, title: b.titulo.slice(0, 24) })) }] } } };\n  } else {\n    mensaje = { messaging_product: 'whatsapp', to: r.para, type: 'text', text: { body: r.respuesta.texto.slice(0, 4096) } };\n  }\n  salida.push({ json: { mensaje } });\n}\nreturn salida;"
+      }
+    },
+    {
+      "id": "0b6f1a52-1e1d-4b8e-9a51-3c1f0d2a1013",
+      "name": "Responder por WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1920, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.mensaje) }}",
+        "options": {}
+      },
+      "credentials": { "httpHeaderAuth": { "id": "", "name": "WhatsApp Cloud API" } }
+    }
+  ],
+  "connections": {
+    "Meta verifica el webhook (GET)": { "main": [[{ "node": "Revisar token de verificación", "type": "main", "index": 0 }]] },
+    "Revisar token de verificación": { "main": [[{ "node": "Responder a Meta", "type": "main", "index": 0 }]] },
+    "Mensaje de WhatsApp (POST)": { "main": [[{ "node": "Validar firma y separar mensajes", "type": "main", "index": 0 }]] },
+    "Validar firma y separar mensajes": { "main": [[{ "node": "¿Trae archivo?", "type": "main", "index": 0 }]] },
+    "¿Trae archivo?": {
+      "main": [
+        [{ "node": "Pedir enlace del archivo", "type": "main", "index": 0 }],
+        [{ "node": "Armar mensaje sin archivo", "type": "main", "index": 0 }]
+      ]
+    },
+    "Pedir enlace del archivo": { "main": [[{ "node": "Descargar archivo", "type": "main", "index": 0 }]] },
+    "Descargar archivo": { "main": [[{ "node": "Armar mensaje con archivo", "type": "main", "index": 0 }]] },
+    "Armar mensaje con archivo": { "main": [[{ "node": "Enviar a Taller Control", "type": "main", "index": 0 }]] },
+    "Armar mensaje sin archivo": { "main": [[{ "node": "Enviar a Taller Control", "type": "main", "index": 0 }]] },
+    "Enviar a Taller Control": { "main": [[{ "node": "Armar respuesta de WhatsApp", "type": "main", "index": 0 }]] },
+    "Armar respuesta de WhatsApp": { "main": [[{ "node": "Responder por WhatsApp", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "pinData": {}
+}
