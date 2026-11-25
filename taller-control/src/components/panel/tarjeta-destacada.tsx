@@ -97,7 +97,7 @@ export function TarjetaTaller({ enTaller, acciones }: { enTaller: Carro[]; accio
           ) : null}
           {acciones.registrarPago ? (
             <Boton asChild variante="blanco" className="px-4 text-[#1a1a1a] dark:bg-white dark:hover:bg-white/90">
-              <Link href="/pronto/registrar-pago">
+              <Link href="/cobros?nuevo=1">
                 <Banknote />
                 Registrar pago
               </Link>
