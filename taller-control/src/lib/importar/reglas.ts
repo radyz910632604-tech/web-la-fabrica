@@ -10,7 +10,10 @@ import { normalizarPlaca } from "@/lib/placas";
 
 export const TIPOS_IMPORTACION = {
   clientes: { nombre: "Clientes y sus carros", detalle: "Nombre, celular, DNI o RUC, placa, marca, modelo, año, color y kilometraje." },
+  historial: { nombre: "Historial de servicios", detalle: "Trabajos anteriores por placa: fecha, servicio y kilometraje. No manda mensajes a los clientes." },
   inventario: { nombre: "Inventario de repuestos", detalle: "Código, nombre, stock, costo y precio de venta." },
+  ventas: { nombre: "Ventas anteriores", detalle: "Boletas y facturas emitidas: fecha, número, cliente, placa y total." },
+  compras: { nombre: "Compras anteriores", detalle: "Compras a proveedores: fecha, proveedor, RUC, número y total. No cambian el stock." },
   gastos: { nombre: "Gastos del taller", detalle: "Fecha, concepto, categoría y monto (alquiler, luz, sueldos…)." },
 } as const;
 export type TipoImportacion = keyof typeof TIPOS_IMPORTACION;
@@ -18,7 +21,7 @@ export type TipoImportacion = keyof typeof TIPOS_IMPORTACION;
 export type Campo = { clave: string; nombre: string; obligatorio?: boolean; sinonimos: string[] };
 
 /** Qué datos se buscan en cada tipo y con qué títulos suelen venir en un Excel. */
-export const CAMPOS: Record<TipoImportacion, Campo[]> = {
+export const CAMPOS = {
   clientes: [
     { clave: "placa", nombre: "Placa", sinonimos: ["placa", "nro placa", "n placa", "placa del vehiculo", "matricula"] },
     { clave: "nombre", nombre: "Nombre del cliente", sinonimos: ["cliente", "nombre", "nombre del cliente", "nombres", "razon social", "propietario", "dueno"] },
@@ -51,7 +54,44 @@ export const CAMPOS: Record<TipoImportacion, Campo[]> = {
     { clave: "medio", nombre: "Cómo se pagó", sinonimos: ["medio", "forma de pago", "metodo", "pago", "medio de pago"] },
     { clave: "comprobante", nombre: "Comprobante", sinonimos: ["comprobante", "recibo", "boleta", "factura", "nro", "numero"] },
   ],
-};
+} as Record<TipoImportacion, Campo[]>;
+
+const PLACA_CLIENTE: Campo[] = [
+  { clave: "nombre", nombre: "Nombre del cliente", sinonimos: ["cliente", "nombre", "nombre del cliente", "razon social", "propietario"] },
+  { clave: "celular", nombre: "Celular", sinonimos: ["celular", "telefono", "tel", "cel", "movil", "whatsapp", "contacto"] },
+  { clave: "marca", nombre: "Marca", sinonimos: ["marca"] },
+  { clave: "modelo", nombre: "Modelo", sinonimos: ["modelo"] },
+];
+CAMPOS.historial = [
+  { clave: "placa", nombre: "Placa", obligatorio: true, sinonimos: ["placa", "nro placa", "matricula"] },
+  { clave: "fecha", nombre: "Fecha", obligatorio: true, sinonimos: ["fecha", "fecha de ingreso", "fecha ingreso", "dia", "fecha de servicio"] },
+  { clave: "servicio", nombre: "Servicio o trabajo", obligatorio: true, sinonimos: ["servicio", "trabajo", "descripcion", "detalle", "trabajo realizado", "servicios", "motivo"] },
+  { clave: "kilometraje", nombre: "Kilometraje", sinonimos: ["kilometraje", "km", "kms", "kilometros"] },
+  { clave: "monto", nombre: "Monto cobrado", sinonimos: ["monto", "total", "importe", "cobrado", "precio", "soles"] },
+  { clave: "notas", nombre: "Observaciones", sinonimos: ["observaciones", "obs", "notas", "comentarios", "diagnostico"] },
+  ...PLACA_CLIENTE,
+];
+CAMPOS.ventas = [
+  { clave: "fecha", nombre: "Fecha", obligatorio: true, sinonimos: ["fecha", "fecha de emision", "emision", "dia"] },
+  { clave: "tipo", nombre: "Tipo (boleta o factura)", sinonimos: ["tipo", "tipo de comprobante", "comprobante", "documento", "tipo doc"] },
+  { clave: "numero", nombre: "Serie y número", sinonimos: ["numero", "nro", "n", "serie numero", "nro comprobante", "correlativo", "numero de comprobante"] },
+  { clave: "serie", nombre: "Serie (si va aparte)", sinonimos: ["serie"] },
+  { clave: "total", nombre: "Total", obligatorio: true, sinonimos: ["total", "importe", "monto", "importe total", "total s/", "venta"] },
+  { clave: "documento", nombre: "DNI o RUC del cliente", sinonimos: ["dni", "ruc", "dni ruc", "doc cliente", "ruc/dni", "documento cliente"] },
+  { clave: "placa", nombre: "Placa", sinonimos: ["placa"] },
+  { clave: "detalle", nombre: "Detalle", sinonimos: ["detalle", "descripcion", "concepto", "servicio"] },
+  { clave: "nombre", nombre: "Cliente", sinonimos: ["cliente", "nombre", "razon social", "senor es", "senores"] },
+];
+CAMPOS.compras = [
+  { clave: "fecha", nombre: "Fecha", obligatorio: true, sinonimos: ["fecha", "fecha de emision", "emision", "dia"] },
+  { clave: "proveedor", nombre: "Proveedor", obligatorio: true, sinonimos: ["proveedor", "razon social", "empresa", "tienda", "emisor"] },
+  { clave: "ruc", nombre: "RUC del proveedor", sinonimos: ["ruc", "ruc proveedor", "ruc del proveedor"] },
+  { clave: "tipo", nombre: "Tipo de comprobante", sinonimos: ["tipo", "tipo de comprobante", "comprobante", "documento", "tipo doc"] },
+  { clave: "numero", nombre: "Serie y número", sinonimos: ["numero", "nro", "serie numero", "nro comprobante", "factura", "numero de comprobante"] },
+  { clave: "serie", nombre: "Serie (si va aparte)", sinonimos: ["serie"] },
+  { clave: "total", nombre: "Total", obligatorio: true, sinonimos: ["total", "importe", "monto", "importe total", "compra"] },
+  { clave: "detalle", nombre: "Qué se compró", sinonimos: ["detalle", "descripcion", "concepto", "producto", "repuesto", "articulo"] },
+];
 
 export const simple = (t: unknown) =>
   String(t ?? "")
@@ -158,6 +198,28 @@ const CATEGORIAS: [RegExp, string][] = [
 const MEDIOS: [RegExp, string][] = [[/yape/, "yape"], [/plin/, "plin"], [/tarjeta|pos|visa|master/, "tarjeta"], [/transfer|deposito|banco|bcp|bbva|interbank|scotiabank/, "transferencia"], [/efectivo|cash|caja/, "efectivo"]];
 const buscar = (t: string, tabla: [RegExp, string][]) => tabla.find(([r]) => r.test(t))?.[1] ?? null;
 
+/** «B001-123», «F001 - 00000123», o serie y número en columnas separadas. */
+export function aSerieNumero(numero: unknown, serieAparte?: unknown): { serie: string; numero: string } | null {
+  const t = String(numero ?? "").toUpperCase().replace(/\s+/g, "");
+  const sa = String(serieAparte ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const junto = /^([A-Z0-9]{1,4})-0*(\d{1,8})$/.exec(t);
+  if (junto && !sa) return { serie: junto[1], numero: junto[2] };
+  const solo = /^0*(\d{1,8})$/.exec(t.replace(/^N[°º]?/, ""));
+  if (sa && sa.length <= 4 && solo) return { serie: sa, numero: solo[1] };
+  if (junto) return { serie: junto[1], numero: junto[2] };
+  return null;
+}
+
+/** Boleta o factura por la columna de tipo, la serie (F… / B…) o el documento del cliente (RUC → factura). */
+function tipoVenta(tipo: string, serie: string | null, ruc: boolean): "boleta" | "factura" {
+  const t = simple(tipo);
+  if (/factura|^f\b|^fa/.test(t)) return "factura";
+  if (/boleta|^b\b|^bv/.test(t)) return "boleta";
+  if (serie?.startsWith("F")) return "factura";
+  if (serie?.startsWith("B")) return "boleta";
+  return ruc ? "factura" : "boleta";
+}
+
 // ---------------------------------------------------------------------------
 // Validar una fila
 // ---------------------------------------------------------------------------
@@ -170,7 +232,7 @@ const celda = (fila: string[], mapa: Mapa, clave: string) => {
 };
 
 /** Convierte una fila del Excel en datos listos para guardar, con sus problemas en palabras simples. */
-export function validarFila(tipo: TipoImportacion, fila: string[], mapa: Mapa, numero: number, opciones: { costosConIgv?: boolean } = {}): FilaValidada {
+export function validarFila(tipo: TipoImportacion, fila: string[], mapa: Mapa, numero: number, opciones: { costosConIgv?: boolean; hoy?: string } = {}): FilaValidada {
   const c = (k: string) => celda(fila, mapa, k);
   const errores: string[] = [];
   const avisos: string[] = [];
@@ -244,6 +306,65 @@ export function validarFila(tipo: TipoImportacion, fila: string[], mapa: Mapa, n
     const medio = buscar(simple(c("medio")), MEDIOS);
     if (medio) datos.medio = medio;
     if (c("comprobante")) datos.comprobante = c("comprobante").slice(0, 40);
+  }
+
+  if (tipo === "historial") {
+    const placaCruda = c("placa");
+    const placa = placaCruda ? normalizarPlaca(placaCruda) : "";
+    if (!/^[A-Z0-9]{4,8}$/.test(placa)) errores.push(placaCruda ? `Placa «${placaCruda}» no válida` : "Sin placa");
+    else datos.placa = placa;
+    const fecha = aFecha(c("fecha"));
+    if (!fecha) errores.push(c("fecha") ? `Fecha «${c("fecha")}» no válida` : "Sin fecha");
+    else if (opciones.hoy && fecha > opciones.hoy) errores.push("La fecha es futura");
+    else datos.fecha = fecha;
+    const servicios = c("servicio").split(/\s*(?:\+|;|\n|\s-\s|\/)\s*/).map((x) => x.trim()).filter((x) => x.length >= 2).slice(0, 10);
+    if (!servicios.length) errores.push("Sin servicio");
+    else datos.servicios = servicios.map((x) => x.slice(0, 160));
+    const km = aNumero(c("kilometraje"));
+    if (km !== null && km >= 0 && km < 3_000_000) datos.kilometraje = Math.round(km);
+    const monto = aNumero(c("monto"));
+    if (monto !== null && monto > 0) datos.monto = Math.round(monto * 100) / 100;
+    if (c("notas")) datos.notas = c("notas").slice(0, 800);
+    const celular = c("celular") ? normalizarCelular(c("celular").replace(/[^\d+]/g, "")) : null;
+    if (celular && c("nombre").length >= 2) {
+      datos.celular = celular;
+      datos.nombre = c("nombre").replace(/\s+/g, " ").slice(0, 120);
+    }
+    if (c("marca")) datos.marca = c("marca").slice(0, 40);
+    if (c("modelo")) datos.modelo = c("modelo").slice(0, 60);
+  }
+
+  if (tipo === "ventas" || tipo === "compras") {
+    const fecha = aFecha(c("fecha"));
+    if (!fecha) errores.push(c("fecha") ? `Fecha «${c("fecha")}» no válida` : "Sin fecha");
+    else datos.fecha = fecha;
+    const total = aNumero(c("total"));
+    if (total === null || total <= 0) errores.push(c("total") ? `Total «${c("total")}» no válido` : "Sin total");
+    else datos.total = Math.round(total * 100) / 100;
+    const sn = aSerieNumero(c("numero"), c("serie"));
+    if (sn) Object.assign(datos, sn);
+    if (c("detalle")) datos.detalle = c("detalle").replace(/\s+/g, " ").slice(0, tipo === "ventas" ? 2000 : 200);
+  }
+
+  if (tipo === "ventas") {
+    const doc = aDocumento(c("documento"));
+    if (doc) datos.documento = doc;
+    datos.tipo = tipoVenta(c("tipo"), (datos.serie as string) ?? null, doc?.tipo === "ruc");
+    if (!datos.serie) avisos.push("Sin serie y número: se guarda como venta del Excel");
+    const placa = c("placa") ? normalizarPlaca(c("placa")) : "";
+    if (/^[A-Z0-9]{4,8}$/.test(placa)) datos.placa = placa;
+    if (c("nombre")) datos.nombre = c("nombre").slice(0, 120);
+  }
+
+  if (tipo === "compras") {
+    const prov = c("proveedor").replace(/\s+/g, " ");
+    if (prov.length < 2) errores.push("Sin proveedor");
+    else datos.proveedor = prov.slice(0, 160);
+    const ruc = String(c("ruc")).replace(/\D/g, "");
+    if (/^(10|15|17|20)\d{9}$/.test(ruc)) datos.ruc = ruc;
+    else if (c("ruc")) avisos.push(`RUC «${c("ruc")}» no válido`);
+    const t = simple(c("tipo"));
+    datos.tipo = /factura/.test(t) || (datos.serie as string | undefined)?.startsWith("F") ? "factura" : /boleta/.test(t) || (datos.serie as string | undefined)?.startsWith("B") ? "boleta" : /ticket/.test(t) ? "ticket" : /nota/.test(t) ? "nota_venta" : datos.serie ? "factura" : "sin_comprobante";
   }
 
   return { fila: numero, ok: errores.length === 0, datos, errores, avisos };

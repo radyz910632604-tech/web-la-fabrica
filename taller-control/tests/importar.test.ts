@@ -78,3 +78,30 @@ describe("importar: inventario y gastos", () => {
     expect(validarFila("gastos", ["", "Algo", "10", ""], m, 3).errores).toContain("Sin fecha");
   });
 });
+
+describe("importar: historial, ventas y compras", async () => {
+  const { aSerieNumero } = await import("@/lib/importar/reglas");
+  it("serie y número juntos o separados", () => {
+    expect(aSerieNumero("B001-00000123")).toEqual({ serie: "B001", numero: "123" });
+    expect(aSerieNumero("123", "F001")).toEqual({ serie: "F001", numero: "123" });
+    expect(aSerieNumero("sin número")).toBeNull();
+  });
+  it("historial: varios servicios en una celda y fecha futura rechazada", () => {
+    const m = detectarColumnas(["Fecha", "Placa", "Trabajo realizado", "KM", "Total"], "historial");
+    const v = validarFila("historial", ["15/03/2025", "abc-123", "Cambio de aceite + filtro de aire", "62,000", "S/ 180"], m, 2, { hoy: "2026-11-25" });
+    expect(v.ok).toBe(true);
+    expect(v.datos).toMatchObject({ placa: "ABC123", fecha: "2025-03-15", servicios: ["Cambio de aceite", "filtro de aire"], kilometraje: 62000, monto: 180 });
+    expect(validarFila("historial", ["15/03/2027", "abc-123", "Frenos", "", ""], m, 3, { hoy: "2026-11-25" }).errores).toContain("La fecha es futura");
+  });
+  it("ventas: boleta o factura por la serie o por el RUC", () => {
+    const m = detectarColumnas(["Fecha", "Comprobante", "Nro", "Cliente", "RUC/DNI", "Placa", "Total"], "ventas");
+    expect(validarFila("ventas", ["01/10/2026", "", "F001-55", "Empresa SAC", "20123456789", "ABC123", "1,180.00"], m, 2).datos).toMatchObject({ tipo: "factura", serie: "F001", numero: "55", total: 1180, placa: "ABC123" });
+    const sinNumero = validarFila("ventas", ["01/10/2026", "", "", "Juan", "40123456", "", "200"], m, 3);
+    expect(sinNumero.datos.tipo).toBe("boleta");
+    expect(sinNumero.avisos.join(" ")).toContain("Sin serie y número");
+  });
+  it("compras: factura del proveedor con su RUC", () => {
+    const m = detectarColumnas(["Fecha", "Proveedor", "RUC", "Factura", "Total"], "compras");
+    expect(validarFila("compras", ["02/10/2026", "Repuestos Lima SAC", "20555555551", "F002-9", "590"], m, 2).datos).toMatchObject({ proveedor: "Repuestos Lima SAC", ruc: "20555555551", tipo: "factura", serie: "F002", numero: "9", total: 590 });
+  });
+});

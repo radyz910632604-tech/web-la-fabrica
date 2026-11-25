@@ -40,6 +40,7 @@ export const VERSIONES: Version[] = [
     sql: "select exists (select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid where t.typname = 'estado_orden' and e.enumlabel = 'espera_aprobacion')",
   },
   { version: "20261116000015", nombre: "Diagnóstico, facturado y alertas del agente", sql: columna("ordenes_trabajo", "facturado_en"), rest: ["ordenes_trabajo", "facturado_en"] },
+  { version: "20261116000016", nombre: "Importar desde Excel", sql: columna("ordenes_trabajo", "importada"), rest: ["ordenes_trabajo", "importada"] },
 ];
 
 export const versionDe = (archivo: string) => /^(\d{14})_/.exec(archivo)?.[1] ?? null;

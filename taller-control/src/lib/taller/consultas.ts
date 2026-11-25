@@ -76,7 +76,7 @@ function aFila(o: OrdenCruda, nombres: Map<string, string>): FilaOrden {
 
 export async function listarOrdenes(
   empresaId: string,
-  filtro: { estados?: EstadoOrden[]; vehiculoId?: string; clienteId?: string; tecnicoId?: string; limite?: number; orden?: "reciente" | "ingreso" | "entrega" } = {},
+  filtro: { estados?: EstadoOrden[]; vehiculoId?: string; clienteId?: string; tecnicoId?: string; limite?: number; orden?: "reciente" | "ingreso" | "entrega"; sinImportadas?: boolean } = {},
 ): Promise<FilaOrden[]> {
   const supabase = await clienteServidor();
   let q = supabase
@@ -88,6 +88,7 @@ export async function listarOrdenes(
   if (filtro.vehiculoId) q = q.eq("vehiculo_id", filtro.vehiculoId);
   if (filtro.clienteId) q = q.eq("cliente_id", filtro.clienteId);
   if (filtro.tecnicoId) q = q.eq("tecnico_id", filtro.tecnicoId);
+  if (filtro.sinImportadas) q = q.eq("importada", false);
   q =
     filtro.orden === "entrega"
       ? q.order("entrega_prometida", { ascending: true, nullsFirst: false }).order("ingresado_en", { ascending: true })

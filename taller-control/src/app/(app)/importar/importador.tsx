@@ -28,7 +28,8 @@ export function Importador() {
   const filas = useMemo(() => hojas?.[hoja]?.filas ?? [], [hojas, hoja]);
   const encabezados = filas[titulos] ?? [];
   const datos = useMemo(() => filas.slice(titulos + 1).map((celdas, i) => ({ numero: titulos + i + 2, celdas })), [filas, titulos]);
-  const revisadas = useMemo(() => datos.map((f) => validarFila(tipo, f.celdas, mapa, f.numero, { costosConIgv: conIgv })).filter((v) => !v.errores.includes("Fila vacía")), [datos, tipo, mapa, conIgv]);
+  const hoy = useMemo(() => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date()), []);
+  const revisadas = useMemo(() => datos.map((f) => validarFila(tipo, f.celdas, mapa, f.numero, { costosConIgv: conIgv, hoy })).filter((v) => !v.errores.includes("Fila vacía")), [datos, tipo, mapa, conIgv, hoy]);
   const listas = revisadas.filter((v) => v.ok).length;
   const conAviso = revisadas.filter((v) => v.ok && v.avisos.length).length;
   const conError = revisadas.filter((v) => !v.ok);
@@ -93,8 +94,8 @@ export function Importador() {
     <div className="flex min-w-0 flex-col gap-4">
       {/* 1. Qué se importa */}
       <Tarjeta aria-labelledby="t-que">
-        <CabeceraTarjeta id="t-que" titulo="1. ¿Qué vas a importar?" detalle="Importa un tipo a la vez. Si tu Excel tiene varias hojas, elige la que corresponde." />
-        <div role="radiogroup" aria-label="Tipo de datos" className="grid gap-2 sm:grid-cols-3">
+        <CabeceraTarjeta id="t-que" titulo="1. ¿Qué vas a importar?" detalle="Uno a la vez y en este orden: primero clientes y carros, después el historial, y al final lo demás." />
+        <div role="radiogroup" aria-label="Tipo de datos" className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {(Object.keys(TIPOS_IMPORTACION) as TipoImportacion[]).map((t) => (
             <button
               key={t}
@@ -113,7 +114,6 @@ export function Importador() {
             </button>
           ))}
         </div>
-        <p className="mt-3 text-sm text-tinta-3">Historial de servicios, ventas y compras antiguas llegan en el siguiente paso.</p>
       </Tarjeta>
 
       {/* 2. Archivo */}
@@ -232,7 +232,7 @@ export function Importador() {
                   <tr key={v.fila} className="border-t border-regla align-top">
                     <td className="num py-2 pr-3 text-tinta-3">{v.fila}</td>
                     {CAMPOS[tipo].filter((c) => mapa[c.clave] != null).map((c) => (
-                      <td key={c.clave} className="max-w-48 truncate py-2 pr-3">{mostrar(v.datos[c.clave === "costo" ? "costo_sin_igv" : c.clave === "precio" ? "precio_sin_igv" : c.clave === "kilometraje" ? "kilometraje" : c.clave])}</td>
+                      <td key={c.clave} className="max-w-48 truncate py-2 pr-3">{mostrar(valorDe(tipo, c.clave, v.datos))}</td>
                     ))}
                     <td className={cn("min-w-56 py-2 text-[13px]", v.ok ? (v.avisos.length ? "text-aviso" : "text-positivo") : "text-negativo")}>{v.ok ? v.avisos[0] ?? "Lista" : v.errores.join("; ")}</td>
                   </tr>
@@ -270,6 +270,16 @@ export function Importador() {
   );
 }
 
+/** Qué dato convertido se muestra en la vista previa para cada columna. */
+function valorDe(tipo: TipoImportacion, clave: string, d: Record<string, unknown>): unknown {
+  if (clave === "costo") return d.costo_sin_igv;
+  if (clave === "precio") return d.precio_sin_igv;
+  if (clave === "servicio") return (d.servicios as string[] | undefined)?.join(" + ");
+  if ((tipo === "ventas" || tipo === "compras") && clave === "numero") return d.serie ? `${d.serie}-${d.numero}` : undefined;
+  if ((tipo === "ventas" || tipo === "compras") && clave === "serie") return d.serie;
+  return d[clave];
+}
+
 function mostrar(v: unknown): string {
   if (v === undefined || v === null || v === "") return "—";
   if (typeof v === "object" && v && "numero" in v) return String((v as { numero: string }).numero);
@@ -279,7 +289,7 @@ function mostrar(v: unknown): string {
 }
 
 function Resultado({ r, tipo }: { r: ResultadoLote; tipo: TipoImportacion }) {
-  const que = tipo === "clientes" ? "clientes y carros" : tipo === "inventario" ? "repuestos" : "gastos";
+  const que = { clientes: "clientes y carros", inventario: "repuestos", gastos: "gastos", historial: "visitas en el historial de cada carro", ventas: "ventas en Comprobantes y Reportes", compras: "compras en Compras y Reportes" }[tipo];
   return (
     <Tarjeta aria-labelledby="t-resultado" role="status">
       <CabeceraTarjeta id="t-resultado" titulo={r.error ? "La importación se detuvo" : "Importación terminada"} />

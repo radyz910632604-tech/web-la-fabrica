@@ -37,6 +37,8 @@ export async function gananciasDelMes(empresaId: string, mes: string): Promise<G
     .eq("empresa_id", empresaId)
     .eq("estado", "entregado")
     .eq("anulada", false)
+    // Las visitas del Excel anterior no tienen costos: no se calcula su ganancia.
+    .eq("importada", false)
     .gte("entregado_en", desde.toISOString())
     .lt("entregado_en", hasta.toISOString())
     .order("entregado_en", { ascending: false });

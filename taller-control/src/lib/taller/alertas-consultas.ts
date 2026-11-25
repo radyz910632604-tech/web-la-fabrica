@@ -24,7 +24,7 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
 
   const [abiertas, entregadas, config] = await Promise.all([
     listarOrdenes(empresaId, { estados: [...ESTADOS_ABIERTOS], limite: 150, orden: "reciente" }),
-    listarOrdenes(empresaId, { estados: ["entregado"], limite: 120, orden: "reciente" }),
+    listarOrdenes(empresaId, { estados: ["entregado"], limite: 120, orden: "reciente", sinImportadas: true }),
     configDinero(empresaId),
   ]);
   const ordenes = [...abiertas, ...entregadas.filter((o) => new Date(o.estadoCambiadoEn) >= hace30)];
@@ -44,7 +44,7 @@ export async function alertasDelTaller(empresaId: string, permisos: { verDinero:
       .eq("compras.estado", "confirmado")
       .gte("compras.fecha_emision", hace120),
     permisos.verDinero
-      ? supabase.from("comprobantes_venta").select("serie, numero").eq("empresa_id", empresaId).eq("estado", "confirmado").is("orden_id", null)
+      ? supabase.from("comprobantes_venta").select("serie, numero").eq("empresa_id", empresaId).eq("estado", "confirmado").is("orden_id", null).neq("origen_datos", "importado")
       : vacio,
     permisos.verMargen && config.regla === "fijo_por_servicio" ? supabase.from("mano_obra_servicio").select("servicio_id, monto").eq("empresa_id", empresaId) : vacio,
     permisos.verMargen ? costosVigentes(empresaId) : Promise.resolve(new Map<string, number>()),

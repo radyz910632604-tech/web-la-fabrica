@@ -12,7 +12,7 @@ export default async function Importar() {
   if (!esGestor(ctx.roles)) notFound();
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <TituloCaja titulo="Importar datos" detalle={`Pasa a ${ctx.taller.nombre} lo que tenías en Excel: clientes y carros, repuestos y gastos.`} />
+      <TituloCaja titulo="Importar datos" detalle={`Pasa a ${ctx.taller.nombre} lo que tenías en Excel: clientes y carros, historial, repuestos, ventas, compras y gastos.`} />
       <Importador />
     </div>
   );
