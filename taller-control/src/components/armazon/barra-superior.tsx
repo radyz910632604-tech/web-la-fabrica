@@ -35,7 +35,10 @@ type Props = {
 };
 
 export function esActivo(ruta: string, href: string) {
-  return href === "/" ? ruta === "/" : ruta === href || ruta.startsWith(`${href}/`);
+  if (href === "/") return ruta === "/";
+  // Carros es una pestaña de Clientes: la sección queda marcada.
+  if (href === "/clientes" && ruta.startsWith("/vehiculos")) return true;
+  return ruta === href || ruta.startsWith(`${href}/`);
 }
 
 const pildora = "flex h-14 items-center rounded-full bg-tarjeta shadow-reposo";

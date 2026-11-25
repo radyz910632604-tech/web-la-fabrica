@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Search } from "lucide-react";
 import { VentanaCliente } from "@/components/taller/formulario-cliente";
+import { PestanasClientes } from "@/components/taller/pestanas-clientes";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
 import { formatearMomento } from "@/lib/formato";
@@ -74,7 +75,8 @@ export default async function Clientes({ searchParams }: { searchParams: Promise
 
   return (
     <div className="flex min-w-0 flex-col gap-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      {tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes"]) ? <PestanasClientes actual="clientes" /> : null}
+      <header className="-mt-2 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.025em] md:text-[32px]">Clientes</h1>
           <p className="mt-1.5 text-[15px] text-tinta-2 md:text-base">
