@@ -30,7 +30,8 @@ export type Icono =
   | "usuarios"
   | "whatsapp"
   | "configuracion"
-  | "sistema";
+  | "sistema"
+  | "importar";
 
 export type Destino = {
   clave: string;
@@ -71,6 +72,7 @@ const GESTION: Destino[] = [
   { clave: "usuarios", nombre: "Personal y roles", corto: "Personal", href: "/usuarios", icono: "usuarios" },
   { clave: "whatsapp", nombre: "WhatsApp y avisos", corto: "WhatsApp", href: "/whatsapp", icono: "whatsapp" },
   { clave: "configuracion", nombre: "Configuración del taller", corto: "Ajustes", href: "/configuracion", icono: "configuracion" },
+  { clave: "importar", nombre: "Importar datos de Excel", corto: "Importar", href: "/importar", icono: "importar" },
 ];
 
 /** Solo gerencia: qué está conectado, qué falta y las copias de seguridad. */

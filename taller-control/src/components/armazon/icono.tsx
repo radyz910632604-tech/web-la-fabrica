@@ -15,6 +15,7 @@ import {
   Receipt,
   Vault,
   Settings,
+  FileSpreadsheet,
   ShieldCheck,
   UserCog,
   Users,
@@ -46,6 +47,7 @@ const ICONOS = {
   whatsapp: MessageCircle,
   configuracion: Settings,
   sistema: ShieldCheck,
+  importar: FileSpreadsheet,
 } satisfies Record<NombreIcono, unknown>;
 
 export function Icono({ nombre, ...props }: { nombre: NombreIcono } & LucideProps) {
