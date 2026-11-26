@@ -58,14 +58,9 @@ const SECCIONES: (Destino & { roles: readonly Rol[] })[] = [
 const ACCIONES: (Destino & { roles: readonly Rol[] })[] = [
   { clave: "nuevo-ingreso", nombre: "Nuevo ingreso", corto: "Ingreso", href: "/ordenes/nueva", icono: "nuevo-ingreso", roles: ["gerencia", "administrador", "asesor"] },
   { clave: "registrar-pago", nombre: "Registrar pago", corto: "Pago", href: "/cobros?nuevo=1", icono: "pago", roles: ["gerencia", "administrador", "asesor", "recepcion"] },
-  { clave: "caja-del-dia", nombre: "Abrir o cerrar caja", corto: "Caja", href: "/caja", icono: "caja-dia", roles: ["recepcion"] },
   { clave: "registrar-comprobante", nombre: "Registrar comprobante", corto: "Boleta", href: "/ventas?nuevo=1", icono: "comprobante", roles: ["recepcion"] },
   { clave: "agendar-cita", nombre: "Agendar cita", corto: "Cita", href: "/citas?agendar=1", icono: "agendar", roles: ["asesor", "vendedor_redes"] },
-  { clave: "confirmar-citas", nombre: "Confirmar citas", corto: "Confirmar", href: "/citas", icono: "confirmar", roles: ["confirmador"] },
-  { clave: "reportar-avance", nombre: "Reportar avance", corto: "Avance", href: "/mis-trabajos", icono: "avance", roles: ["tecnico"] },
-  { clave: "subir-fotos", nombre: "Subir fotos", corto: "Fotos", href: "/mis-trabajos", icono: "fotos", roles: ["tecnico"] },
   { clave: "registrar-compra", nombre: "Registrar compra", corto: "Compra", href: "/compras/nueva", icono: "compras", roles: ["almacen"] },
-  { clave: "entregar-repuesto", nombre: "Entregar repuesto", corto: "Repuesto", href: "/inventario", icono: "repuesto", roles: ["almacen"] },
 ];
 
 const GESTION: Destino[] = [

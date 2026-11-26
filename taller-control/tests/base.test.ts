@@ -47,7 +47,7 @@ describe("para pegar a mano", () => {
   });
   it("desde la versión 13, lo que falta va en dos pasos (los estados nuevos primero)", () => {
     const pendientes = archivos.slice(13).map((archivo) => ({ archivo, sql: readFileSync(`supabase/migrations/${archivo}`, "utf8") }));
-    expect(enBloques(pendientes).map((b) => b.archivos.length)).toEqual([1, 2]);
+    expect(enBloques(pendientes).map((b) => b.archivos.length)).toEqual([1, 3]);
   });
   it("revisando solo con la API: sabe qué versiones faltan", () => {
     const existe = new Map(VERSIONES.filter((v) => v.rest).map((v, i) => [v.version, i < 8]));

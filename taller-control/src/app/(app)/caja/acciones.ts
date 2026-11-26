@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { CATEGORIAS_GASTO } from "../gastos/categorias";
 import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
@@ -33,6 +34,7 @@ const esquemaMovimiento = z.object({
   concepto: z.string().trim().min(2, "Escribe para qué fue.").max(200),
   monto: z.coerce.number({ error: "Escribe el monto." }).positive("El monto debe ser mayor que cero.").max(9_999_999),
   medio: z.enum(["efectivo", "yape", "plin", "tarjeta", "transferencia"]),
+  categoria_gasto: z.string().optional(),
 });
 
 /** Ingreso o gasto de caja que no es pago de una orden (sencillo, movilidad, retiro). */
@@ -44,6 +46,10 @@ export async function registrarMovimiento(_previo: Resultado, form: FormData): P
     for (const i of r.error.issues) errores[String(i.path[0])] ??= i.message;
     return { errores };
   }
+  // Una salida de caja dice si es gasto del taller (con su categoría) o un retiro.
+  const categoria = r.data.tipo === "egreso" ? r.data.categoria_gasto ?? "" : "";
+  if (r.data.tipo === "egreso" && !categoria) return { errores: { categoria_gasto: "Elige si es un gasto o un retiro." } };
+  if (categoria && categoria !== "retiro" && !(categoria in CATEGORIAS_GASTO)) return { errores: { categoria_gasto: "Categoría no válida." } };
   const supabase = await clienteServidor();
   const { error } = await supabase.from("movimientos_caja").insert({
     empresa_id: ctx.taller.id,
@@ -52,10 +58,12 @@ export async function registrarMovimiento(_previo: Resultado, form: FormData): P
     concepto: r.data.concepto,
     monto: Math.round(r.data.monto * 100) / 100,
     medio: r.data.medio,
+    categoria_gasto: categoria && categoria !== "retiro" ? categoria : null,
   });
   if (error) return { error: error.message.includes("cerrada") ? "La caja ya está cerrada." : "No se pudo registrar." };
   revalidatePath("/caja");
-  return { ok: r.data.tipo === "egreso" ? "Gasto registrado." : "Ingreso registrado." };
+  revalidatePath("/gastos");
+  return { ok: r.data.tipo === "ingreso" ? "Ingreso registrado." : categoria === "retiro" ? "Retiro registrado." : "Gasto registrado: también quedó en Gastos del taller." };
 }
 
 export async function anularMovimiento(id: string, motivo: string): Promise<Resultado> {

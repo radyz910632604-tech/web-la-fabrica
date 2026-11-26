@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TituloCaja } from "@/components/caja/subnav";
 import { Estado, type ColorEstado } from "@/components/ui/estado";
@@ -60,23 +61,33 @@ export default async function MensajesWhatsapp() {
         titulo="WhatsApp y avisos"
         detalle={`Todo lo que llega al número del taller y lo que hizo el sistema. ${lista.length ? `${guardados} de los últimos ${lista.length} terminaron guardados.` : ""}`}
       />
+      {ctx.roles.includes("gerencia") ? (
+        <p className="text-[15px] text-tinta-2">
+          Si WhatsApp, n8n y la IA están conectados lo ves en{" "}
+          <Link href="/sistema" className="font-medium text-tinta underline underline-offset-2">
+            Estado del sistema
+          </Link>
+          .
+        </p>
+      ) : (
       <Tarjeta aria-labelledby="t-estado-wa">
-        <CabeceraTarjeta id="t-estado-wa" titulo="Conexión" />
-        <ul className="grid gap-2 text-[15px] sm:grid-cols-3">
-          <li className="rounded-2xl bg-interna px-4 py-3">
-            <Estado color={process.env.CLAVE_API_INTERNA && process.env.CLAVE_API_INTERNA.length >= 32 ? "verde" : "rojo"} texto={process.env.CLAVE_API_INTERNA && process.env.CLAVE_API_INTERNA.length >= 32 ? "API para n8n encendida" : "API para n8n apagada"} />
-            <p className="mt-1 text-[13px] text-tinta-3">Se enciende con CLAVE_API_INTERNA.</p>
-          </li>
-          <li className="rounded-2xl bg-interna px-4 py-3">
-            <Estado color={ia.lectura ? "verde" : "amarillo"} texto={ia.lectura ? `IA para leer: ${ia.proveedor}` : "Sin IA para leer"} />
-            <p className="mt-1 text-[13px] text-tinta-3">{ia.lectura ? "Lee fotos, PDF y mensajes." : "Entiende mensajes simples sin IA."}</p>
-          </li>
-          <li className="rounded-2xl bg-interna px-4 py-3">
-            <Estado color={ia.audio ? "verde" : "amarillo"} texto={ia.audio ? "Audios activados" : "Audios apagados"} />
-            <p className="mt-1 text-[13px] text-tinta-3">{ia.audio ? "Pasa los audios a texto." : "Falta OPENAI_API_KEY."}</p>
-          </li>
-        </ul>
-      </Tarjeta>
+          <CabeceraTarjeta id="t-estado-wa" titulo="Conexión" />
+          <ul className="grid gap-2 text-[15px] sm:grid-cols-3">
+            <li className="rounded-2xl bg-interna px-4 py-3">
+              <Estado color={process.env.CLAVE_API_INTERNA && process.env.CLAVE_API_INTERNA.length >= 32 ? "verde" : "rojo"} texto={process.env.CLAVE_API_INTERNA && process.env.CLAVE_API_INTERNA.length >= 32 ? "API para n8n encendida" : "API para n8n apagada"} />
+              <p className="mt-1 text-[13px] text-tinta-3">Se enciende con CLAVE_API_INTERNA.</p>
+            </li>
+            <li className="rounded-2xl bg-interna px-4 py-3">
+              <Estado color={ia.lectura ? "verde" : "amarillo"} texto={ia.lectura ? `IA para leer: ${ia.proveedor}` : "Sin IA para leer"} />
+              <p className="mt-1 text-[13px] text-tinta-3">{ia.lectura ? "Lee fotos, PDF y mensajes." : "Entiende mensajes simples sin IA."}</p>
+            </li>
+            <li className="rounded-2xl bg-interna px-4 py-3">
+              <Estado color={ia.audio ? "verde" : "amarillo"} texto={ia.audio ? "Audios activados" : "Audios apagados"} />
+              <p className="mt-1 text-[13px] text-tinta-3">{ia.audio ? "Pasa los audios a texto." : "Falta OPENAI_API_KEY."}</p>
+            </li>
+          </ul>
+        </Tarjeta>
+      )}
       <Tarjeta aria-labelledby="t-avisos">
         <CabeceraTarjeta id="t-avisos" titulo="Avisos enviados" detalle="Resúmenes, carros listos, cotizaciones, encuestas y recordatorios. El canal de cada uno se elige en Configuración → Avisos." />
         {avisos?.length ? (

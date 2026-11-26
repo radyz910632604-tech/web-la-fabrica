@@ -74,7 +74,7 @@ describe("navegación", () => {
     expect(s).toContain("mis-trabajos");
     expect(s).not.toContain("ordenes");
     expect(s).not.toContain("clientes");
-    expect(claves(accionesPara(["tecnico"]))).toEqual(["reportar-avance", "subir-fotos"]);
+    expect(claves(accionesPara(["tecnico"]))).toEqual([]);
   });
 
   it("solo gerencia y administración ven personal y configuración", () => {
@@ -113,8 +113,14 @@ describe("Entrega 1B: lo construido ya no apunta a «Próximamente»", () => {
   it("el dinero ya tiene sus pantallas: caja, compras y reportes", () => {
     expect(accionesPara(["asesor"]).find((d) => d.clave === "registrar-pago")?.href).toBe("/cobros?nuevo=1");
     expect(seccionesPara(["administrador"]).find((d) => d.clave === "caja")?.href).toBe("/caja");
-    expect(accionesPara(["almacen"]).map((d) => d.href)).toEqual(["/compras/nueva", "/inventario"]);
+    expect(accionesPara(["almacen"]).map((d) => d.href)).toEqual(["/compras/nueva"]);
     expect(seccionesPara(["gerencia"]).find((d) => d.clave === "reportes")?.href).toBe("/reportes");
+  });
+  it("ningún botón de acción repite una sección (un solo camino para cada cosa)", () => {
+    for (const rol of ROLES) {
+      const secciones = new Set(seccionesPara([rol]).map((d) => d.href));
+      for (const a of accionesPara([rol])) expect(secciones.has(a.href)).toBe(false);
+    }
   });
   it("ningún rol ve botones que lleven a «Próximamente»", () => {
     for (const rol of ROLES) {
@@ -129,7 +135,7 @@ describe("Entrega 1B: lo construido ya no apunta a «Próximamente»", () => {
 describe("recepción y caja", () => {
   const todos = [...seccionesPara(["recepcion"]), ...accionesPara(["recepcion"])].map((d) => d.clave);
   it("abre y cierra la caja, cobra y registra comprobantes", () => {
-    expect(todos).toEqual(expect.arrayContaining(["panel", "ordenes", "clientes", "caja", "registrar-pago", "caja-del-dia", "registrar-comprobante"]));
+    expect(todos).toEqual(expect.arrayContaining(["panel", "ordenes", "clientes", "caja", "registrar-pago", "registrar-comprobante"]));
   });
   it("no registra ingresos, no compra y no ve reportes", () => {
     for (const clave of ["nuevo-ingreso", "compras", "registrar-compra", "reportes", "usuarios"]) expect(todos).not.toContain(clave);

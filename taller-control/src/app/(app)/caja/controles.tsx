@@ -8,6 +8,7 @@ import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ve
 import { MEDIOS } from "@/lib/dinero";
 import { formatearSoles } from "@/lib/formato";
 import { cn } from "@/lib/utils";
+import { CATEGORIAS_GASTO } from "../gastos/categorias";
 import { abrirCaja, cerrarCaja, registrarMovimiento, type Resultado } from "./acciones";
 
 function CampoSoles({ nombre, etiqueta, error, ayuda, valor, onChange, autoFocus }: { nombre: string; etiqueta: string; error?: string; ayuda?: string; valor?: string; onChange?: (v: string) => void; autoFocus?: boolean }) {
@@ -92,6 +93,23 @@ export function Movimiento({ caja }: { caja: string }) {
           <Campo etiqueta="¿Para qué?" error={e.concepto}>
             {(p) => <Entrada {...p} name="concepto" placeholder={tipo === "egreso" ? "Ejemplo: movilidad para recoger repuesto" : "Ejemplo: sencillo traído por gerencia"} required />}
           </Campo>
+          {tipo === "egreso" ? (
+            <Campo etiqueta="¿Es un gasto del taller?" ayuda="Si es un gasto, se anota solo en Gastos del taller y cuenta en la utilidad. Un retiro de dinero no es gasto." error={e.categoria_gasto}>
+              {(p) => (
+                <Selector {...p} name="categoria_gasto" defaultValue="" required>
+                  <option value="" disabled>
+                    Elige…
+                  </option>
+                  {Object.entries(CATEGORIAS_GASTO).map(([k, t]) => (
+                    <option key={k} value={k}>
+                      Gasto: {t}
+                    </option>
+                  ))}
+                  <option value="retiro">No es gasto: retiro de dinero</option>
+                </Selector>
+              )}
+            </Campo>
+          ) : null}
           <div className="grid grid-cols-2 gap-3">
             <CampoSoles nombre="monto" etiqueta="Monto" error={e.monto} />
             <Campo etiqueta="Medio">

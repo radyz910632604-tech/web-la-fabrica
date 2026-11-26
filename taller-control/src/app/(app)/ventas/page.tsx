@@ -25,7 +25,7 @@ export default async function Ventas({ searchParams }: { searchParams: Promise<{
   const verPendientes = ver === "por-confirmar";
   const supabase = await clienteServidor();
   const hoy = diaEnLima(new Date());
-  const [{ data }, ordenes, { data: notasCrudas }] = await Promise.all([
+  const [{ data }, ordenes, { data: notasCrudas }, { data: recibosCrudos }] = await Promise.all([
     supabase
       .from("comprobantes_venta")
       .select("id, orden_id, tipo, serie, numero, fecha_emision, documento_cliente, subtotal_sin_igv, igv, total, estado, origen_datos, motivo_anulacion, archivo_path")
@@ -40,7 +40,11 @@ export default async function Ventas({ searchParams }: { searchParams: Promise<{
       .eq("empresa_id", ctx.taller.id)
       .order("fecha_emision", { ascending: false })
       .limit(200),
+    // Los recibos del taller también son ventas (cuando la orden no tiene boleta ni factura).
+    supabase.from("recibos").select("id, numero, orden_id, emitido_en, total, estado, motivo_anulacion").eq("empresa_id", ctx.taller.id).order("emitido_en", { ascending: false }).limit(60),
   ]);
+  const recibos = recibosCrudos ?? [];
+  const recibosMes = recibos.filter((r) => r.estado !== "anulado" && diaEnLima(new Date(r.emitido_en)).slice(0, 7) === hoy.slice(0, 7));
   const notas = notasCrudas ?? [];
   const notasDe = (id: string) => notas.filter((x) => x.comprobante_id === id);
   const porId = new Map(ordenes.map((o) => [o.id, o]));
@@ -167,6 +171,49 @@ export default async function Ventas({ searchParams }: { searchParams: Promise<{
           </ul>
         )}
       </Tarjeta>
+
+      {!verPendientes ? (
+        <Tarjeta aria-labelledby="t-recibos">
+          <CabeceraTarjeta
+            id="t-recibos"
+            titulo="Recibos de venta"
+            detalle={`${recibosMes.length} este mes por ${formatearSoles(recibosMes.reduce((a, r) => a + Number(r.total), 0))}. Cuentan como venta cuando la orden no tiene boleta ni factura. Se emiten desde la orden.`}
+          />
+          {recibos.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-control px-4 py-5 text-center text-[15px] text-tinta-2">Todavía no hay recibos. Se emiten en cada orden: Dinero → Recibo de venta.</p>
+          ) : (
+            <ul className="flex flex-col">
+              {recibos.map((r) => {
+                const o = porId.get(r.orden_id);
+                return (
+                  <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-regla py-3 first:border-t-0">
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-[15px] font-medium ${r.estado === "anulado" ? "text-tinta-3 line-through" : ""}`}>
+                        Recibo N° {r.numero}
+                        <span className="num ml-2 font-normal">{formatearSoles(Number(r.total))}</span>
+                      </p>
+                      <p className="text-[13px] text-tinta-3">
+                        {diaEnLima(new Date(r.emitido_en)).split("-").reverse().join("/")}
+                        {o ? (
+                          <>
+                            {" · "}
+                            <Link href={`/ordenes/${r.orden_id}`} className="underline-offset-2 hover:underline">
+                              {numeroOrden(o.numero)} · {o.placa.replace(/^([A-Z0-9]{3})(\d{3})$/, "$1-$2")}
+                              {o.cliente ? ` · ${o.cliente}` : ""}
+                            </Link>
+                          </>
+                        ) : null}
+                        {r.estado === "anulado" ? ` · Anulado: ${r.motivo_anulacion}` : ""}
+                      </p>
+                    </div>
+                    <EnlacePdf href={`/pdf/recibo/${r.id}`} texto="Recibo" />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Tarjeta>
+      ) : null}
     </div>
   );
 }
