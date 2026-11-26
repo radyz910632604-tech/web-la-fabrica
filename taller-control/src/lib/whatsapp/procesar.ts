@@ -767,7 +767,12 @@ async function corregir(ctx: Ctx, m: MensajeInterpretado): Promise<{ ok: boolean
   if (m.observaciones) await intentar("observaciones", ctx.db.from("ordenes_trabajo").update({ observaciones_ingreso: m.observaciones.slice(0, 1000) }).eq("id", o.id));
   if (m.entrega_prometida) {
     const cuando = entregaPrometida(m.entrega_prometida, ctx.hoy);
-    if (cuando) await intentar(`entrega ${cuandoEntrega(cuando)}`, ctx.db.from("ordenes_trabajo").update({ entrega_prometida: cuando.toISOString() }).eq("id", o.id));
+    if (cuando) {
+      // La reprograman solo recepción, gerencia y administración (lo exige la base).
+      const { error } = await ctx.db.rpc("cambiar_hora_prometida", { p_orden: o.id, p_hora: cuando.toISOString() });
+      if (!error) hecho.push(`entrega ${cuandoEntrega(cuando)}`);
+      else fallo.push(error.code === "42501" ? "la hora de entrega (solo la cambian recepción o gerencia)" : "la hora de entrega");
+    }
     else fallo.push("la hora de entrega (dímela como «mañana 5pm»)");
   }
   if (m.diagnostico) await intentar("diagnóstico", ctx.db.rpc("registrar_diagnostico", { p_orden: o.id, p_texto: m.diagnostico }));

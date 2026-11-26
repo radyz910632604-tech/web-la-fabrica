@@ -36,7 +36,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<{
   const supabase = await clienteServidor();
   const { data } = await supabase
     .from("gastos")
-    .select("id, fecha, categoria, descripcion, monto, medio, comprobante, estado, motivo_anulacion")
+    .select("id, fecha, categoria, descripcion, monto, medio, comprobante, estado, motivo_anulacion, origen")
     .eq("empresa_id", ctx.taller.id)
     .gte("fecha", desdeDia)
     .lt("fecha", hastaDia)
@@ -118,7 +118,15 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<{
                     </p>
                   </div>
                   <span className={cn("num shrink-0 text-[15px] font-medium", g.estado === "anulado" && "text-tinta-3 line-through")}>{formatearSoles(Number(g.monto))}</span>
-                  {g.estado !== "anulado" ? <Anular id={g.id} accion={anularGasto} que="gasto" /> : <span className="w-[58px]" />}
+                  {g.origen === "comision" ? (
+                    <Link href="/comisiones" className="w-[58px] shrink-0 text-right text-[12px] leading-tight text-tinta-3 hover:text-tinta" title="Se cambia o anula desde Comisiones">
+                      Desde Comisiones
+                    </Link>
+                  ) : g.estado !== "anulado" ? (
+                    <Anular id={g.id} accion={anularGasto} que="gasto" />
+                  ) : (
+                    <span className="w-[58px]" />
+                  )}
                 </li>
               ))}
             </ul>

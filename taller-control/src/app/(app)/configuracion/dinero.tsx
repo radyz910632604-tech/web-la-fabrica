@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Pie } from "./formularios";
 import { cambiarReglaComision, crearReglaComision, guardarCostos, guardarManoObraServicios, guardarReglaManoObra } from "./dinero-acciones";
 
-const EVENTO: Record<string, string> = { cita_llego_y_pago: "Cita que llegó y pagó (para quien la agendó)", trabajo_entregado: "Trabajo entregado (para el técnico)" };
+const EVENTO: Record<string, string> = { cita_llego_y_pago: "Cita que llegó y pagó (para quien la agendó)", trabajo_entregado: "Orden entregada y cobrada (para el asesor)" };
 
 function Soles({ nombre, valor, etiqueta }: { nombre: string; valor: number | null; etiqueta: string }) {
   return (

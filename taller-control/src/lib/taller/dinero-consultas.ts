@@ -241,7 +241,11 @@ export async function totalesPeriodo(empresaId: string, desdeDia: string, hastaD
     verSueldos ? costosVigentes(empresaId, hastaDia) : Promise.resolve(new Map<string, number>()),
     verSueldos ? supabase.from("miembros").select("perfil_id").eq("empresa_id", empresaId).eq("rol", "tecnico").eq("activo", true) : Promise.resolve({ data: [] }),
     supabase.from("notas_credito").select("subtotal_sin_igv, total").eq("empresa_id", empresaId).eq("estado", "confirmado").gte("fecha_emision", desdeDia).lt("fecha_emision", hastaDia),
-    supabase.from("gastos").select("monto").eq("empresa_id", empresaId).eq("estado", "confirmado").gte("fecha", desdeDia).lt("fecha", hastaDia),
+    // Con sueldos a la vista, las comisiones pagadas se restan como comisiones (Reportes): su gasto no se suma otra vez.
+    (verSueldos
+      ? supabase.from("gastos").select("monto").eq("empresa_id", empresaId).eq("estado", "confirmado").neq("origen", "comision")
+      : supabase.from("gastos").select("monto").eq("empresa_id", empresaId).eq("estado", "confirmado")
+    ).gte("fecha", desdeDia).lt("fecha", hastaDia),
     verSueldos ? supabase.from("miembros").select("perfil_id, rol").eq("empresa_id", empresaId).eq("activo", true) : Promise.resolve({ data: [] }),
   ]);
   // Ventas netas: comprobantes menos sus notas de crédito, más los recibos de venta

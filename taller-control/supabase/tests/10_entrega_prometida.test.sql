@@ -2,15 +2,17 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(11);
+select plan(12);
 
 insert into empresas (id, nombre) values ('a0000000-0000-0000-0000-0000000000b1', 'Taller Entregas');
 insert into auth.users (id, email, raw_app_meta_data) values
   ('81000000-0000-0000-0000-000000000001', 'ea@prueba.invalid', '{"nombre":"Asesor E","celular":"+51955500501"}'),
-  ('81000000-0000-0000-0000-000000000002', 'et@prueba.invalid', '{"nombre":"Tecnico E","celular":"+51955500502"}');
+  ('81000000-0000-0000-0000-000000000002', 'et@prueba.invalid', '{"nombre":"Tecnico E","celular":"+51955500502"}'),
+  ('81000000-0000-0000-0000-000000000003', 'er@prueba.invalid', '{"nombre":"Recepcion E","celular":"+51955500503"}');
 insert into miembros (empresa_id, perfil_id, rol) values
   ('a0000000-0000-0000-0000-0000000000b1', '81000000-0000-0000-0000-000000000001', 'asesor'),
-  ('a0000000-0000-0000-0000-0000000000b1', '81000000-0000-0000-0000-000000000002', 'tecnico');
+  ('a0000000-0000-0000-0000-0000000000b1', '81000000-0000-0000-0000-000000000002', 'tecnico'),
+  ('a0000000-0000-0000-0000-0000000000b1', '81000000-0000-0000-0000-000000000003', 'recepcion');
 insert into clientes (id, empresa_id, nombre, celular) values ('c1000000-0000-0000-0000-0000000000b1', 'a0000000-0000-0000-0000-0000000000b1', 'Cliente E', '+51966600051');
 insert into vehiculos (id, empresa_id, placa, cliente_id) values ('d1000000-0000-0000-0000-0000000000b1', 'a0000000-0000-0000-0000-0000000000b1', 'ENT123', 'c1000000-0000-0000-0000-0000000000b1');
 
@@ -28,7 +30,11 @@ $$, 'El asesor abre la orden con la hora prometida');
 select is((select entrega_reprogramada from ordenes_trabajo where id = 'f1000000-0000-0000-0000-0000000000b1'), 0, 'Las reprogramaciones empiezan en cero aunque se mande otro número');
 select is((select count(*)::int from orden_avances where orden_id = 'f1000000-0000-0000-0000-0000000000b1'), 0, 'Al abrir la orden no se agrega nota');
 
-update ordenes_trabajo set entrega_prometida = '2026-11-21 15:30:00+00' where id = 'f1000000-0000-0000-0000-0000000000b1';
+-- Desde ahora la reprograman recepción, gerencia o administración (no el asesor).
+select throws_ok($$ update ordenes_trabajo set entrega_prometida = '2026-11-21 15:30:00+00' where id = 'f1000000-0000-0000-0000-0000000000b1' $$, '42501', null, 'El asesor ya no reprograma la hora');
+select pg_temp.como('81000000-0000-0000-0000-000000000003');
+select cambiar_hora_prometida('f1000000-0000-0000-0000-0000000000b1', '2026-11-21 15:30:00+00');
+select pg_temp.como('81000000-0000-0000-0000-000000000001');
 select is((select entrega_reprogramada from ordenes_trabajo where id = 'f1000000-0000-0000-0000-0000000000b1'), 1, 'Cambiar la hora cuenta una reprogramación');
 select is(
   (select texto from orden_avances where orden_id = 'f1000000-0000-0000-0000-0000000000b1' order by creado_en desc limit 1),
@@ -37,7 +43,7 @@ select is(
 );
 select is(
   (select autor_id from orden_avances where orden_id = 'f1000000-0000-0000-0000-0000000000b1' limit 1),
-  '81000000-0000-0000-0000-000000000001'::uuid,
+  '81000000-0000-0000-0000-000000000003'::uuid,
   'La nota queda a nombre de quien la cambió'
 );
 update ordenes_trabajo set entrega_reprogramada = 0 where id = 'f1000000-0000-0000-0000-0000000000b1';

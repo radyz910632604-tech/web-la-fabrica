@@ -178,6 +178,7 @@ if (!yaHay) {
   async function orden({ clienteId, vehiculoId, servicio, estado, tecnico, ingreso, cambio, km, entrega = null }) {
     const { data: o, error } = await db.from("ordenes_trabajo").insert({
       empresa_id: norte, cliente_id: clienteId, vehiculo_id: vehiculoId, estado, tecnico_id: tecnico,
+      asesor_id: ids["Carla Mendoza"],
       ingresado_en: ingreso, kilometraje_ingreso: km, entrega_prometida: entrega,
     }).select("id").single();
     await falla("orden", error);
@@ -294,7 +295,7 @@ if (!hayDinero) {
   await falla("sueldos", (await db.from("costos_personal").insert(COSTOS.map(([n, c]) => ({ empresa_id: norte, perfil_id: ids[n], costo_mensual: c, vigente_desde: inicio })))).error);
   await falla("comisiones", (await db.from("reglas_comision").insert([
     { empresa_id: norte, nombre: "S/ 20 por cita que llegó y pagó", evento: "cita_llego_y_pago", tipo_monto: "fijo", valor: 20 },
-    { empresa_id: norte, nombre: "3 % por trabajo entregado", evento: "trabajo_entregado", tipo_monto: "porcentaje", valor: 3 },
+    { empresa_id: norte, nombre: "3 % por orden entregada y cobrada", evento: "trabajo_entregado", tipo_monto: "porcentaje", valor: 3 },
   ])).error);
 
   const { data: ords, error: eOrd } = await db.from("ordenes_trabajo")

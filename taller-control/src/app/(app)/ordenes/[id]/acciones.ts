@@ -64,6 +64,20 @@ export async function asignarTecnico(ordenId: string, tecnicoId: string): Promis
   return { ok: tecnicoId ? "Listo. El cambio queda en los avances de la orden." : "Técnico quitado." };
 }
 
+/** El asesor de la orden (a quien le corresponde la comisión). Solo gerencia y administración. */
+export async function asignarAsesor(ordenId: string, asesorId: string): Promise<Resultado> {
+  const ctx = await obtenerContexto();
+  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador"])) return { error: "El asesor lo cambian gerencia o administración." };
+  const supabase = await clienteServidor();
+  const { error, count } = await supabase
+    .from("ordenes_trabajo")
+    .update({ asesor_id: asesorId || null }, { count: "exact" })
+    .eq("id", ordenId);
+  if (error || count !== 1) return { error: "No se pudo cambiar el asesor." };
+  revalidatePath(`/ordenes/${ordenId}`);
+  return { ok: "Asesor guardado." };
+}
+
 export async function agregarServicio(ordenId: string, descripcion: string, adicional: boolean): Promise<Resultado> {
   const ctx = await obtenerContexto();
   const limpio = descripcion.trim();
@@ -83,22 +97,17 @@ export async function agregarServicio(ordenId: string, descripcion: string, adic
   return { ok: "Servicio agregado." };
 }
 
-/** Pone o cambia la hora prometida al cliente. La base anota el cambio en la orden. */
+/** Pone o cambia la hora prometida al cliente (recepción, gerencia o administración). La base anota quién y cuándo. */
 export async function cambiarEntrega(ordenId: string, valor: { dia: string; hora: string; porDefinir: boolean }): Promise<Resultado> {
   const ctx = await obtenerContexto();
-  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"])) return { error: "La hora de entrega la cambia el asesor." };
+  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "recepcion"])) return { error: "La hora prometida la cambian recepción, gerencia o administración." };
   const v = z.object({ dia: z.string(), hora: z.string(), porDefinir: z.boolean() }).safeParse(valor);
   if (!v.success) return { error: "Revisa el día y la hora." };
   const entrega = validarEntrega(v.data, new Date());
   if ("error" in entrega) return { error: entrega.error };
   const supabase = await clienteServidor();
-  const { error, count } = await supabase
-    .from("ordenes_trabajo")
-    .update({ entrega_prometida: entrega.instante?.toISOString() ?? null }, { count: "exact" })
-    .eq("id", ordenId)
-    .eq("empresa_id", ctx.taller.id)
-    .eq("anulada", false);
-  if (error || !count) return { error: "No se pudo cambiar la hora de entrega." };
+  const { error } = await supabase.rpc("cambiar_hora_prometida", { p_orden: ordenId, p_hora: entrega.instante?.toISOString() ?? (null as unknown as string) });
+  if (error) return { error: error.code === "42501" ? error.message : "No se pudo cambiar la hora de entrega." };
   revalidatePath(`/ordenes/${ordenId}`);
   revalidatePath("/", "layout");
   return { ok: entrega.instante ? "Hora de entrega guardada." : "La hora de entrega quedó por definir." };

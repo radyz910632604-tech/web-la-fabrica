@@ -29,14 +29,15 @@ export default async function Configuracion() {
 
   const esGerencia = ctx.roles.includes("gerencia");
   const { data: canales } = await supabase.from("config_avisos").select("tipo, canal").eq("empresa_id", ctx.taller.id);
-  const [{ data: personas }, costos, { data: fijos }, { data: reglas }] = esGerencia
+  const [{ data: personas }, costos, { data: fijos }] = esGerencia
     ? await Promise.all([
         supabase.rpc("directorio", { p_empresa: ctx.taller.id }),
         costosVigentes(ctx.taller.id),
         supabase.from("mano_obra_servicio").select("servicio_id, monto").eq("empresa_id", ctx.taller.id),
-        supabase.from("reglas_comision").select("id, nombre, evento, tipo_monto, valor, activa").eq("empresa_id", ctx.taller.id).order("creado_en"),
       ])
-    : [{ data: [] }, new Map<string, number>(), { data: [] }, { data: [] }];
+    : [{ data: [] }, new Map<string, number>(), { data: [] }];
+  // Las reglas de comisión las manejan gerencia y administración.
+  const { data: reglas } = await supabase.from("reglas_comision").select("id, nombre, evento, tipo_monto, valor, activa").eq("empresa_id", ctx.taller.id).order("creado_en");
   const fijoPor = new Map(((fijos ?? []) as { servicio_id: string; monto: number }[]).map((f) => [f.servicio_id, Number(f.monto)]));
 
   return (
@@ -110,7 +111,11 @@ export default async function Configuracion() {
               <FormManoObraServicios servicios={servicios.filter((s) => s.activo).map((s) => ({ id: s.id, nombre: s.nombre, monto: fijoPor.get(s.id) ?? null }))} />
             </Seccion>
           ) : null}
-          <Seccion titulo="Comisiones" descripcion="Se calculan solas cada mes y salen en Reportes. Puedes pausar una regla sin borrarla.">
+        </>
+      ) : null}
+
+      <div id="comisiones" className="scroll-mt-24">
+        <Seccion titulo="Comisiones" descripcion="Las del asesor se calculan en Más → Comisiones sobre órdenes entregadas y cobradas; ahí se aprueban y pagan. El mecánico no comisiona por órdenes. Solo gerencia y administración las ven.">
             <FormComisiones
               reglas={((reglas ?? []) as { id: string; nombre: string; evento: string; tipo_monto: string; valor: number; activa: boolean }[]).map((r) => ({
                 id: r.id,
@@ -122,8 +127,7 @@ export default async function Configuracion() {
               }))}
             />
           </Seccion>
-        </>
-      ) : null}
+      </div>
 
       <Seccion titulo="Agregar un taller" descripcion="Para manejar otro local en el mismo sistema. Tendrá su propio personal, datos y reportes.">
         <FormNuevoTaller />

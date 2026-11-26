@@ -69,21 +69,21 @@ export function sumarFilas(filas: FilaMes[], mes: string): FilaMes {
 export type FilaPersonal = { id: string; nombre: string; roles: string; costo: number; comision: number; detalle: { regla: string; monto: number }[]; trabajos: number };
 
 /**
- * Personal del mes: costo mensual y comisiones según las reglas activas.
- * - Cita que llegó y pagó: para quien la agendó, si su orden tiene un pago confirmado.
- * - Trabajo entregado: para el técnico de cada orden entregada en el mes.
+ * Personal del mes: costo mensual y comisiones.
+ * - Comisiones del asesor: las registradas en Comisiones del mes (no anuladas). El mecánico no comisiona por órdenes.
+ * - Cita que llegó y pagó: para quien la agendó, si su orden tiene un pago confirmado (según las reglas activas).
  */
 export async function personalDelMes(empresaId: string, mes: string): Promise<FilaPersonal[]> {
   const supabase = await clienteServidor();
   const { desde, hasta, hastaDia } = limitesMes(mes);
-  const [{ data: personas }, costos, { data: reglas }, { data: entregadas }, { data: citas }] = await Promise.all([
+  const [{ data: personas }, costos, { data: reglas }, { data: registradas }, { data: citas }] = await Promise.all([
     supabase.rpc("directorio", { p_empresa: empresaId }),
     costosVigentes(empresaId, hastaDia),
-    supabase.from("reglas_comision").select("id, nombre, evento, tipo_monto, valor").eq("empresa_id", empresaId).eq("activa", true),
-    supabase.from("ordenes_trabajo").select("id, tecnico_id").eq("empresa_id", empresaId).eq("estado", "entregado").gte("entregado_en", desde.toISOString()).lt("entregado_en", hasta.toISOString()),
+    supabase.from("reglas_comision").select("id, nombre, evento, tipo_monto, valor").eq("empresa_id", empresaId).eq("activa", true).eq("evento", "cita_llego_y_pago"),
+    supabase.from("comisiones").select("perfil_id, monto, orden_id").eq("empresa_id", empresaId).eq("periodo", `${mes}-01`).neq("estado", "anulada"),
     supabase.from("citas").select("vendedor_id, orden_id").eq("empresa_id", empresaId).eq("estado", "llego").not("orden_id", "is", null).gte("fecha_hora", desde.toISOString()).lt("fecha_hora", hasta.toISOString()),
   ]);
-  const idsOrden = [...new Set([...(entregadas ?? []).map((o) => o.id), ...(citas ?? []).map((c) => c.orden_id as string)])];
+  const idsOrden = [...new Set((citas ?? []).map((c) => c.orden_id as string))];
   const [{ data: ventas }, { data: pagos }, { data: notas }] = idsOrden.length
     ? await Promise.all([
         supabase.from("comprobantes_venta").select("orden_id, subtotal_sin_igv").eq("estado", "confirmado").in("orden_id", idsOrden),
@@ -97,13 +97,22 @@ export async function personalDelMes(empresaId: string, mes: string): Promise<Fi
   const pagadas = new Set((pagos ?? []).map((p) => p.orden_id));
 
   const eventos = [
-    ...(entregadas ?? []).filter((o) => o.tecnico_id).map((o) => ({ evento: "trabajo_entregado" as const, personaId: o.tecnico_id as string, ventaSinIgv: ventaPor.get(o.id) ?? 0 })),
     ...(citas ?? []).filter((c) => c.vendedor_id && pagadas.has(c.orden_id)).map((c) => ({ evento: "cita_llego_y_pago" as const, personaId: c.vendedor_id as string, ventaSinIgv: ventaPor.get(c.orden_id as string) ?? 0 })),
   ];
   const r: ReglaComision[] = (reglas ?? []).map((x) => ({ id: x.id, nombre: x.nombre, evento: x.evento, tipoMonto: x.tipo_monto, valor: n(x.valor) }));
   const porPersona = calcularComisiones(r, eventos);
   const trabajos = new Map<string, number>();
   for (const e of eventos) trabajos.set(e.personaId, (trabajos.get(e.personaId) ?? 0) + 1);
+  // Comisiones del asesor ya registradas (aprobadas o no): cuentan una sola vez, aquí.
+  for (const c of registradas ?? []) {
+    const p = porPersona.get(c.perfil_id) ?? { total: 0, detalle: [] };
+    p.total = redondear(p.total + n(c.monto));
+    const fila = p.detalle.find((d) => d.regla === "Comisiones del asesor");
+    if (fila) fila.monto = redondear(fila.monto + n(c.monto));
+    else p.detalle.push({ regla: "Comisiones del asesor", monto: n(c.monto) });
+    porPersona.set(c.perfil_id, p);
+    if (c.orden_id) trabajos.set(c.perfil_id, (trabajos.get(c.perfil_id) ?? 0) + 1);
+  }
 
   return ((personas ?? []) as { perfil_id: string; nombre: string; roles: Rol[]; activo: boolean }[])
     .filter((p) => p.activo || porPersona.has(p.perfil_id))

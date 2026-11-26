@@ -9,7 +9,7 @@ import { Entrada, Selector } from "@/components/ui/campo";
 import { siguientesEstados, type EstadoOrden } from "@/lib/taller/estados";
 import { reducirFoto } from "@/lib/taller/fotos";
 import { subirFoto } from "../nueva/acciones";
-import { agregarAvance, agregarServicio, guardarDiagnostico, asignarTecnico, cambiarEntrega, cambiarEstado, type Resultado } from "./acciones";
+import { agregarAvance, agregarServicio, guardarDiagnostico, asignarAsesor, asignarTecnico, cambiarEntrega, cambiarEstado, type Resultado } from "./acciones";
 
 function Mensaje({ r }: { r: Resultado }) {
   if (r.error) return <p role="alert" className="mt-3 text-sm text-negativo">{r.error}</p>;
@@ -173,6 +173,36 @@ export function AsignarTecnico({ ordenId, tecnicoId, tecnicos }: { ordenId: stri
         ))}
       </Selector>
       {tecnicos.length === 0 ? <p className="mt-2 text-sm text-tinta-2">No hay personas con rol técnico. Agrégalas en Personal.</p> : null}
+      <Mensaje r={r} />
+    </div>
+  );
+}
+
+/** Quién atiende la orden como asesor (define su comisión). Solo lo cambian gerencia y administración. */
+export function AsignarAsesor({ ordenId, asesorId, asesores }: { ordenId: string; asesorId: string; asesores: { id: string; nombre: string }[] }) {
+  const [r, setR] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  return (
+    <div className="flex flex-col gap-1.5 sm:max-w-sm">
+      <label htmlFor="asesor" className="text-sm font-medium text-tinta-2">
+        Asesor de la orden
+      </label>
+      <Selector
+        id="asesor"
+        defaultValue={asesorId}
+        disabled={pendiente}
+        onChange={(e) => {
+          const valor = e.target.value;
+          iniciar(async () => setR(await asignarAsesor(ordenId, valor)));
+        }}
+      >
+        <option value="">Sin asesor</option>
+        {asesores.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.nombre}
+          </option>
+        ))}
+      </Selector>
       <Mensaje r={r} />
     </div>
   );

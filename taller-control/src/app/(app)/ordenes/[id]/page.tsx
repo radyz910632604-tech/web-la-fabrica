@@ -19,7 +19,7 @@ import { listarRepuestos } from "@/lib/taller/inventario-consultas";
 import { colorSituacion, cuandoEntrega, partesLima, situacionEntrega, textoSituacion } from "@/lib/taller/entrega";
 import { SacarDelInventario } from "../../inventario/controles";
 import { FirmarCliente } from "@/components/taller/firma-cliente";
-import { AgregarServicio, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, FormDiagnostico, SubirFotos } from "./controles";
+import { AgregarServicio, AsignarAsesor, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, FormDiagnostico, SubirFotos } from "./controles";
 import { guardarFirma } from "./firma-acciones";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -39,14 +39,15 @@ export default async function Orden({ params, searchParams }: { params: Promise<
   const { data: o } = await supabase
     .from("ordenes_trabajo")
     .select(
-      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, es_reingreso_garantia, orden_garantia_origen_id, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, diagnostico, diagnostico_en, facturado_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
+      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, entrega_cambiada_por, entrega_cambiada_en, asesor_id, es_reingreso_garantia, orden_garantia_origen_id, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, diagnostico, diagnostico_en, facturado_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
     )
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
     .maybeSingle();
   if (!o) notFound();
 
-  const [{ data: servicios }, { data: historial }, { data: avances }, { data: archivos }, nombres, tecnicos, servCatalogo] = await Promise.all([
+  const esGestorOrden = tieneAlguno(ctx.roles, ["gerencia", "administrador"]);
+  const [{ data: servicios }, { data: historial }, { data: avances }, { data: archivos }, nombres, tecnicos, servCatalogo, asesores] = await Promise.all([
     supabase.from("orden_servicios").select("id, descripcion, es_adicional").eq("orden_id", id).order("creado_en"),
     supabase.from("orden_estados_historial").select("id, estado_anterior, estado_nuevo, nota, cambiado_por, cambiado_en").eq("orden_id", id).order("cambiado_en", { ascending: false }),
     supabase.from("orden_avances").select("id, texto, autor_id, creado_en").eq("orden_id", id).order("creado_en", { ascending: false }),
@@ -54,6 +55,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
     nombresPersonal(ctx.taller.id),
     tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]) ? personalConRol(ctx.taller.id, "tecnico") : Promise.resolve([]),
     tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]) ? catalogo(ctx.taller.id) : Promise.resolve([]),
+    esGestorOrden ? personalConRol(ctx.taller.id, "asesor") : Promise.resolve([] as { id: string; nombre: string }[]),
   ]);
 
   const rutasFirma = [o.firma_ingreso_ruta, o.firma_entrega_ruta].filter(Boolean) as string[];
@@ -91,6 +93,8 @@ export default async function Orden({ params, searchParams }: { params: Promise<
     v?.transmision ? `Caja ${v.transmision === "cvt" ? "CVT" : TRANSMISIONES[v.transmision as keyof typeof TRANSMISIONES].toLowerCase()}` : null,
   ].filter(Boolean);
 
+  // La hora prometida la cambian recepción, gerencia y administración; los demás la ven.
+  const cambiaHora = tieneAlguno(ctx.roles, ["gerencia", "administrador", "recepcion"]);
   const tarjetaEntrega = (id: string) =>
     estado !== "entregado" || prometida ? (
       <Tarjeta aria-labelledby={id}>
@@ -110,14 +114,18 @@ export default async function Orden({ params, searchParams }: { params: Promise<
             ) : null}
             {o.entrega_reprogramada > 0 ? (
               <p className="mt-3 text-sm text-tinta-2">
-                Se cambió {o.entrega_reprogramada === 1 ? "una vez" : `${o.entrega_reprogramada} veces`}. Los cambios quedan en Avances.
+                Se cambió {o.entrega_reprogramada === 1 ? "una vez" : `${o.entrega_reprogramada} veces`}
+                {o.entrega_cambiada_por ? `; la última, ${nombres.get(o.entrega_cambiada_por) ?? "alguien del taller"}${o.entrega_cambiada_en ? ` (${cuandoEntrega(new Date(o.entrega_cambiada_en), ahora)})` : ""}` : ""}. Todos los cambios quedan en Avances.
               </p>
             ) : null}
           </>
         ) : (
-          <p className="text-[15px] text-tinta-2">Todavía no hay hora prometida. Ponla apenas la sepas: así el sistema te avisa antes de que venza.</p>
+          <p className="text-[15px] text-tinta-2">
+            {cambiaHora ? "Todavía no hay hora prometida. Ponla apenas la sepas: así el sistema te avisa antes de que venza." : "Todavía no hay hora prometida. La ponen recepción o gerencia."}
+          </p>
         )}
-        {gestiona && enTrabajo(estado) ? (
+        {!cambiaHora && prometida && enTrabajo(estado) ? <p className="mt-3 text-[13px] text-tinta-3">Para cambiarla, pídeselo a recepción o gerencia.</p> : null}
+        {cambiaHora && enTrabajo(estado) ? (
           <CambiarEntrega ordenId={o.id} actual={prometida ? partesLima(prometida) : null} ahora={ahora.toISOString()} cliente={c?.nombre.split(" ")[0] ?? "el cliente"} />
         ) : null}
       </Tarjeta>
@@ -207,6 +215,11 @@ export default async function Orden({ params, searchParams }: { params: Promise<
               {gestiona && estado !== "entregado" ? (
                 <div className="mb-4">
                   <AsignarTecnico ordenId={o.id} tecnicoId={o.tecnico_id ?? ""} tecnicos={tecnicos} />
+                  {esGestorOrden ? (
+                    <div className="mt-4">
+                      <AsignarAsesor ordenId={o.id} asesorId={o.asesor_id ?? ""} asesores={asesores} />
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               <BotonesEstado ordenId={o.id} estado={estado} esTecnico={!gestiona} sinTecnico={!o.tecnico_id} />

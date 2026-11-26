@@ -1,5 +1,6 @@
 import { CitasPorRed, MetaVentas, PorAtender, type ItemAtender } from "@/components/panel/bloques";
 import { GraficoVentas, LeyendaVentas } from "@/components/panel/grafico-ventas";
+import { AlertasHora, alertasDeHora } from "@/components/panel/alertas-hora";
 import { Indicadores } from "@/components/panel/indicadores";
 import { TablaActividad, TablaCitas, type FilaActividad } from "@/components/panel/tablas";
 import { resumirEstados, TarjetaCitasHoy, TarjetaMisTrabajos, TarjetaTaller } from "@/components/panel/tarjeta-destacada";
@@ -96,6 +97,8 @@ export default async function Panel() {
   ).length;
   const conAtraso = atrasadas ? ` ${atrasadas === 1 ? "Uno ya pasó" : `${atrasadas} ya pasaron`} la hora prometida al cliente.` : "";
   const misTrabajos = enTaller.filter((o) => o.tecnicoId === ctx.perfil.id);
+  // El técnico ve las alertas de sus carros; los demás, las de todo el taller.
+  const horas = alertasDeHora(vista.destacada === "mis_trabajos" ? misTrabajos : enTaller, ahora, ctx.configuracion.minutosAvisoEntrega);
   const verCliente = vista.columnas.cliente;
   const aItem = (o: FilaOrden): ItemAtender => ({
     id: o.id,
@@ -272,6 +275,7 @@ export default async function Panel() {
         </h1>
         <p className="mt-1.5 text-[15px] text-tinta-2 md:text-base">{hallazgo}</p>
       </header>
+      <AlertasHora alertas={horas.alertas} sinHora={horas.sinHora} ahora={ahora} puedeCambiar={tieneAlguno(ctx.roles, ["gerencia", "administrador", "recepcion"])} />
       {cuerpo}
     </div>
   );

@@ -204,7 +204,7 @@ async function entregasQueVencen(admin: SupabaseClient, e: Empresa, ahora: Date)
   const cuenta = { porVencer: 0, atrasadas: 0 };
   const { data } = await admin
     .from("ordenes_trabajo")
-    .select("id, estado, entrega_prometida, creado_por, clientes (nombre, celular), vehiculos (placa)")
+    .select("id, estado, entrega_prometida, creado_por, asesor_id, clientes (nombre, celular), vehiculos (placa)")
     .eq("empresa_id", e.id)
     .eq("anulada", false)
     .in("estado", [...ESTADOS_EN_TRABAJO])
@@ -219,6 +219,8 @@ async function entregasQueVencen(admin: SupabaseClient, e: Empresa, ahora: Date)
   const atiende = (p: (typeof gente)[number]) => p.roles.some((r) => r === "gerencia" || r === "administrador" || r === "asesor");
   const asesores = gente.filter((p) => p.roles.includes("asesor"));
   const gerencia = gente.filter((p) => p.roles.includes("gerencia"));
+  // Recepción es quien reprograma la hora con el cliente: también se entera.
+  const recepcion = gente.filter((p) => p.roles.includes("recepcion"));
 
   for (const o of data) {
     const c = uno(o.clientes as never) as { nombre: string; celular: string } | null;
@@ -226,9 +228,11 @@ async function entregasQueVencen(admin: SupabaseClient, e: Empresa, ahora: Date)
     if (!o.entrega_prometida || !c || !v) continue;
     const prometida = new Date(o.entrega_prometida);
     const atrasada = prometida.getTime() <= ahora.getTime();
+    const asesor = o.asesor_id ? porId.get(o.asesor_id) : undefined;
     const creador = o.creado_por ? porId.get(o.creado_por) : undefined;
-    const responsables = creador && atiende(creador) ? [creador] : asesores.length ? asesores : gerencia;
-    const destino = atrasada ? [...new Map([...responsables, ...gerencia].map((p) => [p.id, p])).values()] : responsables;
+    const responsables = asesor ? [asesor] : creador && atiende(creador) ? [creador] : asesores.length ? asesores : gerencia;
+    const unicos = (l: typeof gente) => [...new Map(l.map((p) => [p.id, p])).values()];
+    const destino = atrasada ? unicos([...responsables, ...recepcion, ...gerencia]) : unicos([...responsables, ...recepcion]);
     const tipo = atrasada ? "entrega_atrasada" : "entrega_por_vencer";
     const datos = {
       placa: formatearPlaca(v.placa), cliente: c.nombre, celular: formatearCelular(c.celular), hora: cuandoEntrega(prometida, ahora),

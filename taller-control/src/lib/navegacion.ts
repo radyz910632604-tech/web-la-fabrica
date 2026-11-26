@@ -31,7 +31,8 @@ export type Icono =
   | "whatsapp"
   | "configuracion"
   | "sistema"
-  | "importar";
+  | "importar"
+  | "comisiones";
 
 export type Destino = {
   clave: string;
@@ -67,6 +68,7 @@ const GESTION: Destino[] = [
   { clave: "usuarios", nombre: "Personal", corto: "Personal", href: "/usuarios", icono: "usuarios" },
   { clave: "whatsapp", nombre: "WhatsApp y avisos", corto: "WhatsApp", href: "/whatsapp", icono: "whatsapp" },
   { clave: "configuracion", nombre: "Configuración del taller", corto: "Ajustes", href: "/configuracion", icono: "configuracion" },
+  { clave: "comisiones", nombre: "Comisiones del asesor", corto: "Comisiones", href: "/comisiones", icono: "comisiones" },
   { clave: "importar", nombre: "Importar datos de Excel", corto: "Importar", href: "/importar", icono: "importar" },
 ];
 

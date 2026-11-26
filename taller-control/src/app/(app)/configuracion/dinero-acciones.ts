@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { diaEnLima } from "@/lib/formato";
+import { esGestor } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import type { Resultado } from "./acciones";
@@ -82,8 +83,15 @@ const esquemaComision = z.object({
   valor: z.coerce.number({ error: "Escribe el valor." }).min(0, "No puede ser negativo.").max(100000),
 });
 
+/** Reglas de comisión: gerencia y administración (la base también lo exige). */
+async function exigirGestorComisiones() {
+  const ctx = await obtenerContexto();
+  if (!esGestor(ctx.roles)) throw new Error("Solo gerencia o administración manejan comisiones.");
+  return ctx;
+}
+
 export async function crearReglaComision(_previo: Resultado, form: FormData): Promise<Resultado> {
-  const ctx = await exigirGerencia();
+  const ctx = await exigirGestorComisiones();
   const r = esquemaComision.safeParse(Object.fromEntries(form));
   if (!r.success) {
     const errores: Record<string, string> = {};
@@ -99,7 +107,7 @@ export async function crearReglaComision(_previo: Resultado, form: FormData): Pr
 }
 
 export async function cambiarReglaComision(id: string, activa: boolean): Promise<Resultado> {
-  await exigirGerencia();
+  await exigirGestorComisiones();
   const supabase = await clienteServidor();
   const { error, count } = await supabase.from("reglas_comision").update({ activa }, { count: "exact" }).eq("id", id);
   if (error || count !== 1) return { error: "No se pudo cambiar." };

@@ -8,6 +8,7 @@ import {
   CarFront,
   ChartColumn,
   ClipboardList,
+  HandCoins,
   LayoutGrid,
   MessageCircle,
   Package,
@@ -48,6 +49,7 @@ const ICONOS = {
   configuracion: Settings,
   sistema: ShieldCheck,
   importar: FileSpreadsheet,
+  comisiones: HandCoins,
 } satisfies Record<NombreIcono, unknown>;
 
 export function Icono({ nombre, ...props }: { nombre: NombreIcono } & LucideProps) {
