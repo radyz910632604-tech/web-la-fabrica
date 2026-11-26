@@ -35,7 +35,7 @@ function Seccion({ titulo, accion, children }: { titulo: string; accion?: React.
   );
 }
 
-/** Cotizaciones, comprobantes, pagos y saldo de una orden (gerencia, administración y asesor). */
+/** Cotizaciones, comprobantes, pagos y saldo de una orden (gerencia, administración, asesor y recepción). */
 export function TarjetaDinero({
   d,
   ordenId,
@@ -55,6 +55,8 @@ export function TarjetaDinero({
 }) {
   const ahora = new Date();
   const opcion = [{ id: ordenId, etiqueta, saldo: d.saldo, entregada }];
+  // Con recibo, boleta o factura vigente, los precios ya no se cambian (primero se anula).
+  const documentada = d.recibos.some((r) => r.estado !== "anulado") || d.comprobantes.some((c) => c.estado === "confirmado");
   return (
     <Tarjeta aria-labelledby="t-dinero">
       <CabeceraTarjeta id="t-dinero" titulo="Dinero" detalle="Cotización, comprobante y pagos" accion={<EnlacePdf href={`/pdf/cuenta/${ordenId}`} texto="Estado de cuenta" />} />
@@ -79,7 +81,7 @@ export function TarjetaDinero({
           ) : (
             <ul className="flex flex-col gap-2">
               {d.cotizaciones.map((c) => (
-                <li key={c.id} className="rounded-2xl bg-interna px-4 py-3">
+                <li key={c.id} className={cn("rounded-2xl bg-interna px-4 py-3", c.estado === "anulada" && "opacity-70")}>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[15px] font-medium">Versión {c.version}</span>
                     {c.adicional ? <span className="rounded-full bg-tarjeta px-2.5 py-0.5 text-[12px] text-tinta-2">Adicional</span> : null}
@@ -87,29 +89,34 @@ export function TarjetaDinero({
                       {ESTADO_COT[c.estado]?.texto}
                       {c.estado === "aprobada" && c.medio ? ` ${MEDIO_APROBACION[c.medio]}` : ""}
                     </span>
-                    <span className="num ml-auto text-[15px] font-semibold">{formatearSoles(c.total)}</span>
+                    <span className={cn("num ml-auto text-[15px] font-semibold", c.estado === "anulada" && "text-tinta-3 line-through")}>{formatearSoles(c.total)}</span>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    <EnlacePdf href={`/pdf/cotizacion/${c.id}?igv=con`} texto="PDF con IGV" />
-                    <EnlacePdf href={`/pdf/cotizacion/${c.id}?igv=sin`} texto="PDF sin IGV" />
-                  </div>
-                  <details className="mt-1 text-sm text-tinta-2">
+                  {c.nota && (c.nota.startsWith("Editada") || c.nota.startsWith("Reemplazada")) ? <p className="mt-0.5 text-[13px] text-tinta-3">{c.nota}</p> : null}
+                  <details className="mt-1 text-sm text-tinta-2" open={c.estado !== "anulada" && c.estado !== "rechazada"}>
                     <summary className="cursor-pointer text-[13px] text-tinta-3">
-                      {c.items.length} {c.items.length === 1 ? "línea" : "líneas"}
+                      {c.items.length} {c.items.length === 1 ? "línea" : "líneas"} · {c.conIgv ? "precios con IGV" : "sin IGV"}
                     </summary>
-                    <ul className="mt-1 flex flex-col gap-0.5">
+                    <ul className="mt-1 flex flex-col gap-1">
                       {c.items.map((i, k) => (
                         <li key={k} className="flex justify-between gap-3">
                           <span className="min-w-0">
-                            {i.cantidad !== 1 ? `${i.cantidad} × ` : ""}
-                            {i.descripcion}
-                            <span className="text-tinta-3"> · {i.tipo}</span>
+                            <span className="text-tinta">{i.descripcion}</span>
+                            <span className="num block text-[13px] text-tinta-3">
+                              {i.tipo === "repuesto" ? "Repuesto" : "Servicio"} · {i.cantidad} × {formatearSoles(i.precio)}
+                            </span>
                           </span>
-                          <span className="num shrink-0">{formatearSoles(i.total)}</span>
+                          <span className="num shrink-0 text-tinta">{formatearSoles(i.total)}</span>
                         </li>
                       ))}
                     </ul>
                   </details>
+                  <div className="mt-1 flex flex-wrap items-center gap-1">
+                    <EnlacePdf href={`/pdf/cotizacion/${c.id}?igv=con`} texto="PDF con IGV" />
+                    <EnlacePdf href={`/pdf/cotizacion/${c.id}?igv=sin`} texto="PDF sin IGV" />
+                    {puedeCotizar && !entregada && !documentada && c.estado !== "anulada" && c.estado !== "rechazada" ? (
+                      <NuevaCotizacion ordenId={ordenId} editar={{ id: c.id, version: c.version, estado: c.estado, conIgv: c.conIgv, items: c.items }} />
+                    ) : null}
+                  </div>
                   {puedeCotizar ? (
                     <div className="mt-2">
                       <RespuestaCotizacion id={c.id} ordenId={ordenId} estado={c.estado} />

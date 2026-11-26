@@ -12,6 +12,7 @@ Sistema interno de gestión para talleres automotrices en Lima. **No tiene relac
 - Avisos: `src/lib/avisos/` (ciclo cada 15 min desde n8n, push con `web-push`). Flujos de n8n en `n8n/`.
 - Hora de entrega prometida: `ordenes_trabajo.entrega_prometida` (migración 0011). Reglas puras en `src/lib/taller/entrega.ts`; se elige con `src/components/taller/elegir-entrega.tsx`; el ciclo de avisos alerta al asesor antes de vencer y al atrasarse.
 - Carga instantánea: `src/app/(app)/loading.tsx` (sin él, Next.js no adelanta nada de las páginas dinámicas).
+- Cotizaciones: recepción también las crea y edita (`editar_cotizacion`, migración 0019: versión nueva con `reemplaza_id`, la anterior queda anulada; si estaba aprobada sigue aprobada; bloqueado con recibo, boleta o factura vigente).
 - Recibos de venta (`recibos`, función `emitir_recibo`, migración 0012): correlativo desde `configuracion_empresa.recibo_inicial`; cuentan como venta si la orden no tiene boleta ni factura (`dineroDeOrden`, `recibosSinComprobante`).
 - Gastos del taller (`gastos`, pantalla `/gastos`) y utilidad neta (`totalesPeriodo`, `reporteMensual`); ganancia por carro en `src/lib/taller/ganancias.ts`.
 - PDF con el formato del taller: `src/lib/pdf/documento.ts` (cabecera con logo del bucket `marca`, `recuadro`, `ultimaLinea`, `cierre`, marca de agua). Monto en letras: `src/lib/letras.ts`.

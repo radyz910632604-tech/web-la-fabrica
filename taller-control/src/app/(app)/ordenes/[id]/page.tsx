@@ -319,7 +319,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
 
           {dinero && verDinero ? (
             <TarjetaDinero
-              puedeCotizar={gestiona}
+              puedeCotizar={verDinero}
               d={dinero}
               ordenId={o.id}
               etiqueta={etiquetaOrden({ numero: o.numero, placa: v?.placa ?? "", cliente: c?.nombre })}

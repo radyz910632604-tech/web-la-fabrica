@@ -56,7 +56,19 @@ export type DineroOrden = {
   comprobantes: { id: string; tipo: string; serie: string; numero: string; fecha: string; total: number; sinIgv: number; estado: string; detalle: string | null }[];
   notas: { id: string; comprobanteId: string; serie: string; numero: string; fecha: string; total: number; sinIgv: number; estado: string; motivoCodigo: string; motivo: string | null }[];
   pagos: { id: string; monto: number; tipo: string; medio: string; pagadoEn: string; estado: string; operacion: string | null }[];
-  cotizaciones: { id: string; version: number; adicional: boolean; estado: string; total: number; medio: string | null; items: { descripcion: string; tipo: string; cantidad: number; total: number }[] }[];
+  cotizaciones: {
+    id: string;
+    version: number;
+    adicional: boolean;
+    estado: string;
+    total: number;
+    medio: string | null;
+    /** Si lleva IGV (tasa mayor que cero). */
+    conIgv: boolean;
+    /** Nota de la respuesta o de la edición («Editada por…», «Reemplazada por…»). */
+    nota: string | null;
+    items: { descripcion: string; tipo: string; cantidad: number; precio: number; total: number }[];
+  }[];
   repuestos: { descripcion: string; cantidad: number; sinIgv: number; deInventario?: boolean }[];
   /** Recibos de venta (el vigente, si hay, y los anulados). */
   recibos: { id: string; numero: number; emitidoEn: string; total: number; sinIgv: number; estado: string }[];
@@ -81,7 +93,7 @@ export async function dineroDeOrden(
   const [{ data: comps }, { data: pagos }, { data: cots }, { data: items }, config, { data: notasCrudas }, { data: recibosCrudos }] = await Promise.all([
     supabase.from("comprobantes_venta").select("id, tipo, serie, numero, fecha_emision, total, subtotal_sin_igv, estado, detalle").eq("orden_id", ordenId).order("fecha_emision"),
     supabase.from("pagos").select("id, monto, tipo, medio, pagado_en, estado, numero_operacion").eq("orden_id", ordenId).order("pagado_en"),
-    supabase.from("cotizaciones").select("id, version, es_adicional, estado, total, aprobada_por_medio, cotizacion_items (descripcion, tipo, cantidad, total)").eq("orden_id", ordenId).order("version"),
+    supabase.from("cotizaciones").select("id, version, es_adicional, estado, total, aprobada_por_medio, tasa_igv, respuesta_texto, cotizacion_items (descripcion, tipo, cantidad, precio_unitario_total, total)").eq("orden_id", ordenId).order("version"),
     supabase.from("compra_items").select("descripcion, cantidad, subtotal_sin_igv, compras!inner (estado, moneda, tipo_cambio)").eq("orden_id", ordenId),
     configDinero(empresaId),
     supabase.from("notas_credito").select("id, comprobante_id, serie, numero, fecha_emision, total, subtotal_sin_igv, estado, motivo_codigo, motivo").eq("orden_id", ordenId).order("fecha_emision"),
@@ -107,8 +119,8 @@ export async function dineroDeOrden(
   const vigentes = comprobantes.filter((c) => c.estado === "confirmado");
   const pagosLista = (pagos ?? []).map((p) => ({ id: p.id, monto: n(p.monto), tipo: p.tipo, medio: p.medio, pagadoEn: p.pagado_en, estado: p.estado, operacion: p.numero_operacion }));
   const cotizaciones = (cots ?? []).map((c) => ({
-    id: c.id, version: c.version, adicional: c.es_adicional, estado: c.estado, total: n(c.total), medio: c.aprobada_por_medio,
-    items: ((c.cotizacion_items ?? []) as { descripcion: string; tipo: string; cantidad: Num; total: Num }[]).map((i) => ({ descripcion: i.descripcion, tipo: i.tipo, cantidad: n(i.cantidad), total: n(i.total) })),
+    id: c.id, version: c.version, adicional: c.es_adicional, estado: c.estado, total: n(c.total), medio: c.aprobada_por_medio, conIgv: n(c.tasa_igv) > 0, nota: c.respuesta_texto,
+    items: ((c.cotizacion_items ?? []) as { descripcion: string; tipo: string; cantidad: Num; precio_unitario_total: Num; total: Num }[]).map((i) => ({ descripcion: i.descripcion, tipo: i.tipo, cantidad: n(i.cantidad), precio: n(i.precio_unitario_total), total: n(i.total) })),
   }));
   type ItemCrudo = { descripcion: string; cantidad: Num; subtotal_sin_igv: Num; compras: { estado: string; moneda: "PEN" | "USD"; tipo_cambio: Num } | { estado: string; moneda: "PEN" | "USD"; tipo_cambio: Num }[] };
   const repuestos = ((items ?? []) as ItemCrudo[])

@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { FilePlus2, Plus, Send, X } from "lucide-react";
-import { crearCotizacion, enviarCotizacionWhatsapp, responderCotizacion, type Resultado } from "@/app/(app)/ordenes/[id]/dinero-acciones";
+import { FilePlus2, Pencil, Plus, Send, X } from "lucide-react";
+import { crearCotizacion, editarCotizacion, enviarCotizacionWhatsapp, responderCotizacion, type Resultado } from "@/app/(app)/ordenes/[id]/dinero-acciones";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { Casilla } from "@/components/ui/casilla";
@@ -12,14 +12,30 @@ import { formatearSoles } from "@/lib/formato";
 type Linea = { clave: number; tipo: "servicio" | "repuesto"; descripcion: string; cantidad: string; precio: string };
 const nueva = (clave: number, tipo: Linea["tipo"] = "servicio", descripcion = ""): Linea => ({ clave, tipo, descripcion, cantidad: "1", precio: "" });
 
-/** Crear una cotización con sus líneas (servicios y repuestos), con precios que incluyen IGV. */
-export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: string; servicios: string[]; hayAprobada: boolean }) {
+/** Cotización que se va a editar (sus líneas con el precio por unidad). */
+export type CotizacionEditable = {
+  id: string;
+  version: number;
+  estado: string;
+  conIgv: boolean;
+  items: { descripcion: string; tipo: string; cantidad: number; precio: number }[];
+};
+
+const desdeItems = (items: CotizacionEditable["items"]): Linea[] =>
+  items.map((i, k) => ({ clave: k, tipo: i.tipo === "repuesto" ? "repuesto" : "servicio", descripcion: i.descripcion, cantidad: String(i.cantidad), precio: String(i.precio) }));
+
+/**
+ * Crear una cotización con sus líneas (servicios y repuestos), o editar una ya hecha.
+ * Al editar se guarda una versión nueva y la anterior queda anulada, a la vista.
+ */
+export function NuevaCotizacion({ ordenId, servicios = [], hayAprobada = false, editar }: { ordenId: string; servicios?: string[]; hayAprobada?: boolean; editar?: CotizacionEditable }) {
   const [abierta, setAbierta] = useState(false);
   const [adicional, setAdicional] = useState(hayAprobada);
-  const [conIgv, setConIgv] = useState(true);
+  const [conIgv, setConIgv] = useState(editar ? editar.conIgv : true);
   const [preciosConIgv, setPreciosConIgv] = useState(true);
-  const siguiente = useRef(servicios.length + 1);
-  const [lineas, setLineas] = useState<Linea[]>(() => (servicios.length ? servicios.map((s, i) => nueva(i, "servicio", s)) : [nueva(0)]));
+  const inicial = () => (editar ? desdeItems(editar.items) : servicios.length ? servicios.map((s, i) => nueva(i, "servicio", s)) : [nueva(0)]);
+  const siguiente = useRef(editar ? editar.items.length + 1 : servicios.length + 1);
+  const [lineas, setLineas] = useState<Linea[]>(inicial);
   const [r, setR] = useState<Resultado>({});
   const [pendiente, iniciar] = useTransition();
   const bruto = lineas.reduce((a, l) => a + (Number(l.cantidad) || 0) * (Number(l.precio) || 0), 0);
@@ -28,23 +44,49 @@ export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: 
   const cambiar = (clave: number, campo: keyof Linea, valor: string) => setLineas((ls) => ls.map((l) => (l.clave === clave ? { ...l, [campo]: valor } : l)));
 
   return (
-    <Ventana open={abierta} onOpenChange={setAbierta}>
+    <Ventana
+      open={abierta}
+      onOpenChange={(v) => {
+        // Al abrir para editar, siempre parte de lo que está guardado.
+        if (v && editar) {
+          setLineas(desdeItems(editar.items));
+          setConIgv(editar.conIgv);
+          setPreciosConIgv(true);
+          setR({});
+        }
+        setAbierta(v);
+      }}
+    >
       <DisparadorVentana asChild>
-        <Boton variante="secundario" tamano="chico">
-          <FilePlus2 />
-          Nueva cotización
-        </Boton>
+        {editar ? (
+          <Boton variante="fantasma" tamano="chico">
+            <Pencil />
+            Editar
+          </Boton>
+        ) : (
+          <Boton variante="secundario" tamano="chico">
+            <FilePlus2 />
+            Nueva cotización
+          </Boton>
+        )}
       </DisparadorVentana>
-      <ContenidoVentana titulo="Nueva cotización" descripcion="Servicios y repuestos. Elige si lleva IGV (18 %) y cómo escribes los precios.">
+      <ContenidoVentana
+        titulo={editar ? `Editar cotización · versión ${editar.version}` : "Nueva cotización"}
+        descripcion={
+          editar
+            ? `Cambia precios, cantidades o líneas. Se guarda como versión ${editar.version + 1}; la versión ${editar.version} queda anulada y a la vista.${editar.estado === "aprobada" ? " Sigue aprobada." : ""}`
+            : "Servicios y repuestos. Elige si lleva IGV (18 %) y cómo escribes los precios."
+        }
+      >
         <div className="flex flex-col gap-3">
           <ul className="flex flex-col gap-3">
             {lineas.map((l, i) => (
-              <li key={l.clave} className="grid grid-cols-[minmax(0,1fr)_4.5rem_6.5rem_auto] items-end gap-2 rounded-2xl bg-interna p-3">
-                <Selector aria-label={`Tipo de la línea ${i + 1}`} value={l.tipo} onChange={(ev) => cambiar(l.clave, "tipo", ev.target.value)} className="col-span-4 h-10 text-sm">
+              <li key={l.clave} className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-end gap-2 rounded-2xl bg-interna p-3 sm:grid-cols-[minmax(0,1fr)_4.5rem_6.5rem_auto]">
+                <Selector aria-label={`Tipo de la línea ${i + 1}`} value={l.tipo} onChange={(ev) => cambiar(l.clave, "tipo", ev.target.value)} className="col-span-3 h-10 text-sm sm:col-span-4">
                   <option value="servicio">Servicio (mano de obra)</option>
                   <option value="repuesto">Repuesto</option>
                 </Selector>
-                <Campo etiqueta="Descripción">{(p) => <Entrada {...p} value={l.descripcion} onChange={(ev) => cambiar(l.clave, "descripcion", ev.target.value)} />}</Campo>
+                <Campo etiqueta="Descripción" className="col-span-3 sm:col-span-1">{(p) => <Entrada {...p} value={l.descripcion} onChange={(ev) => cambiar(l.clave, "descripcion", ev.target.value)} />}</Campo>
                 <Campo etiqueta="Cant.">{(p) => <Entrada {...p} type="number" min="0.01" step="0.01" inputMode="decimal" value={l.cantidad} onChange={(ev) => cambiar(l.clave, "cantidad", ev.target.value)} className="num px-3" />}</Campo>
                 <Campo etiqueta={conIgv ? (preciosConIgv ? "Precio c/u con IGV" : "Precio c/u sin IGV") : "Precio c/u"}>{(p) => <Entrada {...p} type="number" min="0" step="0.01" inputMode="decimal" value={l.precio} onChange={(ev) => cambiar(l.clave, "precio", ev.target.value)} className="num px-3" />}</Campo>
                 <button
@@ -94,10 +136,12 @@ export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: 
               Los precios que escribo ya incluyen IGV
             </label>
           ) : null}
-          <label className="flex cursor-pointer items-center gap-2.5 text-[15px]">
-            <Casilla checked={adicional} onCheckedChange={(v) => setAdicional(v === true)} />
-            Es un trabajo adicional (lo encontrado al revisar)
-          </label>
+          {editar ? null : (
+            <label className="flex cursor-pointer items-center gap-2.5 text-[15px]">
+              <Casilla checked={adicional} onCheckedChange={(v) => setAdicional(v === true)} />
+              Es un trabajo adicional (lo encontrado al revisar)
+            </label>
+          )}
           <dl className="num flex flex-col gap-1 border-t border-regla pt-3 text-[15px]">
             {conIgv ? (
               <>
@@ -121,18 +165,16 @@ export function NuevaCotizacion({ ordenId, servicios, hayAprobada }: { ordenId: 
             disabled={pendiente}
             onClick={() =>
               iniciar(async () => {
-                const res = await crearCotizacion(
-                  ordenId,
-                  adicional,
-                  lineas.map(({ tipo, descripcion, cantidad, precio }) => ({ tipo, descripcion, cantidad, precio })),
-                  { conIgv, preciosConIgv },
-                );
+                const datos = lineas.map(({ tipo, descripcion, cantidad, precio }) => ({ tipo, descripcion, cantidad, precio }));
+                const res = editar
+                  ? await editarCotizacion(editar.id, ordenId, datos, { conIgv, preciosConIgv })
+                  : await crearCotizacion(ordenId, adicional, datos, { conIgv, preciosConIgv });
                 setR(res);
                 if (res.ok) setAbierta(false);
               })
             }
           >
-            {pendiente ? "Guardando…" : "Crear cotización"}
+            {pendiente ? "Guardando…" : editar ? `Guardar como versión ${editar.version + 1}` : "Crear cotización"}
           </Boton>
         </div>
       </ContenidoVentana>
