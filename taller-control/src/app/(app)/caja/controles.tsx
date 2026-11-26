@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, Lock, LockOpen } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ClipboardCheck, Lock, LockOpen } from "lucide-react";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ventana";
@@ -9,7 +9,7 @@ import { MEDIOS } from "@/lib/dinero";
 import { formatearSoles } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { CATEGORIAS_GASTO } from "../gastos/categorias";
-import { abrirCaja, cerrarCaja, registrarMovimiento, type Resultado } from "./acciones";
+import { abrirCaja, cerrarCaja, registrarArqueo, registrarMovimiento, type Resultado } from "./acciones";
 
 function CampoSoles({ nombre, etiqueta, error, ayuda, valor, onChange, autoFocus }: { nombre: string; etiqueta: string; error?: string; ayuda?: string; valor?: string; onChange?: (v: string) => void; autoFocus?: boolean }) {
   return (
@@ -35,10 +35,11 @@ function CampoSoles({ nombre, etiqueta, error, ayuda, valor, onChange, autoFocus
   );
 }
 
-export function AbrirCaja() {
+export function AbrirCaja({ area = "recepcion" }: { area?: "recepcion" | "almacen" }) {
   const [estado, accion, enviando] = useActionState<Resultado, FormData>(abrirCaja, {});
   return (
     <form action={accion} className="flex flex-col gap-4 sm:max-w-sm">
+      <input type="hidden" name="area" value={area} />
       <CampoSoles nombre="monto" etiqueta="¿Con cuánto sencillo empiezas?" error={estado.errores?.monto} ayuda="El efectivo que hay en la caja ahora. Puede ser cero." />
       {estado.error ? <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">{estado.error}</p> : null}
       <Boton type="submit" disabled={enviando}>
@@ -173,6 +174,40 @@ export function CerrarCaja({ caja, esperado }: { caja: string; esperado: number 
             {enviando ? "Cerrando…" : "Cerrar caja"}
           </Boton>
           <p className="text-sm text-tinta-3">Una caja cerrada ya no se cambia. Lo que cobres después entra a la caja de mañana.</p>
+        </form>
+      </ContenidoVentana>
+    </Ventana>
+  );
+}
+
+/** Arqueo de una caja que se cerró sola a las 00:00 (gerencia o administración cuentan el efectivo). */
+export function RegistrarArqueo({ caja, area, esperado }: { caja: string; area: string; esperado: number }) {
+  const [abierta, setAbierta] = useState(false);
+  const [contado, setContado] = useState("");
+  const [estado, accion, enviando] = useActionState<Resultado, FormData>(registrarArqueo, {});
+  const diferencia = contado === "" ? null : Math.round((Number(contado) - esperado) * 100) / 100;
+  return (
+    <Ventana open={abierta && !estado.ok} onOpenChange={setAbierta}>
+      <DisparadorVentana asChild>
+        <Boton tamano="chico">
+          <ClipboardCheck />
+          Registrar arqueo
+        </Boton>
+      </DisparadorVentana>
+      <ContenidoVentana titulo={`Arqueo de la caja de ${area}`} descripcion={`Se cerró sola a las 00:00. El sistema esperaba ${formatearSoles(esperado)} en efectivo: cuenta lo que hay y escríbelo.`}>
+        <form action={accion} className="flex flex-col gap-4">
+          <input type="hidden" name="caja" value={caja} />
+          <CampoSoles nombre="contado" etiqueta="Efectivo contado" error={estado.errores?.contado} valor={contado} onChange={setContado} autoFocus />
+          {diferencia != null ? (
+            <p className={cn("num rounded-2xl px-4 py-3 text-[15px] font-medium", diferencia === 0 ? "bg-positivo-fondo text-positivo" : diferencia > 0 ? "bg-aviso-fondo text-aviso" : "bg-negativo-fondo text-negativo")}>
+              {diferencia === 0 ? "Cuadra exacto." : diferencia > 0 ? `Sobran ${formatearSoles(diferencia)}.` : `Faltan ${formatearSoles(-diferencia)}.`}
+            </p>
+          ) : null}
+          <Campo etiqueta="Nota (opcional)">{(p) => <Entrada {...p} name="observaciones" maxLength={300} placeholder="Quién contó, dónde estaba el efectivo…" />}</Campo>
+          {estado.error ? <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">{estado.error}</p> : null}
+          <Boton type="submit" disabled={enviando || contado === ""} className="w-full">
+            {enviando ? "Guardando…" : "Registrar arqueo"}
+          </Boton>
         </form>
       </ContenidoVentana>
     </Ventana>

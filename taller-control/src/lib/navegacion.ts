@@ -50,7 +50,7 @@ const SECCIONES: (Destino & { roles: readonly Rol[] })[] = [
   { clave: "mis-trabajos", nombre: "Mis trabajos", corto: "Trabajos", href: "/mis-trabajos", icono: "ordenes", roles: ["tecnico"] },
   { clave: "citas", nombre: "Citas", corto: "Citas", href: "/citas", icono: "citas", roles: ["gerencia", "administrador", "asesor", "vendedor_redes", "confirmador"] },
   { clave: "clientes", nombre: "Clientes", corto: "Clientes", href: "/clientes", icono: "clientes", roles: ["gerencia", "administrador", "asesor", "vendedor_redes", "recepcion"] },
-  { clave: "caja", nombre: "Caja", corto: "Caja", href: "/caja", icono: "caja", roles: ["gerencia", "administrador", "asesor", "recepcion"] },
+  { clave: "caja", nombre: "Caja", corto: "Caja", href: "/caja", icono: "caja", roles: ["gerencia", "administrador", "asesor", "recepcion", "almacen"] },
   { clave: "compras", nombre: "Compras", corto: "Compras", href: "/compras", icono: "compras", roles: ["almacen"] },
   { clave: "inventario", nombre: "Inventario", corto: "Inventario", href: "/inventario", icono: "inventario", roles: ["gerencia", "administrador", "asesor", "almacen"] },
   { clave: "reportes", nombre: "Reportes", corto: "Reportes", href: "/reportes", icono: "reportes", roles: ["gerencia"] },

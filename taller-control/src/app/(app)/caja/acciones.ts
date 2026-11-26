@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { CATEGORIAS_GASTO } from "../gastos/categorias";
-import { CAJA, tieneAlguno } from "@/lib/roles";
+import { CAJA, esGestor, tieneAlguno, type Rol } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 
@@ -11,19 +11,24 @@ export type Resultado = { ok?: string; error?: string; errores?: Record<string, 
 
 const soles = z.coerce.number({ error: "Escribe un monto." }).min(0, "No puede ser negativo.").max(9_999_999, "Monto muy alto.");
 
+/** Quién maneja cada caja: Recepción (los de caja) y Almacén (almacén); gerencia y administración, ambas. */
+const MANEJA: Record<"recepcion" | "almacen", readonly Rol[]> = { recepcion: CAJA, almacen: ["gerencia", "administrador", "almacen"] };
+
 async function exigirCaja() {
   const ctx = await obtenerContexto();
-  if (!tieneAlguno(ctx.roles, CAJA)) throw new Error("Tu rol no maneja la caja.");
+  if (!tieneAlguno(ctx.roles, [...CAJA, "almacen"])) throw new Error("Tu rol no maneja la caja.");
   return ctx;
 }
 
 export async function abrirCaja(_previo: Resultado, form: FormData): Promise<Resultado> {
   const ctx = await exigirCaja();
+  const area = form.get("area") === "almacen" ? "almacen" : "recepcion";
+  if (!tieneAlguno(ctx.roles, MANEJA[area])) return { error: "Tu rol no maneja esta caja." };
   const r = soles.safeParse(form.get("monto"));
   if (!r.success) return { errores: { monto: r.error.issues[0]?.message ?? "Monto no válido." } };
   const supabase = await clienteServidor();
-  const { error } = await supabase.from("cajas").insert({ empresa_id: ctx.taller.id, monto_inicial: Math.round(r.data * 100) / 100 });
-  if (error) return { error: error.code === "23505" ? "Ya hay una caja abierta en este taller." : "No se pudo abrir la caja." };
+  const { error } = await supabase.from("cajas").insert({ empresa_id: ctx.taller.id, tipo_caja: area, monto_inicial: Math.round(r.data * 100) / 100 });
+  if (error) return { error: error.code === "23505" ? `Ya hay una caja de ${area === "almacen" ? "Almacén" : "Recepción"} abierta.` : "No se pudo abrir la caja." };
   revalidatePath("/", "layout");
   return { ok: "Caja abierta." };
 }
@@ -93,4 +98,24 @@ export async function cerrarCaja(_previo: Resultado, form: FormData): Promise<Re
   revalidatePath("/", "layout");
   const d = Number((data as { diferencia: number }).diferencia);
   return { ok: d === 0 ? "Caja cerrada. Cuadró exacto." : d > 0 ? `Caja cerrada. Sobran S/ ${d.toFixed(2)}.` : `Caja cerrada. Faltan S/ ${Math.abs(d).toFixed(2)}.` };
+}
+
+/** Arqueo de una caja que se cerró sola a las 00:00: el dueño o administración cuentan el efectivo. */
+export async function registrarArqueo(_previo: Resultado, form: FormData): Promise<Resultado> {
+  const ctx = await obtenerContexto();
+  if (!esGestor(ctx.roles)) return { error: "El arqueo lo registran gerencia o administración." };
+  const caja = z.string().uuid().safeParse(form.get("caja"));
+  const contado = soles.safeParse(form.get("contado"));
+  if (!caja.success) return { error: "No se encontró la caja." };
+  if (!contado.success) return { errores: { contado: "Escribe cuánto efectivo se contó." } };
+  const supabase = await clienteServidor();
+  const { data, error } = await supabase.rpc("registrar_arqueo", {
+    p_caja: caja.data,
+    p_contado: Math.round(contado.data * 100) / 100,
+    p_observaciones: String(form.get("observaciones") ?? "").slice(0, 300),
+  });
+  if (error) return { error: error.code === "23514" || error.code === "42501" ? error.message : "No se pudo registrar el arqueo." };
+  revalidatePath("/caja", "layout");
+  const d = Number((data as { diferencia: number }).diferencia);
+  return { ok: d === 0 ? "Arqueo registrado: cuadró exacto." : d > 0 ? `Arqueo registrado: sobran S/ ${d.toFixed(2)}.` : `Arqueo registrado: faltan S/ ${Math.abs(d).toFixed(2)}.` };
 }

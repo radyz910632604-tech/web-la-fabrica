@@ -1,7 +1,7 @@
 /**
  * Reloj interno de la app: cada 5 minutos arma los avisos que tocan y envía
- * los que van al celular (push), sin depender de n8n. Una vez al día, de
- * madrugada, guarda la copia de seguridad.
+ * los que van al celular (push), sin depender de n8n. Pasada la medianoche
+ * hace el corte de cajas, y de madrugada guarda la copia de seguridad.
  *
  * Solo corre en producción (o con RELOJ_INTERNO=si para probar). Si la base
  * está atrasada o falta la llave de servicio, espera sin hacer nada.
@@ -15,9 +15,12 @@ export async function tic(ahora = new Date()) {
   if ((await versionesFaltantes()).length) return { omitido: "base atrasada" } as const;
   const { cicloDeAvisos } = await import("./avisos/ciclo");
   const avisos = await cicloDeAvisos(ahora, "interno");
+  // Corte de medianoche de las cajas (cierra lo olvidado y arma la Caja Maestra del día anterior).
+  const { corteSiToca } = await import("./caja/corte");
+  const cajas = await corteSiToca(ahora).catch((e) => (console.error("[reloj] Corte de cajas:", e instanceof Error ? e.message : e), null));
   const { respaldoSiToca } = await import("./respaldo/copia");
   const respaldo = await respaldoSiToca(ahora);
-  return { avisos, respaldo } as const;
+  return { avisos, cajas, respaldo } as const;
 }
 
 export function encenderReloj() {
@@ -27,5 +30,5 @@ export function encenderReloj() {
   setTimeout(seguro, 30_000).unref?.();
   marca.__relojTaller = setInterval(seguro, CADA_MS);
   marca.__relojTaller.unref?.();
-  console.log("[reloj] Encendido: avisos cada 5 minutos y copia de seguridad diaria.");
+  console.log("[reloj] Encendido: avisos cada 5 minutos, corte de cajas a medianoche y copia de seguridad diaria.");
 }

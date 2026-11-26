@@ -6,8 +6,15 @@ import { numeroOrden } from "./estados";
 type Num = number | string | null;
 const n = (v: Num) => Number(v ?? 0);
 
+export type AreaCaja = "recepcion" | "almacen";
+export const NOMBRE_AREA: Record<AreaCaja, string> = { recepcion: "Recepción", almacen: "Almacén" };
+
 export type Caja = {
   id: string;
+  area: AreaCaja;
+  fecha: string;
+  tipoCierre: "manual" | "automatico_00h" | null;
+  requiereArqueo: boolean;
   estado: "abierta" | "cerrada";
   montoInicial: number;
   abiertaPor: string | null;
@@ -45,6 +52,10 @@ export type DetalleCaja = {
 
 const aCaja = (c: Record<string, unknown>): Caja => ({
   id: String(c.id),
+  area: (c.tipo_caja as AreaCaja) ?? "recepcion",
+  fecha: String(c.fecha),
+  tipoCierre: (c.tipo_cierre as Caja["tipoCierre"]) ?? null,
+  requiereArqueo: Boolean(c.requiere_arqueo),
   estado: c.estado as Caja["estado"],
   montoInicial: n(c.monto_inicial as Num),
   abiertaPor: (c.abierta_por as string) ?? null,
@@ -57,17 +68,17 @@ const aCaja = (c: Record<string, unknown>): Caja => ({
   observaciones: (c.observaciones as string) ?? null,
 });
 
-const COLUMNAS = "id, estado, monto_inicial, abierta_por, abierta_en, cerrada_por, cerrada_en, efectivo_esperado, efectivo_contado, diferencia, observaciones";
+const COLUMNAS = "id, tipo_caja, fecha, tipo_cierre, requiere_arqueo, estado, monto_inicial, abierta_por, abierta_en, cerrada_por, cerrada_en, efectivo_esperado, efectivo_contado, diferencia, observaciones";
 
-export async function cajaAbierta(empresaId: string): Promise<Caja | null> {
+export async function cajaAbierta(empresaId: string, area: AreaCaja = "recepcion"): Promise<Caja | null> {
   const supabase = await clienteServidor();
-  const { data } = await supabase.from("cajas").select(COLUMNAS).eq("empresa_id", empresaId).eq("estado", "abierta").maybeSingle();
+  const { data } = await supabase.from("cajas").select(COLUMNAS).eq("empresa_id", empresaId).eq("tipo_caja", area).eq("estado", "abierta").maybeSingle();
   return data ? aCaja(data) : null;
 }
 
-export async function historialCajas(empresaId: string, limite = 10): Promise<Caja[]> {
+export async function historialCajas(empresaId: string, limite = 10, area: AreaCaja = "recepcion"): Promise<Caja[]> {
   const supabase = await clienteServidor();
-  const { data } = await supabase.from("cajas").select(COLUMNAS).eq("empresa_id", empresaId).eq("estado", "cerrada").order("abierta_en", { ascending: false }).limit(limite);
+  const { data } = await supabase.from("cajas").select(COLUMNAS).eq("empresa_id", empresaId).eq("tipo_caja", area).eq("estado", "cerrada").order("abierta_en", { ascending: false }).limit(limite);
   return (data ?? []).map(aCaja);
 }
 
@@ -112,4 +123,97 @@ export async function pagosSinCaja(empresaId: string, desde: Date): Promise<numb
   const supabase = await clienteServidor();
   const { count } = await supabase.from("pagos").select("id", { count: "exact", head: true }).eq("empresa_id", empresaId).is("caja_id", null).eq("estado", "confirmado").gte("pagado_en", desde.toISOString());
   return count ?? 0;
+}
+
+/** Una caja dentro de la Caja Maestra (foto tomada al consolidar). */
+export type CajaDelDia = {
+  id: string;
+  area: AreaCaja;
+  tipoCierre: "manual" | "automatico_00h";
+  abiertaEn: string;
+  cerradaEn: string | null;
+  abiertaPor: string | null;
+  cerradaPor: string | null;
+  montoInicial: number;
+  esperado: number;
+  contado: number | null;
+  diferencia: number | null;
+  requiereArqueo: boolean;
+  porMedio: Record<MedioPago, { cobros: number; ingresos: number; egresos: number; gastos: number; compras: number }>;
+};
+
+export type CajaMaestra = {
+  fecha: string;
+  cajas: CajaDelDia[];
+  efectivoEsperado: number;
+  efectivoNeto: number;
+  diferencia: number;
+  yapePlin: number;
+  tarjeta: number;
+  transferencia: number;
+  cobrado: number;
+  egresosGastos: number;
+  egresosCompras: number;
+  egresosOtros: number;
+  cierresAutomaticos: number;
+  requiereArqueo: boolean;
+  generadaEn: string;
+  generadaPor: string;
+};
+
+/** La Caja Maestra de un día (solo gerencia y administración: lo exige la base). */
+export async function cajaMaestra(empresaId: string, fecha: string): Promise<CajaMaestra | null> {
+  const supabase = await clienteServidor();
+  const { data: m } = await supabase.from("caja_maestra_diaria").select("*").eq("empresa_id", empresaId).eq("fecha", fecha).maybeSingle();
+  if (!m) return null;
+  type Medio = { cobros: Num; ingresos: Num; egresos: Num; gastos?: Num; compras?: Num };
+  const cajas = ((m.cajas ?? []) as Record<string, unknown>[]).map((c) => {
+    const medios = (c.medios ?? {}) as Record<string, Medio>;
+    const porMedio = Object.fromEntries(
+      Object.keys(MEDIOS).map((k) => {
+        const x = medios[k] ?? { cobros: 0, ingresos: 0, egresos: 0 };
+        return [k, { cobros: n(x.cobros), ingresos: n(x.ingresos), egresos: n(x.egresos), gastos: n(x.gastos ?? 0), compras: n(x.compras ?? 0) }];
+      }),
+    ) as CajaDelDia["porMedio"];
+    return {
+      id: String(c.id),
+      area: c.tipo as AreaCaja,
+      tipoCierre: c.tipo_cierre as CajaDelDia["tipoCierre"],
+      abiertaEn: String(c.abierta_en),
+      cerradaEn: (c.cerrada_en as string) ?? null,
+      abiertaPor: (c.abierta_por as string) ?? null,
+      cerradaPor: (c.cerrada_por as string) ?? null,
+      montoInicial: n(c.monto_inicial as Num),
+      esperado: n(c.esperado as Num),
+      contado: c.contado == null ? null : n(c.contado as Num),
+      diferencia: c.diferencia == null ? null : n(c.diferencia as Num),
+      requiereArqueo: Boolean(c.requiere_arqueo),
+      porMedio,
+    };
+  });
+  return {
+    fecha: m.fecha,
+    cajas,
+    efectivoEsperado: n(m.efectivo_esperado),
+    efectivoNeto: n(m.efectivo_neto),
+    diferencia: n(m.diferencia),
+    yapePlin: n(m.yape_plin),
+    tarjeta: n(m.tarjeta),
+    transferencia: n(m.transferencia),
+    cobrado: n(m.cobrado),
+    egresosGastos: n(m.egresos_gastos),
+    egresosCompras: n(m.egresos_compras),
+    egresosOtros: n(m.egresos_otros),
+    cierresAutomaticos: m.cierres_automaticos,
+    requiereArqueo: m.requiere_arqueo,
+    generadaEn: m.generada_en,
+    generadaPor: m.generada_por,
+  };
+}
+
+/** Días con Caja Maestra (los últimos), para moverse entre ellos. */
+export async function diasConMaestra(empresaId: string, limite = 31): Promise<{ fecha: string; requiereArqueo: boolean }[]> {
+  const supabase = await clienteServidor();
+  const { data } = await supabase.from("caja_maestra_diaria").select("fecha, requiere_arqueo").eq("empresa_id", empresaId).order("fecha", { ascending: false }).limit(limite);
+  return (data ?? []).map((d) => ({ fecha: d.fecha, requiereArqueo: d.requiere_arqueo }));
 }

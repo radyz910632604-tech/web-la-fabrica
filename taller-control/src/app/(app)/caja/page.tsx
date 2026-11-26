@@ -10,7 +10,7 @@ import { MEDIOS, type MedioPago } from "@/lib/dinero";
 import { diaEnLima, formatearMomento, formatearSoles } from "@/lib/formato";
 import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
-import { cajaAbierta, detalleCaja, historialCajas, pagosSinCaja } from "@/lib/taller/caja-consultas";
+import { cajaAbierta, detalleCaja, historialCajas, NOMBRE_AREA, pagosSinCaja, type AreaCaja } from "@/lib/taller/caja-consultas";
 import { limitesDiaLima, listarOrdenes, nombresPersonal } from "@/lib/taller/consultas";
 import { cuentasDeOrdenes } from "@/lib/taller/dinero-consultas";
 import { etiquetaOrden } from "@/lib/taller/estados";
@@ -22,11 +22,35 @@ export const metadata = { title: "Caja del día" };
 
 const hora = (iso: string) => new Intl.DateTimeFormat("es-PE", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Lima" }).format(new Date(iso));
 
-export default async function CajaDelDia() {
+export default async function CajaDelDia({ searchParams }: { searchParams: Promise<{ area?: string }> }) {
   const ctx = await obtenerContexto();
-  if (!tieneAlguno(ctx.roles, CAJA)) notFound();
+  // Cada área tiene su caja: Recepción (los de caja) y Almacén; gerencia y administración ven ambas.
+  const areas: AreaCaja[] = [
+    ...(tieneAlguno(ctx.roles, CAJA) ? (["recepcion"] as const) : []),
+    ...(tieneAlguno(ctx.roles, ["gerencia", "administrador", "almacen"]) ? (["almacen"] as const) : []),
+  ];
+  if (!areas.length) notFound();
+  const pedida = (await searchParams).area as AreaCaja | undefined;
+  const area: AreaCaja = pedida && areas.includes(pedida) ? pedida : areas[0];
+  const esRecepcion = area === "recepcion";
+  const titulo = `Caja de ${NOMBRE_AREA[area]}`;
   const ahora = new Date();
-  const [abierta, historial, nombres] = await Promise.all([cajaAbierta(ctx.taller.id), historialCajas(ctx.taller.id, 8), nombresPersonal(ctx.taller.id)]);
+  const [abierta, historial, nombres] = await Promise.all([cajaAbierta(ctx.taller.id, area), historialCajas(ctx.taller.id, 8, area), nombresPersonal(ctx.taller.id)]);
+  const pestanas =
+    areas.length > 1 ? (
+      <nav aria-label="Área" className="flex w-fit gap-1 rounded-full bg-hundida p-1">
+        {areas.map((a) => (
+          <Link
+            key={a}
+            href={`/caja?area=${a}`}
+            aria-current={a === area ? "page" : undefined}
+            className={cn("flex h-10 items-center rounded-full px-4 text-sm font-medium", a === area ? "bg-tarjeta text-tinta shadow-sm" : "text-tinta-2 hover:text-tinta")}
+          >
+            Caja {NOMBRE_AREA[a]}
+          </Link>
+        ))}
+      </nav>
+    ) : null;
   const quien = (id: string | null) => nombres.get(id ?? "") ?? "alguien del taller";
 
   const historialTarjeta = (
@@ -43,12 +67,17 @@ export default async function CajaDelDia() {
                   {formatearMomento(new Date(c.abiertaEn), ahora)} a {c.cerradaEn ? hora(c.cerradaEn) : ""}
                 </p>
                 <p className="num text-[13px] text-tinta-3">
-                  Esperado {formatearSoles(c.esperado ?? 0)} · contado {formatearSoles(c.contado ?? 0)} · cerró {quien(c.cerradaPor)}
+                  Esperado {formatearSoles(c.esperado ?? 0)} · {c.contado == null ? "sin contar" : `contado ${formatearSoles(c.contado)}`} ·{" "}
+                  {c.tipoCierre === "automatico_00h" ? "cierre automático" : `cerró ${quien(c.cerradaPor)}`}
                 </p>
               </div>
-              <span className={cn("num rounded-full px-2.5 py-1 text-[13px] font-medium", !c.diferencia ? "bg-positivo-fondo text-positivo" : c.diferencia > 0 ? "bg-aviso-fondo text-aviso" : "bg-negativo-fondo text-negativo")}>
-                {!c.diferencia ? "Cuadró" : c.diferencia > 0 ? `Sobró ${formatearSoles(c.diferencia)}` : `Faltó ${formatearSoles(-c.diferencia)}`}
-              </span>
+              {c.requiereArqueo ? (
+                <span className="rounded-full bg-aviso-fondo px-2.5 py-1 text-[13px] font-medium text-aviso">Cerrada sola a las 00:00 · falta arqueo</span>
+              ) : (
+                <span className={cn("num rounded-full px-2.5 py-1 text-[13px] font-medium", !c.diferencia ? "bg-positivo-fondo text-positivo" : c.diferencia > 0 ? "bg-aviso-fondo text-aviso" : "bg-negativo-fondo text-negativo")}>
+                  {!c.diferencia ? "Cuadró" : c.diferencia > 0 ? `Sobró ${formatearSoles(c.diferencia)}` : `Faltó ${formatearSoles(-c.diferencia)}`}
+                </span>
+              )}
               <Boton asChild variante="fantasma" tamano="chico">
                 <a href={`/pdf/caja/${c.id}`} target="_blank" rel="noreferrer">
                   <FileDown />
@@ -63,10 +92,18 @@ export default async function CajaDelDia() {
   );
 
   if (!abierta) {
-    const sinCaja = await pagosSinCaja(ctx.taller.id, limitesDiaLima(diaEnLima(ahora)).desde);
+    const sinCaja = esRecepcion ? await pagosSinCaja(ctx.taller.id, limitesDiaLima(diaEnLima(ahora)).desde) : 0;
     return (
       <div className="flex min-w-0 flex-col gap-6">
-        <TituloCaja titulo="Caja del día" detalle="La caja está cerrada. Ábrela al empezar el día: cada pago que registres entrará a ella." />
+        <TituloCaja
+          titulo={titulo}
+          detalle={
+            esRecepcion
+              ? "La caja está cerrada. Ábrela al empezar el día: cada pago que registres entrará a ella."
+              : "La caja está cerrada. Ábrela al empezar el día para registrar compras y gastos pagados desde Almacén."
+          }
+        />
+        {pestanas}
         <SubnavCaja actual="/caja" roles={ctx.roles} />
         <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-12 [&>*]:min-w-0">
           <Tarjeta aria-labelledby="t-abrir" className="xl:col-span-5">
@@ -76,7 +113,8 @@ export default async function CajaDelDia() {
                 Hoy se registraron {sinCaja} {sinCaja === 1 ? "pago" : "pagos"} sin caja abierta: no entran en ningún arqueo.
               </p>
             ) : null}
-            <AbrirCaja />
+            <AbrirCaja area={area} />
+            <p className="mt-3 text-[13px] text-tinta-3">Si nadie la cierra, se cierra sola a las 00:00 con el saldo del sistema y queda pendiente el conteo.</p>
           </Tarjeta>
           <div className="xl:col-span-7">{historialTarjeta}</div>
         </div>
@@ -84,7 +122,7 @@ export default async function CajaDelDia() {
     );
   }
 
-  const [d, ordenes] = await Promise.all([detalleCaja(ctx.taller.id, abierta.id), listarOrdenes(ctx.taller.id, { limite: 300, orden: "reciente" })]);
+  const [d, ordenes] = await Promise.all([detalleCaja(ctx.taller.id, abierta.id), esRecepcion ? listarOrdenes(ctx.taller.id, { limite: 300, orden: "reciente" }) : Promise.resolve([])]);
   if (!d) notFound();
   const cuentas = await cuentasDeOrdenes(ctx.taller.id, ordenes.map((o) => ({ id: o.id, numero: o.numero, placa: o.placa, cliente: o.cliente, estado: o.estado })));
   const opciones = cuentas
@@ -94,16 +132,17 @@ export default async function CajaDelDia() {
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <TituloCaja
-        titulo="Caja del día"
+        titulo={titulo}
         detalle={`Abierta por ${quien(abierta.abiertaPor)} ${formatearMomento(new Date(abierta.abiertaEn), ahora).toLowerCase()} con ${formatearSoles(abierta.montoInicial)} de sencillo.`}
         accion={
           <div className="flex flex-wrap gap-2">
-            <RegistrarPago ordenes={opciones} />
+            {esRecepcion ? <RegistrarPago ordenes={opciones} /> : null}
             <Movimiento caja={abierta.id} />
             <CerrarCaja caja={abierta.id} esperado={d.efectivo.esperado} />
           </div>
         }
       />
+      {pestanas}
       <SubnavCaja actual="/caja" roles={ctx.roles} />
 
       <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-12 [&>*]:min-w-0">
@@ -124,6 +163,7 @@ export default async function CajaDelDia() {
             ))}
           </dl>
         </Tarjeta>
+        {esRecepcion ? (
         <Tarjeta aria-labelledby="t-medios" className="xl:col-span-3">
           <CabeceraTarjeta id="t-medios" titulo="Cobrado hoy" detalle="Por medio de pago" />
           <dl className="num flex flex-col text-[15px]">
@@ -139,7 +179,8 @@ export default async function CajaDelDia() {
             </div>
           </dl>
         </Tarjeta>
-        <Tarjeta aria-labelledby="t-movs" className="md:col-span-2 xl:col-span-5">
+        ) : null}
+        <Tarjeta aria-labelledby="t-movs" className={cn("md:col-span-2", esRecepcion ? "xl:col-span-5" : "xl:col-span-8")}>
           <CabeceraTarjeta id="t-movs" titulo="Movimientos" detalle={`${d.movimientos.length} en esta caja`} accion={<EnlacePdf href={`/pdf/caja/${abierta.id}`} />} />
           {d.movimientos.length === 0 ? (
             <p className="rounded-2xl border border-dashed border-control px-4 py-5 text-center text-[15px] text-tinta-2">Todavía no hay movimientos. Los pagos que registres aparecen aquí.</p>
