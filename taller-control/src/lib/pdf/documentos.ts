@@ -1,4 +1,5 @@
 import "server-only";
+import { historialDelCarro } from "@/lib/taller/historial";
 import { MEDIOS, MOTIVOS_NOTA, montoNeto, redondear, TIPO_PAGO_CORTO, type MedioPago } from "../dinero";
 import { formatearCelular } from "../celulares";
 import { NOMBRE_ROL, type Rol } from "../roles";
@@ -822,25 +823,14 @@ export async function pdfHistorial(ctx: Contexto, placaBuscada: string, verDiner
     .eq("placa", placaBuscada)
     .maybeSingle();
   if (!v) return null;
-  const { data: ordenes } = await supabase
-    .from("ordenes_trabajo")
-    .select("id, numero, estado, ingresado_en, entregado_en, kilometraje_ingreso, diagnostico, anulada, orden_servicios (descripcion)")
-    .eq("vehiculo_id", v.id)
-    .order("ingresado_en", { ascending: false })
-    .limit(60);
-  const lista = (ordenes ?? []).filter((o) => !o.anulada);
-  const totales = new Map<string, number>();
-  if (verDinero && lista.length) {
-    const { data: cots } = await supabase.from("cotizaciones").select("orden_id, total").eq("estado", "aprobada").in("orden_id", lista.map((o) => o.id));
-    for (const c of cots ?? []) totales.set(c.orden_id, redondear((totales.get(c.orden_id) ?? 0) + n(c.total)));
-  }
+  const lista = await historialDelCarro(ctx.taller.id, v.id, verDinero);
   const cl = uno(v.clientes);
   const { taller, pie } = await base(ctx);
   const d = await Documento.crear(taller, "Historial del vehículo", "", pie, {
     destacados: [`Placa ${placa(v.placa) ?? "—"}`],
     cabecera: [
       ["Visitas", String(lista.length)],
-      ["Última", lista[0] ? fechaCorta(lista[0].ingresado_en) : null],
+      ["Última", lista[0] ? fechaCorta(lista[0].ingresadoEn) : null],
     ],
   });
   d.recuadro(null, [
@@ -855,17 +845,22 @@ export async function pdfHistorial(ctx: Contexto, placaBuscada: string, verDiner
     { titulo: "Fecha", ancho: 1.1 },
     { titulo: "Orden", ancho: 1.1 },
     { titulo: "Km", ancho: 0.9, alinear: "der" as const },
-    { titulo: "Trabajos y diagnóstico", ancho: verDinero ? 4.4 : 5.3 },
+    { titulo: "Trabajos, repuestos y diagnóstico", ancho: verDinero ? 4.4 : 5.3 },
     ...(verDinero ? [{ titulo: "Total", ancho: 1, alinear: "der" as const }] : []),
   ];
   d.tabla(
     columnas,
     lista.map((o) => [
-      fechaCorta(o.ingresado_en),
+      fechaCorta(o.ingresadoEn),
       numeroOrden(o.numero),
-      o.kilometraje_ingreso != null ? Number(o.kilometraje_ingreso).toLocaleString("es-PE") : "—",
-      [((o.orden_servicios ?? []) as { descripcion: string }[]).map((x) => x.descripcion).join(", "), o.diagnostico ? `Diagnóstico: ${o.diagnostico}` : null].filter(Boolean).join(". ") || "—",
-      ...(verDinero ? [totales.has(o.id) ? importe(totales.get(o.id)!) : "—"] : []),
+      o.km != null ? o.km.toLocaleString("es-PE") : "—",
+      [
+        o.servicios.join(", "),
+        o.repuestos.length ? `Repuestos: ${o.repuestos.join(", ")}` : null,
+        o.diagnostico ? `Diagnóstico: ${o.diagnostico}` : null,
+        o.tecnico ? `Técnico: ${o.tecnico}` : null,
+      ].filter(Boolean).join(". ") || "—",
+      ...(verDinero ? [o.monto ? importe(o.monto.valor) : "—"] : []),
     ]),
     { cebra: true },
   );

@@ -2,15 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Placa } from "@/components/marca/placa";
-import { ListaOrdenes } from "@/components/taller/lista-ordenes";
+import { HistorialCarro } from "@/components/taller/historial-carro";
 import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { normalizarPlaca, formatearPlaca } from "@/lib/placas";
-import { tieneAlguno } from "@/lib/roles";
+import { formatearSoles, ZONA } from "@/lib/formato";
+import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
-import { listarOrdenes } from "@/lib/taller/consultas";
 import { COMBUSTIBLES, TRANSMISIONES } from "@/lib/taller/estados";
+import { historialDelCarro, resumenHistorial } from "@/lib/taller/historial";
 
 export async function generateMetadata({ params }: { params: Promise<{ placa: string }> }) {
   return { title: formatearPlaca((await params).placa) };
@@ -27,7 +28,10 @@ export default async function Vehiculo({ params }: { params: Promise<{ placa: st
     .eq("placa", placa)
     .maybeSingle();
   if (!v) notFound();
-  const ordenes = await listarOrdenes(ctx.taller.id, { vehiculoId: v.id, orden: "ingreso" });
+  const verDinero = tieneAlguno(ctx.roles, CAJA);
+  const ordenes = await historialDelCarro(ctx.taller.id, v.id, verDinero);
+  const resumen = resumenHistorial(ordenes);
+  const desde = resumen.primera ? new Intl.DateTimeFormat("es-PE", { timeZone: ZONA, month: "long", year: "numeric" }).format(new Date(resumen.primera)) : null;
   const cliente = Array.isArray(v.clientes) ? v.clientes[0] : v.clientes;
   const verCliente = tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "vendedor_redes", "recepcion"]);
   const garantias = ordenes.filter((o) => o.garantia).length;
@@ -39,6 +43,9 @@ export default async function Vehiculo({ params }: { params: Promise<{ placa: st
     ["Combustible", v.combustible ? COMBUSTIBLES[v.combustible as keyof typeof COMBUSTIBLES] : "—"],
     ["Caja", v.transmision ? TRANSMISIONES[v.transmision as keyof typeof TRANSMISIONES] : "—"],
     ["Último kilometraje", v.kilometraje_actual != null ? `${v.kilometraje_actual.toLocaleString("es-PE")} km` : "—"],
+    ["Con nosotros desde", desde ?? "—"],
+    ...(resumen.recorrido ? ([["Recorrido entre visitas", `${resumen.recorrido.toLocaleString("es-PE")} km`]] as [string, string][]) : []),
+    ...(verDinero && resumen.cobrado ? ([["Total cobrado", formatearSoles(resumen.cobrado)]] as [string, string][]) : []),
   ];
 
   return (
@@ -60,7 +67,7 @@ export default async function Vehiculo({ params }: { params: Promise<{ placa: st
         </p>
       </header>
       <div className="grid min-w-0 gap-4 xl:grid-cols-12">
-        <Tarjeta aria-labelledby="t-datos" className="xl:col-span-4">
+        <Tarjeta aria-labelledby="t-datos" className="self-start xl:col-span-4">
           <CabeceraTarjeta id="t-datos" titulo="Datos del carro" />
           <dl className="rounded-2xl bg-interna px-4 py-1 text-[15px]">
             {datos.map(([t, d]) => (
@@ -72,8 +79,8 @@ export default async function Vehiculo({ params }: { params: Promise<{ placa: st
           </dl>
         </Tarjeta>
         <Tarjeta aria-labelledby="t-visitas" className="min-w-0 xl:col-span-8">
-          <CabeceraTarjeta id="t-visitas" titulo="Visitas" detalle="De la más reciente a la más antigua" />
-          <ListaOrdenes ordenes={ordenes} verCliente={false} fecha="ingreso" vacio="Este carro no tiene visitas." />
+          <CabeceraTarjeta id="t-visitas" titulo="Todo lo que se le hizo" detalle="Cada visita, de la más reciente a la más antigua" />
+          <HistorialCarro visitas={ordenes} />
         </Tarjeta>
       </div>
     </div>
