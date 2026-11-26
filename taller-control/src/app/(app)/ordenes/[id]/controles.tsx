@@ -17,7 +17,10 @@ function Mensaje({ r }: { r: Resultado }) {
   return null;
 }
 
-export function BotonesEstado({ ordenId, estado, esTecnico, soloEntregar = false }: { ordenId: string; estado: EstadoOrden; esTecnico: boolean; soloEntregar?: boolean }) {
+/** Estados en los que alguien ya está trabajando el carro: piden saber quién. */
+const EMPIEZA: EstadoOrden[] = ["en_diagnostico", "en_proceso"];
+
+export function BotonesEstado({ ordenId, estado, esTecnico, soloEntregar = false, sinTecnico = false }: { ordenId: string; estado: EstadoOrden; esTecnico: boolean; soloEntregar?: boolean; sinTecnico?: boolean }) {
   const [nota, setNota] = useState("");
   const [r, setR] = useState<Resultado>({});
   const [pendiente, iniciar] = useTransition();
@@ -34,7 +37,8 @@ export function BotonesEstado({ ordenId, estado, esTecnico, soloEntregar = false
             key={p.estado}
             type="button"
             variante={i === 0 ? "primario" : "secundario"}
-            disabled={pendiente}
+            disabled={pendiente || (sinTecnico && EMPIEZA.includes(p.estado))}
+            title={sinTecnico && EMPIEZA.includes(p.estado) ? "Primero elige quién lo trabaja" : undefined}
             onClick={() =>
               iniciar(async () => {
                 const res = await cambiarEstado(ordenId, p.estado, nota);
@@ -47,6 +51,7 @@ export function BotonesEstado({ ordenId, estado, esTecnico, soloEntregar = false
           </Boton>
         ))}
       </div>
+      {sinTecnico && pasos.some((p) => EMPIEZA.includes(p.estado)) ? <p className="mt-2 text-sm text-aviso">Para empezar, elige arriba quién lo trabaja.</p> : null}
       <Entrada
         value={nota}
         onChange={(e) => setNota(e.target.value)}
@@ -147,9 +152,9 @@ export function AsignarTecnico({ ordenId, tecnicoId, tecnicos }: { ordenId: stri
   const [r, setR] = useState<Resultado>({});
   const [pendiente, iniciar] = useTransition();
   return (
-    <div>
-      <label htmlFor="tecnico" className="sr-only">
-        Técnico responsable
+    <div className="flex flex-col gap-1.5 sm:max-w-sm">
+      <label htmlFor="tecnico" className="text-sm font-medium text-tinta-2">
+        Lo trabaja
       </label>
       <Selector
         id="tecnico"
@@ -160,7 +165,7 @@ export function AsignarTecnico({ ordenId, tecnicoId, tecnicos }: { ordenId: stri
           iniciar(async () => setR(await asignarTecnico(ordenId, valor)));
         }}
       >
-        <option value="">Sin asignar</option>
+        <option value="">Elige al técnico…</option>
         {tecnicos.map((t) => (
           <option key={t.id} value={t.id}>
             {t.nombre}

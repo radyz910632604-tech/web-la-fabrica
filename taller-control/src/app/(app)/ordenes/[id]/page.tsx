@@ -188,6 +188,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
         <p className="text-[15px] text-tinta-2 md:text-base">
           {datosCarro.join(" · ") || "Carro sin datos"} · Ingresó {formatearMomento(new Date(o.ingresado_en), ahora).toLowerCase()}
           {o.kilometraje_ingreso != null ? ` con ${o.kilometraje_ingreso.toLocaleString("es-PE")} km` : ""}
+          {o.tecnico_id ? ` · Lo trabaja ${nombres.get(o.tecnico_id) ?? "un técnico"}` : " · Sin técnico"}
         </p>
         {fallidas ? (
           <p role="alert" className="rounded-2xl bg-aviso-fondo px-4 py-3 text-sm text-aviso">
@@ -203,7 +204,12 @@ export default async function Orden({ params, searchParams }: { params: Promise<
           {puedeTrabajar ? (
             <Tarjeta aria-labelledby="t-estado">
               <CabeceraTarjeta id="t-estado" titulo="Cambiar estado" detalle="Un toque. Si quieres, deja una nota." />
-              <BotonesEstado ordenId={o.id} estado={estado} esTecnico={!gestiona} />
+              {gestiona && estado !== "entregado" ? (
+                <div className="mb-4">
+                  <AsignarTecnico ordenId={o.id} tecnicoId={o.tecnico_id ?? ""} tecnicos={tecnicos} />
+                </div>
+              ) : null}
+              <BotonesEstado ordenId={o.id} estado={estado} esTecnico={!gestiona} sinTecnico={!o.tecnico_id} />
             </Tarjeta>
           ) : esRecepcion && estado === "listo" ? (
             <Tarjeta aria-labelledby="t-estado">
@@ -330,14 +336,12 @@ export default async function Orden({ params, searchParams }: { params: Promise<
             /> : null}
           {dinero && config ? <TarjetaUtilidad d={dinero} margenMinimo={config.margenMinimo} /> : null}
 
-          <Tarjeta aria-labelledby="t-tecnico">
-            <CabeceraTarjeta id="t-tecnico" titulo="Técnico responsable" />
-            {gestiona ? (
-              <AsignarTecnico ordenId={o.id} tecnicoId={o.tecnico_id ?? ""} tecnicos={tecnicos} />
-            ) : (
+          {!gestiona || estado === "entregado" ? (
+            <Tarjeta aria-labelledby="t-tecnico">
+              <CabeceraTarjeta id="t-tecnico" titulo="Lo trabajó" />
               <p className="text-[15px]">{o.tecnico_id ? (nombres.get(o.tecnico_id) ?? "Asignado") : "Sin asignar"}</p>
-            )}
-          </Tarjeta>
+            </Tarjeta>
+          ) : null}
 
           {tarjetaFirmas}
 

@@ -15,6 +15,11 @@ export async function cambiarEstado(ordenId: string, estado: string, nota: strin
   const e = z.enum(ESTADOS_ORDEN).safeParse(estado);
   if (!e.success) return { error: "Estado no válido." };
   const supabase = await clienteServidor();
+  // Para empezar a trabajar un carro hay que saber quién lo trabaja.
+  if (e.data === "en_proceso" || e.data === "en_diagnostico") {
+    const { data: o } = await supabase.from("ordenes_trabajo").select("tecnico_id").eq("id", ordenId).maybeSingle();
+    if (o && !o.tecnico_id) return { error: "Primero elige quién lo trabaja." };
+  }
   const { error } = await supabase.rpc("cambiar_estado_orden", { p_orden: ordenId, p_estado: e.data, p_nota: nota.trim() || null });
   if (error) return { error: error.message.includes("asesor") ? "La entrega al cliente la registra el asesor o recepción." : error.message.includes("Recepción") ? error.message : "No puedes cambiar el estado de esta orden." };
   revalidatePath(`/ordenes/${ordenId}`);
@@ -56,7 +61,7 @@ export async function asignarTecnico(ordenId: string, tecnicoId: string): Promis
   if (error || count !== 1) return { error: "No puedes asignar técnico en esta orden." };
   revalidatePath(`/ordenes/${ordenId}`);
   revalidatePath("/", "layout");
-  return { ok: tecnicoId ? "Técnico asignado." : "Técnico quitado." };
+  return { ok: tecnicoId ? "Listo. El cambio queda en los avances de la orden." : "Técnico quitado." };
 }
 
 export async function agregarServicio(ordenId: string, descripcion: string, adicional: boolean): Promise<Resultado> {
