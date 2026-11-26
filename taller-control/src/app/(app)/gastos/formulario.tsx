@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ventana";
-import { registrarGasto } from "./acciones";
+import { completarComprobante, registrarGasto } from "./acciones";
 import { CATEGORIAS_GASTO } from "./categorias";
 
 /** Botón y ventana para registrar un gasto del taller. */
@@ -65,10 +65,21 @@ export function RegistrarGasto({ hoy }: { hoy: string }) {
                 </Selector>
               )}
             </Campo>
-            <Campo etiqueta="Comprobante (opcional)" error={e.comprobante}>
-              {(p) => <Entrada {...p} name="comprobante" placeholder="Recibo de luz 123" maxLength={40} />}
+            <Campo etiqueta="Comprobante">
+              {(p) => (
+                <Selector {...p} name="tipo_comprobante" defaultValue="boleta">
+                  <option value="boleta">Boleta</option>
+                  <option value="factura">Factura</option>
+                  <option value="recibo">Recibo</option>
+                  <option value="otro">Otro</option>
+                  <option value="sin_comprobante">Sin comprobante</option>
+                </Selector>
+              )}
             </Campo>
           </div>
+          <Campo etiqueta="Número de comprobante" error={e.comprobante} ayuda="Si no lo tienes a la mano, déjalo vacío: queda «pendiente» y lo completas después.">
+            {(p) => <Entrada {...p} name="comprobante" placeholder="B001-4521" maxLength={40} autoComplete="off" />}
+          </Campo>
           {estado.error ? <p role="alert" className="text-sm text-negativo">{estado.error}</p> : null}
           <Boton type="submit" disabled={enviando} className="h-12 w-full">
             {enviando ? "Guardando…" : "Guardar gasto"}
@@ -76,5 +87,37 @@ export function RegistrarGasto({ hoy }: { hoy: string }) {
         </form>
       </ContenidoVentana>
     </Ventana>
+  );
+}
+
+/** Completar el número de un comprobante que quedó pendiente (rápido, en la misma fila). */
+export function CompletarComprobante({ id }: { id: string }) {
+  const [abierto, setAbierto] = useState(false);
+  const [numero, setNumero] = useState("");
+  const [error, setError] = useState<string>();
+  const [pendiente, iniciar] = useTransition();
+  if (!abierto)
+    return (
+      <button type="button" onClick={() => setAbierto(true)} className="mt-1 inline-flex cursor-pointer rounded-full bg-aviso-fondo px-2.5 py-0.5 text-[12px] font-medium text-aviso hover:bg-aviso-fondo/70">
+        Comprobante pendiente · completar
+      </button>
+    );
+  return (
+    <form
+      className="mt-1.5 flex flex-wrap items-center gap-2"
+      onSubmit={(e) => {
+        e.preventDefault();
+        iniciar(async () => {
+          const r = await completarComprobante(id, numero);
+          if (r.error) setError(r.error);
+        });
+      }}
+    >
+      <Entrada aria-label="Número de comprobante" value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="B001-4521" maxLength={40} autoFocus className="h-10 w-40 text-sm" />
+      <Boton type="submit" tamano="chico" disabled={pendiente || numero.trim().length < 2}>
+        {pendiente ? "Guardando…" : "Guardar"}
+      </Boton>
+      {error ? <span className="text-[13px] text-negativo">{error}</span> : null}
+    </form>
   );
 }

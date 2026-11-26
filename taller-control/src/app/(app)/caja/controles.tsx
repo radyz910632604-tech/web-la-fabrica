@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, ClipboardCheck, Lock, LockOpen } from "lucide-react";
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ClipboardCheck, Lock, LockOpen } from "lucide-react";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ventana";
@@ -9,7 +9,7 @@ import { MEDIOS } from "@/lib/dinero";
 import { formatearSoles } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 import { CATEGORIAS_GASTO } from "../gastos/categorias";
-import { abrirCaja, cerrarCaja, registrarArqueo, registrarMovimiento, type Resultado } from "./acciones";
+import { abrirCaja, cerrarCaja, moverFondo, registrarArqueo, registrarMovimiento, type Resultado } from "./acciones";
 
 function CampoSoles({ nombre, etiqueta, error, ayuda, valor, onChange, autoFocus }: { nombre: string; etiqueta: string; error?: string; ayuda?: string; valor?: string; onChange?: (v: string) => void; autoFocus?: boolean }) {
   return (
@@ -53,6 +53,8 @@ export function AbrirCaja({ area = "recepcion" }: { area?: "recepcion" | "almace
 export function Movimiento({ caja }: { caja: string }) {
   const [abierta, setAbierta] = useState(false);
   const [tipo, setTipo] = useState<"egreso" | "ingreso">("egreso");
+  const [categoria, setCategoria] = useState("");
+  const [tipoComp, setTipoComp] = useState("boleta");
   const [estado, accion, enviando] = useActionState<Resultado, FormData>(async (previo, form) => {
     const r = await registrarMovimiento(previo, form);
     if (r.ok) setAbierta(false);
@@ -97,7 +99,7 @@ export function Movimiento({ caja }: { caja: string }) {
           {tipo === "egreso" ? (
             <Campo etiqueta="¿Es un gasto del taller?" ayuda="Si es un gasto, se anota solo en Gastos del taller y cuenta en la utilidad. Un retiro de dinero no es gasto." error={e.categoria_gasto}>
               {(p) => (
-                <Selector {...p} name="categoria_gasto" defaultValue="" required>
+                <Selector {...p} name="categoria_gasto" value={categoria} onChange={(ev) => setCategoria(ev.target.value)} required>
                   <option value="" disabled>
                     Elige…
                   </option>
@@ -110,6 +112,26 @@ export function Movimiento({ caja }: { caja: string }) {
                 </Selector>
               )}
             </Campo>
+          ) : null}
+          {tipo === "egreso" && categoria && categoria !== "retiro" ? (
+            <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] gap-3">
+              <Campo etiqueta="Comprobante">
+                {(p) => (
+                  <Selector {...p} name="tipo_comprobante" value={tipoComp} onChange={(ev) => setTipoComp(ev.target.value)}>
+                    <option value="boleta">Boleta</option>
+                    <option value="factura">Factura</option>
+                    <option value="recibo">Recibo</option>
+                    <option value="otro">Otro</option>
+                    <option value="sin_comprobante">Sin comprobante</option>
+                  </Selector>
+                )}
+              </Campo>
+              {tipoComp !== "sin_comprobante" ? (
+                <Campo etiqueta="Número" ayuda={tipoComp === "otro" ? undefined : "Si no lo tienes a la mano, déjalo: queda pendiente."} error={e.numero_comprobante}>
+                  {(p) => <Entrada {...p} name="numero_comprobante" placeholder="B001-4521" maxLength={40} autoComplete="off" />}
+                </Campo>
+              ) : null}
+            </div>
           ) : null}
           <div className="grid grid-cols-2 gap-3">
             <CampoSoles nombre="monto" etiqueta="Monto" error={e.monto} />
@@ -211,5 +233,125 @@ export function RegistrarArqueo({ caja, area, esperado }: { caja: string; area: 
         </form>
       </ContenidoVentana>
     </Ventana>
+  );
+}
+
+type Persona = { id: string; nombre: string };
+
+/**
+ * Dinero para Almacén: entregarle fondo para comprar, o recibir su vuelto.
+ * Es un traspaso de efectivo (sale de una caja y entra a la otra): no es gasto.
+ */
+export function FondoAlmacen({
+  tipo,
+  personas,
+  almaceneros,
+  yo,
+  puedeExterno,
+  desdeRecepcion,
+}: {
+  tipo: "asignacion" | "devolucion";
+  personas: Persona[];
+  almaceneros: Persona[];
+  yo: string;
+  puedeExterno: boolean;
+  desdeRecepcion: boolean;
+}) {
+  const [abierta, setAbierta] = useState(false);
+  const [origen, setOrigen] = useState<"recepcion" | "externo">("recepcion");
+  const [estado, accion, enviando] = useActionState<Resultado, FormData>(async (previo, form) => {
+    const r = await moverFondo(previo, form);
+    if (r.ok) setAbierta(false);
+    return r;
+  }, {});
+  const e = estado.errores ?? {};
+  const esAsignacion = tipo === "asignacion";
+  const almacenero = almaceneros.find((p) => p.id === yo)?.id ?? almaceneros[0]?.id ?? "";
+  const entregaPorDefecto = esAsignacion ? (desdeRecepcion ? yo : "") : almacenero;
+  const recibePorDefecto = esAsignacion ? almacenero : desdeRecepcion ? yo : "";
+  const opciones = (lista: Persona[]) =>
+    lista.map((p) => (
+      <option key={p.id} value={p.id}>
+        {p.nombre}
+      </option>
+    ));
+  return (
+    <>
+      <Ventana open={abierta} onOpenChange={setAbierta}>
+        <DisparadorVentana asChild>
+          <Boton variante="secundario">
+            <ArrowLeftRight />
+            {esAsignacion ? (desdeRecepcion ? "Entregar a Almacén" : "Recibir fondo") : "Devolver vuelto"}
+          </Boton>
+        </DisparadorVentana>
+        <ContenidoVentana
+          titulo={esAsignacion ? "Dinero para Almacén" : "Vuelto de Almacén"}
+          descripcion={
+            esAsignacion
+              ? "Efectivo para comprar repuestos o insumos. No es un gasto: el gasto es lo que Almacén compre, con su comprobante."
+              : "Lo que sobró del fondo vuelve a la Caja de Recepción (o al dueño)."
+          }
+        >
+          <form action={accion} className="flex flex-col gap-4">
+            <input type="hidden" name="tipo" value={tipo} />
+            <input type="hidden" name="origen" value={origen} />
+            {puedeExterno ? (
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label="De dónde sale">
+                {(
+                  [
+                    ["recepcion", esAsignacion ? "De la Caja de Recepción" : "A la Caja de Recepción", esAsignacion ? "Sale de esa caja" : "Entra a esa caja"],
+                    ["externo", esAsignacion ? "Fuera de las cajas" : "Al dueño", esAsignacion ? "Lo da el dueño" : "No entra a ninguna caja"],
+                  ] as const
+                ).map(([v, t, d]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={origen === v}
+                    onClick={() => setOrigen(v)}
+                    className={cn("presionable cursor-pointer rounded-2xl border px-4 py-3 text-left", origen === v ? "border-primario ring-2 ring-primario/15" : "border-borde hover:bg-interna")}
+                  >
+                    <span className="block text-[15px] font-medium">{t}</span>
+                    <span className="block text-[13px] text-tinta-2">{d}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <CampoSoles nombre="monto" etiqueta="Monto en efectivo" error={e.monto} autoFocus />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Campo etiqueta="Entrega" error={e.entrega}>
+                {(p) => (
+                  <Selector {...p} name="entrega" defaultValue={entregaPorDefecto} required>
+                    <option value="" disabled>
+                      Elige…
+                    </option>
+                    {opciones(esAsignacion ? personas : almaceneros)}
+                  </Selector>
+                )}
+              </Campo>
+              <Campo etiqueta="Recibe" error={e.recibe}>
+                {(p) => (
+                  <Selector {...p} name="recibe" defaultValue={recibePorDefecto} required>
+                    <option value="" disabled>
+                      Elige…
+                    </option>
+                    {opciones(esAsignacion ? almaceneros : personas)}
+                  </Selector>
+                )}
+              </Campo>
+            </div>
+            <Campo etiqueta="Nota (opcional)">{(p) => <Entrada {...p} name="nota" maxLength={120} placeholder="Ejemplo: repuestos del Hilux" autoComplete="off" />}</Campo>
+            {estado.error ? <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">{estado.error}</p> : null}
+            <Boton type="submit" disabled={enviando} className="w-full">
+              {enviando ? "Guardando…" : esAsignacion ? "Registrar entrega" : "Registrar vuelto"}
+            </Boton>
+          </form>
+        </ContenidoVentana>
+      </Ventana>
+      {estado.ok && !abierta ? (
+        <p role="status" className="fixed bottom-24 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 rounded-2xl bg-positivo-fondo px-4 py-3 text-sm text-positivo shadow-flotante md:bottom-8">
+          {estado.ok}
+        </p>
+      ) : null}
+    </>
   );
 }

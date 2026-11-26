@@ -11,12 +11,12 @@ import { diaEnLima, formatearMomento, formatearSoles } from "@/lib/formato";
 import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { cajaAbierta, detalleCaja, historialCajas, NOMBRE_AREA, pagosSinCaja, type AreaCaja } from "@/lib/taller/caja-consultas";
-import { limitesDiaLima, listarOrdenes, nombresPersonal } from "@/lib/taller/consultas";
+import { limitesDiaLima, listarOrdenes, nombresPersonal, personalConRol } from "@/lib/taller/consultas";
 import { cuentasDeOrdenes } from "@/lib/taller/dinero-consultas";
 import { etiquetaOrden } from "@/lib/taller/estados";
 import { cn } from "@/lib/utils";
 import { anularMovimiento } from "./acciones";
-import { AbrirCaja, CerrarCaja, Movimiento } from "./controles";
+import { AbrirCaja, CerrarCaja, FondoAlmacen, Movimiento } from "./controles";
 
 export const metadata = { title: "Caja del día" };
 
@@ -122,7 +122,13 @@ export default async function CajaDelDia({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [d, ordenes] = await Promise.all([detalleCaja(ctx.taller.id, abierta.id), esRecepcion ? listarOrdenes(ctx.taller.id, { limite: 300, orden: "reciente" }) : Promise.resolve([])]);
+  const [d, ordenes, almaceneros] = await Promise.all([
+    detalleCaja(ctx.taller.id, abierta.id),
+    esRecepcion ? listarOrdenes(ctx.taller.id, { limite: 300, orden: "reciente" }) : Promise.resolve([]),
+    personalConRol(ctx.taller.id, "almacen"),
+  ]);
+  const personas = [...nombres.entries()].map(([id, nombre]) => ({ id, nombre })).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  const esGestorCaja = tieneAlguno(ctx.roles, ["gerencia", "administrador"]);
   if (!d) notFound();
   const cuentas = await cuentasDeOrdenes(ctx.taller.id, ordenes.map((o) => ({ id: o.id, numero: o.numero, placa: o.placa, cliente: o.cliente, estado: o.estado })));
   const opciones = cuentas
@@ -137,6 +143,14 @@ export default async function CajaDelDia({ searchParams }: { searchParams: Promi
         accion={
           <div className="flex flex-wrap gap-2">
             {esRecepcion ? <RegistrarPago ordenes={opciones} /> : null}
+            {esRecepcion ? (
+              <FondoAlmacen tipo="asignacion" personas={personas} almaceneros={almaceneros} yo={ctx.perfil.id} puedeExterno={false} desdeRecepcion />
+            ) : (
+              <>
+                <FondoAlmacen tipo="asignacion" personas={personas} almaceneros={almaceneros} yo={ctx.perfil.id} puedeExterno={esGestorCaja} desdeRecepcion={false} />
+                <FondoAlmacen tipo="devolucion" personas={personas} almaceneros={almaceneros} yo={ctx.perfil.id} puedeExterno={esGestorCaja} desdeRecepcion={false} />
+              </>
+            )}
             <Movimiento caja={abierta.id} />
             <CerrarCaja caja={abierta.id} esperado={d.efectivo.esperado} />
           </div>
@@ -202,8 +216,15 @@ export default async function CajaDelDia({ searchParams }: { searchParams: Promi
                       </p>
                       <p className="text-[13px] text-tinta-3">
                         {hora(m.momento)} · {MEDIOS[m.medio]}
+                        {m.fondo ? ` · entregó ${quien(m.fondo.entregadoPor)}, recibió ${quien(m.fondo.recibidoPor)} · no es gasto` : ""}
+                        {m.comprobante && m.comprobante.tipo !== "sin_comprobante" ? ` · ${m.comprobante.tipo === "factura" ? "Factura" : m.comprobante.tipo === "boleta" ? "Boleta" : m.comprobante.tipo === "recibo" ? "Recibo" : "Comprobante"} ${m.comprobante.numero ?? ""}` : ""}
                         {anulado ? ` · Anulado: ${m.motivoAnulacion}` : ""}
                       </p>
+                      {!anulado && m.comprobante && ["factura", "boleta", "recibo"].includes(m.comprobante.tipo) && !m.comprobante.numero ? (
+                        <Link href="/gastos?ver=pendientes" className="mt-1 inline-flex rounded-full bg-aviso-fondo px-2.5 py-0.5 text-[12px] font-medium text-aviso">
+                          Comprobante pendiente
+                        </Link>
+                      ) : null}
                     </div>
                     <span className={cn("num text-[15px] font-medium", m.efecto < 0 && "text-negativo", anulado && "text-tinta-3")}>
                       {m.efecto < 0 ? "−" : "+"}

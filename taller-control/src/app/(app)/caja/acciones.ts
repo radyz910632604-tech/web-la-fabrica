@@ -40,6 +40,8 @@ const esquemaMovimiento = z.object({
   monto: z.coerce.number({ error: "Escribe el monto." }).positive("El monto debe ser mayor que cero.").max(9_999_999),
   medio: z.enum(["efectivo", "yape", "plin", "tarjeta", "transferencia"]),
   categoria_gasto: z.string().optional(),
+  tipo_comprobante: z.enum(["factura", "boleta", "recibo", "otro", "sin_comprobante"]).optional(),
+  numero_comprobante: z.string().trim().max(40, "Máximo 40 caracteres.").optional(),
 });
 
 /** Ingreso o gasto de caja que no es pago de una orden (sencillo, movilidad, retiro). */
@@ -64,11 +66,24 @@ export async function registrarMovimiento(_previo: Resultado, form: FormData): P
     monto: Math.round(r.data.monto * 100) / 100,
     medio: r.data.medio,
     categoria_gasto: categoria && categoria !== "retiro" ? categoria : null,
+    // El comprobante del gasto pasa a Gastos; sin número queda «pendiente» para completarlo después.
+    tipo_comprobante: categoria && categoria !== "retiro" ? (r.data.tipo_comprobante ?? "sin_comprobante") : null,
+    numero_comprobante: categoria && categoria !== "retiro" ? r.data.numero_comprobante || null : null,
   });
   if (error) return { error: error.message.includes("cerrada") ? "La caja ya está cerrada." : "No se pudo registrar." };
   revalidatePath("/caja");
   revalidatePath("/gastos");
-  return { ok: r.data.tipo === "ingreso" ? "Ingreso registrado." : categoria === "retiro" ? "Retiro registrado." : "Gasto registrado: también quedó en Gastos del taller." };
+  const pendiente = categoria && categoria !== "retiro" && ["factura", "boleta", "recibo"].includes(r.data.tipo_comprobante ?? "") && !r.data.numero_comprobante;
+  return {
+    ok:
+      r.data.tipo === "ingreso"
+        ? "Ingreso registrado."
+        : categoria === "retiro"
+          ? "Retiro registrado."
+          : pendiente
+            ? "Gasto registrado con el comprobante pendiente: complétalo en Gastos del taller."
+            : "Gasto registrado: también quedó en Gastos del taller.",
+  };
 }
 
 export async function anularMovimiento(id: string, motivo: string): Promise<Resultado> {
@@ -118,4 +133,45 @@ export async function registrarArqueo(_previo: Resultado, form: FormData): Promi
   revalidatePath("/caja", "layout");
   const d = Number((data as { diferencia: number }).diferencia);
   return { ok: d === 0 ? "Arqueo registrado: cuadró exacto." : d > 0 ? `Arqueo registrado: sobran S/ ${d.toFixed(2)}.` : `Arqueo registrado: faltan S/ ${Math.abs(d).toFixed(2)}.` };
+}
+
+const esquemaFondo = z.object({
+  tipo: z.enum(["asignacion", "devolucion"]),
+  origen: z.enum(["recepcion", "externo"]),
+  monto: z.coerce.number({ error: "Escribe el monto." }).positive("El monto debe ser mayor que cero.").max(9_999_999),
+  entrega: z.string().uuid("Elige quién entrega."),
+  recibe: z.string().uuid("Elige quién recibe."),
+  nota: z.string().trim().max(120).optional(),
+});
+
+/**
+ * Dinero para Almacén (o su vuelto): es un traspaso de efectivo entre cajas, no un gasto.
+ * El gasto se registra cuando Almacén compra, con su comprobante.
+ */
+export async function moverFondo(_previo: Resultado, form: FormData): Promise<Resultado> {
+  const ctx = await exigirCaja();
+  const r = esquemaFondo.safeParse(Object.fromEntries(form));
+  if (!r.success) {
+    const errores: Record<string, string> = {};
+    for (const i of r.error.issues) errores[String(i.path[0])] ??= i.message;
+    return { errores };
+  }
+  const supabase = await clienteServidor();
+  const { error } = await supabase.rpc("mover_fondo_almacen", {
+    p_empresa: ctx.taller.id,
+    p_tipo: r.data.tipo,
+    p_monto: Math.round(r.data.monto * 100) / 100,
+    p_origen: r.data.origen,
+    p_entregado_por: r.data.entrega,
+    p_recibido_por: r.data.recibe,
+    p_nota: r.data.nota ?? "",
+  });
+  if (error) return { error: error.code === "23514" || error.code === "42501" ? error.message : "No se pudo registrar." };
+  revalidatePath("/caja", "layout");
+  return {
+    ok:
+      r.data.tipo === "asignacion"
+        ? `Fondo de S/ ${r.data.monto.toFixed(2)} entregado a Almacén. No es gasto: lo será lo que compre.`
+        : `Vuelto de S/ ${r.data.monto.toFixed(2)} devuelto por Almacén.`,
+  };
 }

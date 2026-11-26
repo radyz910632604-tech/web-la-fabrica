@@ -22,7 +22,7 @@ const esquema = z.object({
   proveedorId: z.string(),
   ruc: z.string().trim().regex(/^((10|15|17|20)\d{9})?$/, "El RUC tiene 11 números y empieza con 10, 15, 17 o 20."),
   razonSocial: z.string().trim().max(160),
-  tipo: z.enum(["factura", "boleta", "nota_venta", "ticket", "sin_comprobante"]),
+  tipo: z.enum(["factura", "boleta", "recibo", "nota_venta", "ticket", "otro", "sin_comprobante"]),
   serie: z.string().trim().toUpperCase().regex(/^([A-Z0-9]{1,4})?$/, "Serie como F001."),
   numero: z.string().trim().regex(/^(\d{1,8})?$/, "Solo números, hasta 8."),
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elige la fecha."),
@@ -51,7 +51,8 @@ export async function registrarCompra(_previo: Resultado, form: FormData): Promi
   }
   const d = r.data;
   if (!d.proveedorId && d.razonSocial.length < 2) return { errores: { razonSocial: "Escribe el nombre del proveedor." } };
-  if (d.tipo !== "sin_comprobante" && (!d.serie || !d.numero)) return { errores: { numero: "Escribe la serie y el número del comprobante." } };
+  // Sin número se puede guardar en el apuro: queda «comprobante pendiente» para completarlo después.
+  if (d.serie && !d.numero) return { errores: { numero: "Falta el número (o borra la serie y complétalo después)." } };
 
   const { tasaIgv } = await configDinero(ctx.taller.id);
   // Solo la factura da crédito de IGV; en boleta, ticket o sin comprobante el costo es el total.
@@ -131,4 +132,24 @@ export async function confirmarCompra(id: string): Promise<Resultado> {
   if (error || count !== 1) return { error: "No se pudo confirmar." };
   revalidatePath("/", "layout");
   return { ok: "Compra confirmada." };
+}
+
+/** Completar serie y número de una compra con comprobante pendiente (lo único que se puede cambiar). */
+export async function completarComprobanteCompra(id: string, serie: string, numero: string): Promise<Resultado> {
+  const ctx = await obtenerContexto();
+  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "almacen"])) return { error: "Tu rol no registra compras." };
+  const s = serie.trim().toUpperCase();
+  const n = numero.trim();
+  if (!/^[A-Z0-9]{1,4}$/.test(s) && s !== "") return { error: "Serie como F001 o B001." };
+  if (!/^\d{1,8}$/.test(n)) return { error: "El número: solo dígitos, hasta 8." };
+  const supabase = await clienteServidor();
+  const { error, count } = await supabase
+    .from("compras")
+    .update({ serie: s || null, numero: String(Number(n)) }, { count: "exact" })
+    .eq("id", id)
+    .eq("comprobante_pendiente", true);
+  if (error) return { error: error.code === "23505" ? "Ese comprobante ya está registrado en otra compra." : "No se pudo guardar." };
+  if (count !== 1) return { error: "Esta compra ya no tiene el comprobante pendiente." };
+  revalidatePath("/compras");
+  return { ok: "Comprobante completado." };
 }

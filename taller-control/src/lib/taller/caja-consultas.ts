@@ -40,6 +40,10 @@ export type Movimiento = {
   ordenId: string | null;
   estado: string;
   motivoAnulacion: string | null;
+  /** Fondo de Almacén: traspaso entre cajas (no es gasto). */
+  fondo?: { entregadoPor: string | null; recibidoPor: string | null };
+  /** Comprobante del gasto (si lo tiene) y si falta su número. */
+  comprobante?: { tipo: string; numero: string | null };
 };
 
 export type DetalleCaja = {
@@ -88,7 +92,7 @@ export async function detalleCaja(empresaId: string, cajaId: string): Promise<De
   const [{ data: c }, { data: pagos }, { data: movs }] = await Promise.all([
     supabase.from("cajas").select(COLUMNAS).eq("id", cajaId).eq("empresa_id", empresaId).maybeSingle(),
     supabase.from("pagos").select("id, orden_id, monto, tipo, medio, pagado_en, estado, motivo_anulacion, ordenes_trabajo (numero)").eq("caja_id", cajaId).order("pagado_en"),
-    supabase.from("movimientos_caja").select("id, tipo, concepto, monto, medio, creado_en, estado, motivo_anulacion").eq("caja_id", cajaId).order("creado_en"),
+    supabase.from("movimientos_caja").select("id, tipo, concepto, monto, medio, creado_en, estado, motivo_anulacion, clase, entregado_por, recibido_por, tipo_comprobante, numero_comprobante").eq("caja_id", cajaId).order("creado_en"),
   ]);
   if (!c) return null;
   const caja = aCaja(c);
@@ -105,6 +109,8 @@ export async function detalleCaja(empresaId: string, cajaId: string): Promise<De
     ...(movs ?? []).map((m) => ({
       id: m.id, clase: "movimiento" as const, momento: m.creado_en, tipo: m.tipo, concepto: m.concepto, medio: m.medio as MedioPago,
       monto: n(m.monto), efecto: m.tipo === "egreso" ? -n(m.monto) : n(m.monto), ordenId: null, estado: m.estado, motivoAnulacion: m.motivo_anulacion,
+      fondo: m.clase && m.clase !== "normal" ? { entregadoPor: m.entregado_por, recibidoPor: m.recibido_por } : undefined,
+      comprobante: m.tipo_comprobante ? { tipo: m.tipo_comprobante, numero: m.numero_comprobante } : undefined,
     })),
   ].sort((a, b) => b.momento.localeCompare(a.momento));
   const vigentes = movimientos.filter((m) => m.estado === "confirmado");
@@ -155,6 +161,8 @@ export type CajaMaestra = {
   egresosGastos: number;
   egresosCompras: number;
   egresosOtros: number;
+  /** Lo que recibió Almacén como fondo, menos el vuelto (no es gasto). */
+  fondoAlmacen: number;
   cierresAutomaticos: number;
   requiereArqueo: boolean;
   generadaEn: string;
@@ -204,6 +212,7 @@ export async function cajaMaestra(empresaId: string, fecha: string): Promise<Caj
     egresosGastos: n(m.egresos_gastos),
     egresosCompras: n(m.egresos_compras),
     egresosOtros: n(m.egresos_otros),
+    fondoAlmacen: n(m.fondo_almacen),
     cierresAutomaticos: m.cierres_automaticos,
     requiereArqueo: m.requiere_arqueo,
     generadaEn: m.generada_en,

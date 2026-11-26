@@ -14,7 +14,7 @@ import { mesesHasta } from "@/lib/taller/reportes";
 import { cn } from "@/lib/utils";
 import { anularGasto } from "./acciones";
 import { CATEGORIAS_GASTO, type CategoriaGasto } from "./categorias";
-import { RegistrarGasto } from "./formulario";
+import { CompletarComprobante, RegistrarGasto } from "./formulario";
 
 export const metadata = { title: "Gastos del taller" };
 
@@ -24,24 +24,28 @@ const etiquetaMes = (mes: string) => {
   return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${a}`;
 };
 
-export default async function Gastos({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
+const TIPO_COMP: Record<string, string> = { factura: "Factura", boleta: "Boleta", recibo: "Recibo", otro: "Comprobante" };
+
+export default async function Gastos({ searchParams }: { searchParams: Promise<{ mes?: string; ver?: string }> }) {
   const ctx = await obtenerContexto();
   if (!esGestor(ctx.roles)) notFound();
   const hoy = diaEnLima(new Date());
-  const { mes: pedido } = await searchParams;
+  const { mes: pedido, ver } = await searchParams;
+  const soloPendientes = ver === "pendientes";
   const mes = pedido && /^\d{4}-\d{2}$/.test(pedido) && pedido <= hoy.slice(0, 7) ? pedido : hoy.slice(0, 7);
   const [anterior] = mesesHasta(mes, 2);
   const siguiente = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 1)).toISOString().slice(0, 7);
   const { desdeDia, hastaDia } = limitesMes(mes);
   const supabase = await clienteServidor();
-  const { data } = await supabase
+  let consulta = supabase
     .from("gastos")
-    .select("id, fecha, categoria, descripcion, monto, medio, comprobante, estado, motivo_anulacion, origen")
-    .eq("empresa_id", ctx.taller.id)
-    .gte("fecha", desdeDia)
-    .lt("fecha", hastaDia)
-    .order("fecha", { ascending: false })
-    .order("creado_en", { ascending: false });
+    .select("id, fecha, categoria, descripcion, monto, medio, comprobante, tipo_comprobante, comprobante_pendiente, estado, motivo_anulacion, origen, movimiento_caja_id")
+    .eq("empresa_id", ctx.taller.id);
+  consulta = soloPendientes ? consulta.eq("comprobante_pendiente", true).neq("estado", "anulado") : consulta.gte("fecha", desdeDia).lt("fecha", hastaDia);
+  const [{ data }, { count: pendientes }] = await Promise.all([
+    consulta.order("fecha", { ascending: false }).order("creado_en", { ascending: false }),
+    supabase.from("gastos").select("id", { count: "exact", head: true }).eq("empresa_id", ctx.taller.id).eq("comprobante_pendiente", true).neq("estado", "anulado"),
+  ]);
   const gastos = data ?? [];
   const vigentes = gastos.filter((g) => g.estado !== "anulado");
   const total = vigentes.reduce((a, g) => a + Number(g.monto), 0);
@@ -58,6 +62,14 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<{
       />
       <SubnavCaja actual="/gastos" roles={ctx.roles} />
 
+      {pendientes ? (
+        <Link
+          href={soloPendientes ? "/gastos" : "/gastos?ver=pendientes"}
+          className="flex w-fit items-center gap-2 rounded-full bg-aviso-fondo px-4 py-2 text-sm font-medium text-aviso hover:bg-aviso-fondo/70"
+        >
+          {soloPendientes ? "← Ver todos los gastos" : `${pendientes} ${pendientes === 1 ? "gasto con comprobante pendiente" : "gastos con comprobante pendiente"} · completarlos`}
+        </Link>
+      ) : null}
       <div className="flex items-center gap-2">
         <Link href={`/gastos?mes=${anterior}`} className="presionable grid size-11 place-items-center rounded-full bg-tarjeta shadow-reposo hover:bg-interna" aria-label="Mes anterior">
           <ChevronLeft className="size-5" />
@@ -113,9 +125,11 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<{
                     <p className="truncate text-[13px] text-tinta-3">
                       {g.fecha.split("-").reverse().join("/")} · {CATEGORIAS_GASTO[g.categoria as CategoriaGasto] ?? g.categoria}
                       {g.medio ? ` · ${MEDIOS[g.medio as MedioPago]}` : ""}
-                      {g.comprobante ? ` · ${g.comprobante}` : ""}
+                      {g.comprobante ? ` · ${TIPO_COMP[g.tipo_comprobante] ?? "Comprobante"} ${g.comprobante}` : ""}
+                      {g.movimiento_caja_id ? " · desde la caja" : ""}
                       {g.estado === "anulado" ? ` · Anulado: ${g.motivo_anulacion}` : ""}
                     </p>
+                    {g.comprobante_pendiente && g.estado !== "anulado" ? <CompletarComprobante id={g.id} /> : null}
                   </div>
                   <span className={cn("num shrink-0 text-[15px] font-medium", g.estado === "anulado" && "text-tinta-3 line-through")}>{formatearSoles(Number(g.monto))}</span>
                   {g.origen === "comision" ? (

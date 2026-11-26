@@ -23,8 +23,10 @@ type RepuestoOpcion = { id: string; codigo: string; nombre: string };
 const TIPOS = [
   ["factura", "Factura"],
   ["boleta", "Boleta"],
+  ["recibo", "Recibo"],
   ["nota_venta", "Nota de venta"],
   ["ticket", "Ticket"],
+  ["otro", "Otro"],
   ["sin_comprobante", "Sin comprobante"],
 ] as const;
 

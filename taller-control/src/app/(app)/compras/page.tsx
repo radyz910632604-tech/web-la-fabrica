@@ -16,15 +16,17 @@ import { etiquetaOrden, numeroOrden } from "@/lib/taller/estados";
 import { cn } from "@/lib/utils";
 import { ConfirmarMontos } from "@/components/ia/confirmar-montos";
 import { anularCompra, confirmarCompra } from "./acciones";
-import { EntregarRepuesto } from "./controles";
+import { CompletarComprobanteCompra, EntregarRepuesto } from "./controles";
 
 export const metadata = { title: "Compras" };
 
 const TIPO: Record<string, string> = {
   factura: "Factura",
   boleta: "Boleta",
+  recibo: "Recibo",
   nota_venta: "Nota de venta",
   ticket: "Ticket",
+  otro: "Otro comprobante",
   sin_comprobante: "Sin comprobante",
 };
 
@@ -62,7 +64,7 @@ export default async function Compras({
     supabase
       .from("compras")
       .select(
-        "id, tipo_comprobante, serie, numero, fecha_emision, moneda, tipo_cambio, subtotal_sin_igv, igv, total, estado, motivo_anulacion, origen_datos, archivo_path, proveedores (razon_social, ruc), compra_items (id, descripcion, cantidad, total, destino, orden_id, repuesto_id)",
+        "id, tipo_comprobante, serie, numero, comprobante_pendiente, fecha_emision, moneda, tipo_cambio, subtotal_sin_igv, igv, total, estado, motivo_anulacion, origen_datos, archivo_path, proveedores (razon_social, ruc), compra_items (id, descripcion, cantidad, total, destino, orden_id, repuesto_id)",
       )
       .eq("empresa_id", ctx.taller.id)
       .order("fecha_emision", { ascending: false })
@@ -275,6 +277,7 @@ export default async function Compras({
                             : ""}
                         {anulado ? ` · Anulada: ${c.motivo_anulacion}` : ""}
                       </p>
+                      {c.comprobante_pendiente && !anulado ? <CompletarComprobanteCompra id={c.id} /> : null}
                       <p className="mt-1 text-[13px] text-tinta-2">
                         {c.items.map((i) => i.descripcion).join(", ")}
                         {destinos.length ? (

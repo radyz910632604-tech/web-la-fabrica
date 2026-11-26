@@ -165,6 +165,15 @@ export default async function CajaMaestra({ searchParams }: { searchParams: Prom
                   <dt>Retiros y otros</dt>
                   <dd>{formatearSoles(m.egresosOtros)}</dd>
                 </div>
+                {m.fondoAlmacen ? (
+                  <div className="flex justify-between gap-3 border-t border-regla py-2 text-tinta-2">
+                    <dt>
+                      Fondo entregado a Almacén
+                      <span className="block text-[12px] text-tinta-3">Traspaso entre cajas, no es gasto</span>
+                    </dt>
+                    <dd>{formatearSoles(m.fondoAlmacen)}</dd>
+                  </div>
+                ) : null}
               </dl>
             </Tarjeta>
           </div>
