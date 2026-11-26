@@ -76,7 +76,7 @@ export function puntosDelSistema(d: DatosSistema): Punto[] {
   // 8. Personal
   p.push(
     d.personal.activos <= 1
-      ? { clave: "personal", titulo: "Personal", estado: "atencion", detalle: "Solo estás tú. Cada persona debe entrar con su propio celular.", como: "Agrégalas en Personal y roles." }
+      ? { clave: "personal", titulo: "Personal", estado: "atencion", detalle: "Solo estás tú. Cada persona debe entrar con su propio celular.", como: "Agrégalas en Personal." }
       : { clave: "personal", titulo: "Personal", estado: "listo", detalle: `${d.personal.activos} personas con acceso.` },
   );
   return p;

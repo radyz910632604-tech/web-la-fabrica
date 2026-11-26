@@ -11,7 +11,7 @@ const GUIAS: Record<Rol, { para: string; pasos: string[] }> = {
     para: "Ver cómo va cada taller y decidir.",
     pasos: [
       "El panel muestra los carros en el taller, los listos y los que esperan repuesto. Cambia de taller arriba a la izquierda.",
-      "En Personal y roles agregas a tu equipo con su celular y le das uno o varios roles. Puedes quitarle el acceso en cualquier momento.",
+      "En Personal agregas a tu equipo con su celular y le das uno o varios roles. Si deja de trabajar, lo das de baja: pierde el acceso al instante y su historial se conserva.",
       "En Configuración ajustas la garantía, la tolerancia de citas, el IGV, la meta del mes y si administración puede ver la utilidad.",
       "En Reportes ves ventas, compras, utilidad y comisiones mes a mes, y los descargas en Excel o PDF.",
     ],
@@ -19,7 +19,7 @@ const GUIAS: Record<Rol, { para: string; pasos: string[] }> = {
   administrador: {
     para: "Dejar todo listo para que el taller funcione.",
     pasos: [
-      "Agrega al personal en Personal y roles. No puedes dar el rol de gerencia.",
+      "Agrega al personal en Personal. No puedes dar el rol de gerencia.",
       "En Configuración: datos del taller, servicios que ofrecen, reglas y meta del mes.",
       "También puedes registrar ingresos y citas como un asesor.",
     ],

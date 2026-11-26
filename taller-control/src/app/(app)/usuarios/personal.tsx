@@ -1,20 +1,32 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Ellipsis, KeyRound, Plus, UserRoundCheck, UserRoundX, UsersRound } from "lucide-react";
+import { Crown, Pencil, Plus, UserRoundCheck, UserRoundX, UsersRound } from "lucide-react";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { Casilla } from "@/components/ui/casilla";
-import { Estado } from "@/components/ui/estado";
-import { ContenidoMenu, DisparadorMenu, Menu, OpcionMenu, SeparadorMenu } from "@/components/ui/menu";
 import { Tarjeta } from "@/components/ui/tarjeta";
 import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ventana";
 import { iniciales } from "@/lib/formato";
 import { NOMBRE_ROL, type Rol } from "@/lib/roles";
 import { cn } from "@/lib/utils";
-import { agregarPersona, asignarClave, cambiarAcceso, cambiarRoles, type Resultado } from "./acciones";
+import { agregarPersona, asignarClave, cambiarRoles, darDeBaja, editarDatos, reactivar, type Resultado } from "./acciones";
 
-export type Persona = { id: string; nombre: string; celular: string; activo: boolean; roles: Rol[] };
+export type Persona = {
+  id: string;
+  nombre: string;
+  celular: string;
+  documento: string | null;
+  cargo: string | null;
+  fechaIngreso: string | null;
+  activo: boolean;
+  dueno: boolean;
+  bajaEn: string | null;
+  bajaMotivo: string | null;
+  roles: Rol[];
+};
+
+const fechaLarga = (f: string) => new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(f));
 
 function Mensaje({ resultado }: { resultado: Resultado }) {
   if (resultado.error) {
@@ -68,6 +80,9 @@ export function AgregarPersona({ asignables }: { asignables: Rol[] }) {
               </Selector>
             )}
           </Campo>
+          <Campo etiqueta="Cargo (opcional)" ayuda="Cómo lo llaman en el taller: «Mecánico de motor», «Cajera».">
+            {(p) => <Entrada {...p} name="cargo" autoComplete="off" maxLength={60} />}
+          </Campo>
           <Campo etiqueta="Contraseña inicial" error={estado.errores?.clave} ayuda="Mínimo 8 caracteres. Te sugerimos esta; puedes cambiarla.">
             {(p) => <Entrada {...p} name="clave" defaultValue={clave} autoComplete="new-password" className="num" required />}
           </Campo>
@@ -95,21 +110,25 @@ function generarClave() {
 
 export function ListaPersonal({
   personas,
+  deBaja,
   asignables,
   yo,
   soyGerencia,
+  hoy,
 }: {
   personas: Persona[];
+  deBaja: boolean;
   asignables: Rol[];
   yo: string;
   soyGerencia: boolean;
+  hoy: string;
 }) {
   if (personas.length === 0) {
     return (
       <Tarjeta className="flex flex-col items-start gap-2">
         <UsersRound className="size-6 text-tinta-3" aria-hidden />
-        <p className="text-[15px] font-medium">Todavía no hay personal en este taller.</p>
-        <p className="text-sm text-tinta-2">Agrega a la primera persona con el botón de arriba.</p>
+        <p className="text-[15px] font-medium">{deBaja ? "Nadie dado de baja." : "Todavía no hay personal en este taller."}</p>
+        <p className="text-sm text-tinta-2">{deBaja ? "Aquí aparece quien deje de trabajar, con su historial intacto." : "Agrega a la primera persona con el botón de arriba."}</p>
       </Tarjeta>
     );
   }
@@ -120,7 +139,7 @@ export function ListaPersonal({
           const esGerencia = p.roles.includes("gerencia");
           const puedoGestionar = p.id !== yo && (soyGerencia || !esGerencia);
           return (
-            <li key={p.id} className="flex items-center gap-3 border-t border-regla px-2 py-3 first:border-t-0 md:gap-4 md:px-3">
+            <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-3 border-t border-regla px-2 py-3.5 first:border-t-0 md:flex-nowrap md:gap-4 md:px-3">
               <span
                 aria-hidden
                 className={cn(
@@ -130,31 +149,41 @@ export function ListaPersonal({
               >
                 {iniciales(p.nombre)}
               </span>
-              <div className="min-w-0 flex-1 md:grid md:grid-cols-[minmax(0,1.1fr)_minmax(0,1.6fr)_120px] md:items-center md:gap-4">
+              <div className="min-w-0 flex-1 md:grid md:grid-cols-[minmax(0,1.2fr)_minmax(0,1.5fr)] md:items-center md:gap-4">
                 <div className="min-w-0">
-                  <p className={cn("truncate text-[15px] font-medium", !p.activo && "text-tinta-3")}>
-                    {p.nombre}
-                    {p.id === yo ? <span className="font-normal text-tinta-3"> (tú)</span> : null}
+                  <p className={cn("flex items-center gap-2 text-[15px] font-medium", !p.activo && "text-tinta-2")}>
+                    <span className="truncate">{p.nombre}</span>
+                    {p.id === yo ? <span className="shrink-0 font-normal text-tinta-3">(tú)</span> : null}
+                    {p.dueno ? (
+                      <span className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-acento-suave px-2.5 text-[12px] font-medium text-tinta">
+                        <Crown className="size-3.5" aria-hidden />
+                        Dueño
+                      </span>
+                    ) : null}
                   </p>
-                  <p className="num text-[13px] text-tinta-3">{p.celular}</p>
+                  <p className="truncate text-[13px] text-tinta-3">
+                    {[p.cargo, p.celular].filter(Boolean).join(" · ")}
+                  </p>
                 </div>
-                <ul className="mt-1.5 flex flex-wrap gap-1.5 md:mt-0" aria-label="Roles">
-                  {p.roles.map((r) => (
-                    <li key={r} className="flex h-7 items-center rounded-full bg-interna px-3 text-[13px] whitespace-nowrap text-tinta">
-                      {NOMBRE_ROL[r]}
-                    </li>
-                  ))}
-                </ul>
-                <Estado
-                  className="mt-1.5 text-[13px] text-tinta-2 md:mt-0"
-                  color={p.activo ? "verde" : "gris"}
-                  texto={p.activo ? "Con acceso" : "Desactivada"}
-                />
+                {deBaja ? (
+                  <p className="mt-1.5 min-w-0 text-[13px] text-tinta-2 md:mt-0">
+                    <span className="font-medium text-tinta">De baja{p.bajaEn ? ` desde el ${fechaLarga(p.bajaEn)}` : ""}</span>
+                    {p.bajaMotivo ? <span className="block truncate">{p.bajaMotivo}</span> : null}
+                  </p>
+                ) : (
+                  <ul className="mt-1.5 flex flex-wrap gap-1.5 md:mt-0" aria-label="Roles">
+                    {p.roles.map((r) => (
+                      <li key={r} className="flex h-7 items-center rounded-full bg-interna px-3 text-[13px] whitespace-nowrap text-tinta">
+                        {NOMBRE_ROL[r]}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               {puedoGestionar ? (
-                <AccionesPersona persona={p} asignables={asignables} />
+                <AccionesPersona persona={p} asignables={asignables} hoy={hoy} />
               ) : (
-                <span className="size-10 shrink-0" aria-hidden />
+                <span className="hidden w-[220px] shrink-0 md:block" aria-hidden />
               )}
             </li>
           );
@@ -164,77 +193,202 @@ export function ListaPersonal({
   );
 }
 
-function AccionesPersona({ persona, asignables }: { persona: Persona; asignables: Rol[] }) {
-  const [ventana, setVentana] = useState<"roles" | "clave" | null>(null);
-  const [resultado, setResultado] = useState<Resultado>({});
-  const [pendiente, iniciar] = useTransition();
-
+function Aviso({ resultado }: { resultado: Resultado }) {
+  if (!resultado.error && !resultado.ok) return null;
   return (
-    <>
-      <Menu>
-        <DisparadorMenu asChild>
-          <button
-            type="button"
-            className="presionable grid size-10 shrink-0 cursor-pointer place-items-center rounded-full text-tinta-2 hover:bg-interna data-[state=open]:bg-interna"
-            aria-label={`Opciones de ${persona.nombre}`}
-          >
-            <Ellipsis className="size-5" />
-          </button>
-        </DisparadorMenu>
-        <ContenidoMenu align="end">
-          <OpcionMenu onSelect={() => { setResultado({}); setVentana("roles"); }}>
-            <UsersRound />
-            Cambiar roles
-          </OpcionMenu>
-          <OpcionMenu onSelect={() => { setResultado({}); setVentana("clave"); }}>
-            <KeyRound />
-            Asignar nueva contraseña
-          </OpcionMenu>
-          <SeparadorMenu />
-          <OpcionMenu
-            disabled={pendiente}
-            onSelect={() =>
-              iniciar(async () => {
-                setResultado(await cambiarAcceso(persona.id, !persona.activo));
-                setTimeout(() => setResultado({}), 4000);
-              })
-            }
-            className={persona.activo ? "text-negativo [&_svg]:text-negativo" : undefined}
-          >
-            {persona.activo ? <UserRoundX /> : <UserRoundCheck />}
-            {persona.activo ? "Quitar acceso" : "Devolver acceso"}
-          </OpcionMenu>
-        </ContenidoMenu>
-      </Menu>
-
-      {(resultado.error || resultado.ok) && ventana === null ? (
-        <p
-          role={resultado.error ? "alert" : "status"}
-          className={cn(
-            "fixed bottom-24 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 rounded-2xl px-4 py-3 text-sm shadow-flotante md:bottom-8",
-            resultado.error ? "bg-negativo-fondo text-negativo" : "bg-positivo-fondo text-positivo",
-          )}
-        >
-          {resultado.error ?? resultado.ok}
-        </p>
-      ) : null}
-
-      <Ventana open={ventana === "roles"} onOpenChange={(v) => !v && setVentana(null)}>
-        <ContenidoVentana titulo={`Roles de ${persona.nombre}`} descripcion="Puede tener más de uno. Lo que ve depende de sus roles.">
-          <FormularioRoles persona={persona} asignables={asignables} alTerminar={() => setVentana(null)} />
-        </ContenidoVentana>
-      </Ventana>
-
-      <Ventana open={ventana === "clave"} onOpenChange={(v) => !v && setVentana(null)}>
-        <ContenidoVentana titulo="Nueva contraseña" descripcion={`Para ${persona.nombre}. Dásela en persona; la anterior deja de funcionar.`}>
-          <FormularioClave persona={persona} />
-        </ContenidoVentana>
-      </Ventana>
-    </>
+    <p
+      role={resultado.error ? "alert" : "status"}
+      className={cn(
+        "fixed bottom-24 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 rounded-2xl px-4 py-3 text-sm shadow-flotante md:bottom-8",
+        resultado.error ? "bg-negativo-fondo text-negativo" : "bg-positivo-fondo text-positivo",
+      )}
+    >
+      {resultado.error ?? resultado.ok}
+    </p>
   );
 }
 
-function FormularioRoles({ persona, asignables, alTerminar }: { persona: Persona; asignables: Rol[]; alTerminar: () => void }) {
+/** Los dos botones al costado de cada persona. */
+function AccionesPersona({ persona, asignables, hoy }: { persona: Persona; asignables: Rol[]; hoy: string }) {
+  const [ventana, setVentana] = useState<"modificar" | "baja" | null>(null);
+  const [resultado, setResultado] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  const avisar = (r: Resultado) => {
+    setResultado(r);
+    setTimeout(() => setResultado({}), 4500);
+  };
+
+  return (
+    <div className="flex w-full shrink-0 gap-2 pl-14 md:w-auto md:pl-0">
+      {persona.activo ? (
+        <>
+          <Boton variante="secundario" tamano="chico" onClick={() => setVentana("modificar")} aria-label={`Modificar a ${persona.nombre}`}>
+            <Pencil />
+            Modificar
+          </Boton>
+          {persona.dueno ? null : (
+            <Boton variante="fantasma" tamano="chico" className="text-negativo [&_svg]:text-negativo" onClick={() => setVentana("baja")} aria-label={`Dar de baja a ${persona.nombre}`}>
+              <UserRoundX />
+              Dar de baja
+            </Boton>
+          )}
+        </>
+      ) : (
+        <Boton
+          variante="secundario"
+          tamano="chico"
+          disabled={pendiente}
+          onClick={() => iniciar(async () => avisar(await reactivar(persona.id)))}
+          aria-label={`Reactivar a ${persona.nombre}`}
+        >
+          <UserRoundCheck />
+          {pendiente ? "Reactivando…" : "Reactivar"}
+        </Boton>
+      )}
+
+      {ventana === null ? <Aviso resultado={resultado} /> : null}
+
+      <Ventana open={ventana === "modificar"} onOpenChange={(v) => !v && setVentana(null)}>
+        <ContenidoVentana titulo={persona.nombre} descripcion={persona.dueno ? "Dueño del taller: no se puede dar de baja ni quitarle la gerencia." : "Cambia sus datos, roles o contraseña."}>
+          <Modificar persona={persona} asignables={asignables} />
+        </ContenidoVentana>
+      </Ventana>
+
+      <Ventana open={ventana === "baja"} onOpenChange={(v) => !v && setVentana(null)}>
+        <ContenidoVentana titulo={`Dar de baja a ${persona.nombre}`} descripcion="Pierde el acceso al instante, también por WhatsApp. No se borra nada: sus órdenes, movimientos y gastos siguen a su nombre. Puedes reactivarlo cuando quieras.">
+          <FormularioBaja
+            persona={persona}
+            hoy={hoy}
+            alTerminar={(r) => {
+              setVentana(null);
+              avisar(r);
+            }}
+          />
+        </ContenidoVentana>
+      </Ventana>
+    </div>
+  );
+}
+
+const PESTANAS = [
+  ["datos", "Datos y contraseña"],
+  ["roles", "Roles"],
+] as const;
+
+function Modificar({ persona, asignables }: { persona: Persona; asignables: Rol[] }) {
+  const [pestana, setPestana] = useState<(typeof PESTANAS)[number][0]>("datos");
+  return (
+    <div className="flex flex-col gap-5">
+      <div role="tablist" aria-label="Secciones" className="grid grid-cols-2 gap-1 rounded-full bg-hundida p-1">
+        {PESTANAS.map(([clave, texto]) => (
+          <button
+            key={clave}
+            type="button"
+            role="tab"
+            aria-selected={pestana === clave}
+            onClick={() => setPestana(clave)}
+            className={cn("h-10 cursor-pointer rounded-full text-sm font-medium", pestana === clave ? "bg-tarjeta text-tinta shadow-sm" : "text-tinta-2 hover:text-tinta")}
+          >
+            {texto}
+          </button>
+        ))}
+      </div>
+      {pestana === "datos" ? (
+        <div role="tabpanel" className="flex flex-col gap-6">
+          <FormularioDatos persona={persona} />
+          <section className="flex flex-col gap-3 border-t border-regla pt-5">
+            <h3 className="text-[15px] font-semibold">Restablecer contraseña</h3>
+            <p className="-mt-1.5 text-sm text-tinta-2">Si la olvidó. La anterior deja de funcionar; dásela en persona.</p>
+            <FormularioClave persona={persona} />
+          </section>
+        </div>
+      ) : (
+        <div role="tabpanel">
+          <FormularioRoles persona={persona} asignables={asignables} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FormularioDatos({ persona }: { persona: Persona }) {
+  const [resultado, setResultado] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  return (
+    <form
+      className="flex flex-col gap-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        iniciar(async () =>
+          setResultado(
+            await editarDatos(persona.id, {
+              nombre: f.get("nombre"),
+              documento: f.get("documento"),
+              cargo: f.get("cargo"),
+              fechaIngreso: f.get("fechaIngreso"),
+            }),
+          ),
+        );
+      }}
+    >
+      <Campo etiqueta="Nombre y apellido" error={resultado.errores?.nombre}>
+        {(p) => <Entrada {...p} name="nombre" defaultValue={persona.nombre} autoComplete="off" required />}
+      </Campo>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Campo etiqueta="DNI o carné" error={resultado.errores?.documento}>
+          {(p) => <Entrada {...p} name="documento" defaultValue={persona.documento ?? ""} inputMode="numeric" className="num" autoComplete="off" />}
+        </Campo>
+        <Campo etiqueta="Fecha de ingreso" error={resultado.errores?.fechaIngreso}>
+          {(p) => <Entrada {...p} name="fechaIngreso" type="date" defaultValue={persona.fechaIngreso ?? ""} className="num" />}
+        </Campo>
+      </div>
+      <Campo etiqueta="Cargo" error={resultado.errores?.cargo} ayuda="Cómo lo llaman en el taller. Lo que puede hacer depende de sus roles.">
+        {(p) => <Entrada {...p} name="cargo" defaultValue={persona.cargo ?? ""} maxLength={60} autoComplete="off" />}
+      </Campo>
+      <p className="text-[13px] text-tinta-3">
+        Celular: <span className="num">{persona.celular}</span>. Es su usuario y su WhatsApp; para cambiarlo, agrégalo de nuevo con el número nuevo.
+      </p>
+      <Mensaje resultado={{ ok: resultado.ok, error: resultado.error }} />
+      <Boton type="submit" disabled={pendiente} className="w-full">
+        {pendiente ? "Guardando…" : "Guardar datos"}
+      </Boton>
+    </form>
+  );
+}
+
+function FormularioBaja({ persona, hoy, alTerminar }: { persona: Persona; hoy: string; alTerminar: (r: Resultado) => void }) {
+  const [motivo, setMotivo] = useState("");
+  const [fecha, setFecha] = useState(hoy);
+  const [error, setError] = useState<string>();
+  const [pendiente, iniciar] = useTransition();
+  return (
+    <form
+      className="flex flex-col gap-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        iniciar(async () => {
+          const r = await darDeBaja(persona.id, motivo, fecha);
+          if (r.error) setError(r.error);
+          else alTerminar(r);
+        });
+      }}
+    >
+      <Campo etiqueta="Motivo" ayuda="Por ejemplo: «Renunció», «Fin de contrato».">
+        {(p) => <Entrada {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} required autoComplete="off" />}
+      </Campo>
+      <Campo etiqueta="Último día de trabajo">
+        {(p) => <Entrada {...p} type="date" value={fecha} max={hoy} onChange={(e) => setFecha(e.target.value)} className="num" />}
+      </Campo>
+      <Mensaje resultado={{ error }} />
+      <Boton type="submit" variante="peligro" disabled={pendiente || motivo.trim().length < 3} className="w-full">
+        {pendiente ? "Dando de baja…" : `Dar de baja a ${persona.nombre.split(" ")[0]}`}
+      </Boton>
+    </form>
+  );
+}
+
+function FormularioRoles({ persona, asignables }: { persona: Persona; asignables: Rol[] }) {
   const [elegidos, setElegidos] = useState<Set<Rol>>(new Set(persona.roles));
   const [resultado, setResultado] = useState<Resultado>({});
   const [pendiente, iniciar] = useTransition();
@@ -246,17 +400,14 @@ function FormularioRoles({ persona, asignables, alTerminar }: { persona: Persona
       className="flex flex-col gap-4"
       onSubmit={(e) => {
         e.preventDefault();
-        iniciar(async () => {
-          const r = await cambiarRoles(persona.id, [...elegidos]);
-          setResultado(r);
-          if (r.ok) alTerminar();
-        });
+        iniciar(async () => setResultado(await cambiarRoles(persona.id, [...elegidos])));
       }}
     >
+      <p className="text-sm text-tinta-2">Puede tener más de uno. Lo que ve y puede hacer depende de sus roles.</p>
       <fieldset className="flex flex-col gap-1">
         <legend className="sr-only">Roles</legend>
         {visibles.map((rol) => {
-          const fijo = !asignables.includes(rol);
+          const fijo = !asignables.includes(rol) || (persona.dueno && rol === "gerencia");
           return (
             <label key={rol} className={cn("flex min-h-12 items-center gap-3 rounded-2xl px-3 hover:bg-interna", fijo ? "cursor-not-allowed opacity-60" : "cursor-pointer")}>
               <Casilla
@@ -272,7 +423,7 @@ function FormularioRoles({ persona, asignables, alTerminar }: { persona: Persona
                 }
               />
               <span className="text-[15px]">{NOMBRE_ROL[rol]}</span>
-              {fijo ? <span className="ml-auto text-[13px] text-tinta-3">Solo gerencia lo cambia</span> : null}
+              {fijo ? <span className="ml-auto text-[13px] text-tinta-3">{persona.dueno && rol === "gerencia" ? "Es el dueño" : "Solo gerencia lo cambia"}</span> : null}
             </label>
           );
         })}
@@ -291,19 +442,23 @@ function FormularioClave({ persona }: { persona: Persona }) {
   const [pendiente, iniciar] = useTransition();
   return (
     <form
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3"
       onSubmit={(e) => {
         e.preventDefault();
         iniciar(async () => setResultado(await asignarClave(persona.id, clave)));
       }}
     >
-      <Campo etiqueta="Contraseña nueva" ayuda="Mínimo 8 caracteres.">
-        {(p) => <Entrada {...p} value={clave} onChange={(e) => setClave(e.target.value)} autoComplete="new-password" className="num" />}
-      </Campo>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <Campo etiqueta="Contraseña nueva">
+            {(p) => <Entrada {...p} value={clave} onChange={(e) => setClave(e.target.value)} autoComplete="new-password" className="num" />}
+          </Campo>
+        </div>
+        <Boton type="submit" variante="secundario" disabled={pendiente || clave.length < 8}>
+          {pendiente ? "Guardando…" : "Cambiar contraseña"}
+        </Boton>
+      </div>
       <Mensaje resultado={resultado} />
-      <Boton type="submit" disabled={pendiente || clave.length < 8} className="w-full">
-        {pendiente ? "Guardando…" : "Cambiar contraseña"}
-      </Boton>
     </form>
   );
 }

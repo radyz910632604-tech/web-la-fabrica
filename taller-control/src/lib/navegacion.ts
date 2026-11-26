@@ -64,7 +64,7 @@ const ACCIONES: (Destino & { roles: readonly Rol[] })[] = [
 ];
 
 const GESTION: Destino[] = [
-  { clave: "usuarios", nombre: "Personal y roles", corto: "Personal", href: "/usuarios", icono: "usuarios" },
+  { clave: "usuarios", nombre: "Personal", corto: "Personal", href: "/usuarios", icono: "usuarios" },
   { clave: "whatsapp", nombre: "WhatsApp y avisos", corto: "WhatsApp", href: "/whatsapp", icono: "whatsapp" },
   { clave: "configuracion", nombre: "Configuración del taller", corto: "Ajustes", href: "/configuracion", icono: "configuracion" },
   { clave: "importar", nombre: "Importar datos de Excel", corto: "Importar", href: "/importar", icono: "importar" },

@@ -134,7 +134,7 @@ export async function crearTaller(_previo: Resultado, form: FormData): Promise<R
   if (error || !data) return { error: "No se pudo crear el taller." };
   (await cookies()).set(COOKIE_TALLER, String(data), { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });
   revalidatePath("/", "layout");
-  return { ok: `Listo. Ahora estás en ${datos.data.nombre}; agrega a su personal en Personal y roles.` };
+  return { ok: `Listo. Ahora estás en ${datos.data.nombre}; agrega a su personal en Personal.` };
 }
 
 const CATEGORIAS = ["transmision", "gnv_glp", "aire_acondicionado", "frenos", "aceite", "otro"] as const;

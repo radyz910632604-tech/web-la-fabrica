@@ -369,7 +369,7 @@ Cada fase se entrega completa (base con RLS y pruebas pgTAP, pantallas, pruebas,
 
 | Fase | Contenido | Depende de |
 |---|---|---|
-| **1. Personal en Configuración** | Datos nuevos de `perfiles`, `es_dueno`, protección del dueño, dar de baja con motivo y cierre de sesión, reactivar, pantalla con «Modificar» (pestaña Datos y contraseña) | — |
+| **1. Personal en Configuración** (hecha) | Datos nuevos de `perfiles`, `es_dueno`, protección del dueño, dar de baja con motivo y cierre de sesión, reactivar, pantalla con «Modificar» (pestaña Datos y contraseña) | — |
 | **2. Permisos** | `permisos`, `rol_permisos`, `usuario_permisos`, `puede()`, `mis_permisos()`; matriz con «Restaurar del rol». Menú y botones leen `mis_permisos`. Se migran a `puede()` primero Gastos, Reportes, Personal y Configuración; luego Almacén, Caja, Órdenes y Clientes, con pruebas «antes = después» | 1 |
 | **3. Esquema de pago** | `esquemas_pago` versionado y tarifas de destajo; migra `costos_personal`; la ganancia por carro lo usa | 1 |
 | **4. Gastos con origen** | Columnas de origen, índice 1 a 1, solo lectura para Personal, filtro Origen; `sueldos` deja de poder elegirse a mano | — |

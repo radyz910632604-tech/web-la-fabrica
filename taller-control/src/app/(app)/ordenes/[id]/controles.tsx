@@ -172,7 +172,7 @@ export function AsignarTecnico({ ordenId, tecnicoId, tecnicos }: { ordenId: stri
           </option>
         ))}
       </Selector>
-      {tecnicos.length === 0 ? <p className="mt-2 text-sm text-tinta-2">No hay personas con rol técnico. Agrégalas en Personal y roles.</p> : null}
+      {tecnicos.length === 0 ? <p className="mt-2 text-sm text-tinta-2">No hay personas con rol técnico. Agrégalas en Personal.</p> : null}
       <Mensaje r={r} />
     </div>
   );

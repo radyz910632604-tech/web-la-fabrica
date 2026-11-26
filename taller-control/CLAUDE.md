@@ -22,7 +22,7 @@ Sistema interno de gestión para talleres automotrices en Lima. **No tiene relac
 - Importar el Excel anterior: pantalla `/importar` (gestores). Reglas puras en `src/lib/importar/reglas.ts` (columnas por sinónimos, montos, fechas, DNI/RUC); se guarda en `importar/acciones.ts` con la sesión, sin duplicar (celular, placa, código, serie-número). Historial con `importar_orden_historica()` (migración 0016: `ordenes_trabajo.importada`, sin avisos al cliente); ventas y compras con `origen_datos = 'importado'` (fuera de alertas; compras sin mover stock). Lo importado no entra en la ganancia por carro.
 - PDF: `src/lib/pdf/` (pdf-lib, Helvetica) y la ruta `src/app/pdf/[tipo]/[id]/route.ts`; leen con la sesión de quien pide.
 - Dinero: cálculos puros en `src/lib/dinero.ts` y `src/lib/alertas.ts` (con pruebas); consultas en `src/lib/taller/*-consultas.ts` y `reportes.ts`. Nada con dinero se borra: se anula con motivo (disparador `privado.proteger_dinero`).
-- Personal, permisos por persona y nómina (diseño propuesto por fases, aún sin construir): `docs/personal-permisos-nomina.md`.
+- Personal, permisos por persona y nómina: diseño en `docs/personal-permisos-nomina.md`. Hecha la parte 1 (migración 0020: `perfiles.documento/cargo/fecha_ingreso`, `miembros.es_dueno` protegido por disparadores, baja por taller con `dar_de_baja()` / `reactivar()` que conservan el historial; pantalla `/usuarios` con Modificar y Dar de baja). Faltan las partes 2 a 7.
 - Plan y modelo de datos: `docs/fase-0-plan.md`, `docs/modelo-de-datos.md`. Contexto de producto: `PRODUCT.md`.
 - Pide aprobación antes de cambiar de fase salvo que el usuario haya dicho que avances solo.
 - Habla en español sencillo: el usuario no es programador.
