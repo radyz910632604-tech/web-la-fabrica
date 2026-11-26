@@ -7,7 +7,7 @@
 export const TABLAS_PUBLICAS = [
   "empresas", "perfiles", "miembros", "configuracion_empresa", "metas_ventas", "catalogo_servicios", "clientes", "vehiculos", "citas",
   "ordenes_trabajo", "orden_servicios", "orden_estados_historial", "orden_avances", "archivos", "proveedores", "compras", "compra_items",
-  "comprobantes_venta", "notas_credito", "cotizaciones", "cotizacion_items", "pagos", "recibos", "gastos", "costos_personal",
+  "comprobantes_venta", "notas_credito", "cotizaciones", "cotizacion_items", "pagos", "recibos", "gastos", "costos_personal", "esquemas_pago",
   "mano_obra_servicio", "reglas_comision", "comisiones", "cierres_diarios", "cajas", "movimientos_caja", "caja_maestra_diaria", "repuestos", "movimientos_inventario",
   "mensajes_whatsapp", "borradores_whatsapp", "preferencias_whatsapp", "config_avisos", "avisos", "encuestas",
   "recordatorios_mantenimiento", "suscripciones_push", "auditoria",

@@ -54,9 +54,20 @@ export function Importador() {
     iniciarLectura(async () => {
       setError("");
       setResultado(null);
+      // Se avisa antes de enviar: un archivo muy pesado ni siquiera llega al servidor.
+      if (archivo.size > 5.5 * 1024 * 1024) {
+        setError(`El archivo pesa ${(archivo.size / 1024 / 1024).toFixed(1)} MB y el máximo es 5 MB. Divídelo en partes (por ejemplo, una hoja por archivo).`);
+        return;
+      }
       const form = new FormData();
       form.append("archivo", archivo);
-      const r = await leerArchivo(form);
+      let r: Awaited<ReturnType<typeof leerArchivo>>;
+      try {
+        r = await leerArchivo(form);
+      } catch {
+        setError("No se pudo enviar el archivo. Revisa tu conexión e intenta otra vez.");
+        return;
+      }
       if (r.error || !r.hojas) {
         setError(r.error ?? "No se pudo leer el archivo.");
         setHojas(null);

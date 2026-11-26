@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useTransition, type ReactNode } from "react";
+import { prepararLogo } from "@/lib/taller/fotos";
+import { useActionState, useState, useTransition, type ReactNode } from "react";
 import { Switch } from "radix-ui";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada } from "@/components/ui/campo";
@@ -273,23 +274,59 @@ export function FormServicios({ servicios }: { servicios: { id: string; nombre: 
   );
 }
 
-/** Logo del taller: vista previa y subir uno nuevo. */
+/**
+ * Logo del taller: vista previa y subir uno nuevo. La imagen se achica en el mismo equipo antes
+ * de enviarla (así sube aunque la original pese varios MB) y siempre se muestra qué pasó.
+ */
 export function FormLogo({ url }: { url: string | null }) {
-  const [estado, accion, enviando] = useActionState(subirLogo, {});
+  const [estado, setEstado] = useState<Resultado>({});
+  const [enviando, iniciar] = useTransition();
+  const [vista, setVista] = useState<string | null>(null);
+  const [archivo, setArchivo] = useState<File | null>(null);
   return (
-    <form action={accion}>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!archivo) {
+          setEstado({ error: "Primero elige la imagen del logo." });
+          return;
+        }
+        iniciar(async () => {
+          try {
+            const listo = await prepararLogo(archivo);
+            const datos = new FormData();
+            datos.append("logo", listo);
+            setEstado(await subirLogo({}, datos));
+          } catch (err) {
+            setEstado({ error: err instanceof Error && err.message ? `No se pudo subir: ${err.message}` : "No se pudo subir el logo. Revisa tu conexión e intenta otra vez." });
+          }
+        });
+      }}
+    >
       <div className="flex flex-wrap items-center gap-5">
         <div className="grid size-28 shrink-0 place-items-center overflow-hidden rounded-2xl border border-borde bg-white">
-          {url ? (
+          {vista || url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt="Logo del taller" className="max-h-full max-w-full object-contain p-2" />
+            <img src={vista ?? url ?? ""} alt="Logo del taller" className="max-h-full max-w-full object-contain p-2" />
           ) : (
             <span className="px-3 text-center text-[13px] text-tinta-3">Sin logo</span>
           )}
         </div>
         <label className="flex min-w-0 flex-1 flex-col gap-2 text-sm font-medium">
-          Imagen del logo (PNG o JPG, hasta 1 MB)
-          <input name="logo" type="file" accept="image/png,image/jpeg" required className="text-sm font-normal text-tinta-2 file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border-0 file:bg-interna file:px-4 file:text-sm file:font-medium file:text-tinta" />
+          Imagen del logo (PNG o JPG)
+          <input
+            name="logo"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => {
+              const f = e.target.files?.[0] ?? null;
+              setArchivo(f);
+              setEstado({});
+              setVista(f ? URL.createObjectURL(f) : null);
+            }}
+            className="text-sm font-normal text-tinta-2 file:mr-3 file:h-10 file:cursor-pointer file:rounded-full file:border-0 file:bg-interna file:px-4 file:text-sm file:font-medium file:text-tinta"
+          />
+          <span className="text-[13px] font-normal text-tinta-3">Si pesa mucho, el sistema la achica sola antes de subirla.</span>
         </label>
       </div>
       <Pie estado={estado} enviando={enviando} texto="Subir logo" />

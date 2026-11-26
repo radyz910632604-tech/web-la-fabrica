@@ -172,13 +172,25 @@ export async function subirLogo(_previo: Resultado, form: FormData): Promise<Res
   if (!(archivo instanceof File) || archivo.size === 0) return { error: "Elige la imagen del logo." };
   if (!["image/png", "image/jpeg"].includes(archivo.type)) return { error: "El logo debe ser PNG o JPG." };
   if (archivo.size > 1024 * 1024) return { error: "El logo pesa más de 1 MB. Usa una imagen más chica." };
+  const fallo = (paso: string, detalle: string) => {
+    // Queda en los registros de EasyPanel para saber exactamente qué pasó.
+    console.error(`[logo] ${paso}: ${detalle}`);
+  };
   const supabase = await clienteServidor();
   const ruta = `${ctx.taller.id}/logo-${Date.now()}.${archivo.type === "image/png" ? "png" : "jpg"}`;
   const { error } = await supabase.storage.from("marca").upload(ruta, archivo, { contentType: archivo.type, upsert: false });
-  if (error) return { error: "No se pudo subir el logo." };
+  if (error) {
+    fallo("subir", error.message);
+    if (/bucket/i.test(error.message)) return { error: "Falta el espacio para el logo en la base de datos (carpeta «marca»). Avísale a quien te ayuda con el sistema." };
+    if (/row-level|policy|unauthorized|403/i.test(error.message)) return { error: "Tu usuario no tiene permiso para subir el logo (solo gerencia o administración)." };
+    return { error: `No se pudo subir el logo: ${error.message}` };
+  }
   const { data: antes } = await supabase.from("empresas").select("logo_ruta").eq("id", ctx.taller.id).single();
   const { error: e2 } = await supabase.from("empresas").update({ logo_ruta: ruta }).eq("id", ctx.taller.id);
-  if (e2) return { error: "El logo se subió, pero no se guardó en el taller." };
+  if (e2) {
+    fallo("guardar", e2.message);
+    return { error: "El logo se subió, pero no se guardó en el taller." };
+  }
   if (antes?.logo_ruta) await supabase.storage.from("marca").remove([antes.logo_ruta]);
   revalidatePath("/configuracion");
   return { ok: "Logo guardado. Ya sale en los PDF." };

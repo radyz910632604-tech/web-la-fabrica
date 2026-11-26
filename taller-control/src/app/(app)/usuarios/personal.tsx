@@ -10,7 +10,7 @@ import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ve
 import { iniciales } from "@/lib/formato";
 import { NOMBRE_ROL, type Rol } from "@/lib/roles";
 import { cn } from "@/lib/utils";
-import { agregarPersona, asignarClave, cambiarRoles, darDeBaja, editarDatos, reactivar, type Resultado } from "./acciones";
+import { agregarPersona, asignarClave, cambiarPago, cambiarRoles, darDeBaja, editarDatos, reactivar, type Resultado } from "./acciones";
 
 export type Persona = {
   id: string;
@@ -24,7 +24,12 @@ export type Persona = {
   bajaEn: string | null;
   bajaMotivo: string | null;
   roles: Rol[];
+  /** Pago vigente y sus versiones anteriores (solo si quien mira es gestor). */
+  pago?: Pago | null;
+  historialPago?: Pago[];
 };
+
+export type Pago = { tipo: "fijo" | "destajo"; monto: number; frecuencia: string; comision: number | null; desde: string; hasta: string | null; motivo: string | null };
 
 const fechaLarga = (f: string) => new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(f));
 
@@ -46,10 +51,76 @@ function Mensaje({ resultado }: { resultado: Resultado }) {
   return null;
 }
 
-export function AgregarPersona({ asignables }: { asignables: Rol[] }) {
+const FRECUENCIAS = [
+  ["semanal", "Semanal"],
+  ["quincenal", "Quincenal"],
+  ["mensual", "Mensual"],
+] as const;
+const NOMBRE_FRECUENCIA: Record<string, string> = { semanal: "por semana", quincenal: "por quincena", mensual: "al mes" };
+
+function Subtitulo({ children }: { children: React.ReactNode }) {
+  return <h3 className="border-t border-regla pt-4 text-[13px] font-semibold tracking-wide text-tinta-2 uppercase first:border-t-0 first:pt-0">{children}</h3>;
+}
+
+/** Campos del pago: fijo o destajo, monto, cada cuánto y (solo asesor) la comisión por orden. */
+function CamposPago({ rol, errores, valores }: { rol: string; errores: Record<string, string>; valores?: Pago | null }) {
+  const [tipo, setTipo] = useState<"fijo" | "destajo">(valores?.tipo ?? "fijo");
+  return (
+    <>
+      <input type="hidden" name="tipoPago" value={tipo} />
+      <input type="hidden" name="tipo" value={tipo} />
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Cómo se le paga">
+        {(
+          [
+            ["fijo", "Sueldo fijo", "Un monto cada periodo"],
+            ["destajo", "A destajo", "Por cada trabajo"],
+          ] as const
+        ).map(([v, t, d]) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={tipo === v}
+            onClick={() => setTipo(v)}
+            className={cn("presionable cursor-pointer rounded-2xl border px-4 py-2.5 text-left", tipo === v ? "border-primario ring-2 ring-primario/15" : "border-borde hover:bg-interna")}
+          >
+            <span className="block text-[15px] font-medium">{t}</span>
+            <span className="block text-[13px] text-tinta-2">{d}</span>
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Campo etiqueta={tipo === "fijo" ? "Sueldo por periodo (S/)" : "Tarifa por trabajo (S/)"} error={errores.monto}>
+          {(p) => <Entrada {...p} name="monto" type="number" min="0" step="0.01" inputMode="decimal" defaultValue={valores?.monto ?? ""} className="num" required />}
+        </Campo>
+        <Campo etiqueta="Se le paga" error={errores.frecuencia}>
+          {(p) => (
+            <Selector {...p} name="frecuencia" defaultValue={valores?.frecuencia ?? "quincenal"}>
+              {FRECUENCIAS.map(([v, t]) => (
+                <option key={v} value={v}>
+                  {t}
+                </option>
+              ))}
+            </Selector>
+          )}
+        </Campo>
+      </div>
+      {rol === "asesor" ? (
+        <Campo etiqueta="Comisión por orden entregada y cobrada (%)" ayuda="Opcional. Si la dejas vacía, se usan las reglas de Configuración." error={errores.comision}>
+          {(p) => <Entrada {...p} name="comision" type="number" min="0" max="100" step="0.1" inputMode="decimal" defaultValue={valores?.comision ?? ""} className="num" />}
+        </Campo>
+      ) : rol === "tecnico" ? (
+        <p className="text-[13px] text-tinta-3">El mecánico no gana comisión por orden.</p>
+      ) : null}
+    </>
+  );
+}
+
+export function AgregarPersona({ asignables, hoy }: { asignables: Rol[]; hoy: string }) {
   const [abierta, setAbierta] = useState(false);
   const [clave] = useState(generarClave);
+  const [rol, setRol] = useState("");
   const [estado, accion, enviando] = useActionState(agregarPersona, {});
+  const e = estado.errores ?? {};
   return (
     <Ventana open={abierta} onOpenChange={setAbierta}>
       <DisparadorVentana asChild>
@@ -58,17 +129,28 @@ export function AgregarPersona({ asignables }: { asignables: Rol[] }) {
           Agregar persona
         </Boton>
       </DisparadorVentana>
-      <ContenidoVentana titulo="Agregar persona" descripcion="Entrará con su celular y esta contraseña. Dásela en persona.">
+      <ContenidoVentana titulo="Agregar persona" descripcion="Queda lista para entrar, trabajar y cobrar. Su contraseña dásela en persona.">
         <form action={accion} className="flex flex-col gap-4">
-          <Campo etiqueta="Nombre y apellido" error={estado.errores?.nombre}>
+          <Subtitulo>Datos</Subtitulo>
+          <Campo etiqueta="Nombre y apellido" error={e.nombre}>
             {(p) => <Entrada {...p} name="nombre" autoComplete="off" required />}
           </Campo>
-          <Campo etiqueta="Celular" error={estado.errores?.celular} ayuda="Con este número también la reconocerá el WhatsApp del taller.">
-            {(p) => <Entrada {...p} name="celular" type="tel" inputMode="tel" placeholder="987 654 321" required />}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Campo etiqueta="DNI o carné" error={e.documento}>
+              {(p) => <Entrada {...p} name="documento" inputMode="numeric" autoComplete="off" className="num" required />}
+            </Campo>
+            <Campo etiqueta="Fecha de ingreso" error={e.fechaIngreso}>
+              {(p) => <Entrada {...p} name="fechaIngreso" type="date" defaultValue={hoy} className="num" required />}
+            </Campo>
+          </div>
+          <Campo etiqueta="Cargo (opcional)" ayuda="Cómo lo llaman en el taller: «Mecánico de motor», «Cajera».">
+            {(p) => <Entrada {...p} name="cargo" autoComplete="off" maxLength={60} />}
           </Campo>
-          <Campo etiqueta="Rol" error={estado.errores?.rol} ayuda="Luego puedes darle más de un rol.">
+
+          <Subtitulo>Rol y acceso</Subtitulo>
+          <Campo etiqueta="Rol" error={e.rol} ayuda="Lo que puede ver y hacer sale de su rol. Luego puedes darle más de uno.">
             {(p) => (
-              <Selector {...p} name="rol" defaultValue="" required>
+              <Selector {...p} name="rol" value={rol} onChange={(ev) => setRol(ev.target.value)} required>
                 <option value="" disabled>
                   Elige un rol
                 </option>
@@ -80,12 +162,17 @@ export function AgregarPersona({ asignables }: { asignables: Rol[] }) {
               </Selector>
             )}
           </Campo>
-          <Campo etiqueta="Cargo (opcional)" ayuda="Cómo lo llaman en el taller: «Mecánico de motor», «Cajera».">
-            {(p) => <Entrada {...p} name="cargo" autoComplete="off" maxLength={60} />}
+          <Campo etiqueta="Celular" error={e.celular} ayuda="Es su usuario para entrar y su número para el WhatsApp del taller.">
+            {(p) => <Entrada {...p} name="celular" type="tel" inputMode="tel" placeholder="987 654 321" required />}
           </Campo>
-          <Campo etiqueta="Contraseña inicial" error={estado.errores?.clave} ayuda="Mínimo 8 caracteres. Te sugerimos esta; puedes cambiarla.">
+          <Campo etiqueta="Contraseña inicial" error={e.clave} ayuda="Mínimo 8 caracteres. Te sugerimos esta; puedes cambiarla.">
             {(p) => <Entrada {...p} name="clave" defaultValue={clave} autoComplete="new-password" className="num" required />}
           </Campo>
+
+          <Subtitulo>Pago</Subtitulo>
+          <CamposPago rol={rol} errores={e} />
+          <p className="-mt-1 text-[13px] text-tinta-3">Solo lo ven gerencia y administración. Si cambia, se registra desde una fecha y lo pasado queda igual.</p>
+
           <Mensaje resultado={{ ok: estado.ok, error: estado.error }} />
           <Boton type="submit" disabled={enviando} className="mt-1 w-full">
             {enviando ? "Guardando…" : "Agregar"}
@@ -273,13 +360,14 @@ function AccionesPersona({ persona, asignables, hoy }: { persona: Persona; asign
 const PESTANAS = [
   ["datos", "Datos y contraseña"],
   ["roles", "Roles"],
+  ["pago", "Pago"],
 ] as const;
 
 function Modificar({ persona, asignables }: { persona: Persona; asignables: Rol[] }) {
   const [pestana, setPestana] = useState<(typeof PESTANAS)[number][0]>("datos");
   return (
     <div className="flex flex-col gap-5">
-      <div role="tablist" aria-label="Secciones" className="grid grid-cols-2 gap-1 rounded-full bg-hundida p-1">
+      <div role="tablist" aria-label="Secciones" className="grid grid-cols-3 gap-1 rounded-full bg-hundida p-1">
         {PESTANAS.map(([clave, texto]) => (
           <button
             key={clave}
@@ -302,9 +390,13 @@ function Modificar({ persona, asignables }: { persona: Persona; asignables: Rol[
             <FormularioClave persona={persona} />
           </section>
         </div>
-      ) : (
+      ) : pestana === "roles" ? (
         <div role="tabpanel">
           <FormularioRoles persona={persona} asignables={asignables} />
+        </div>
+      ) : (
+        <div role="tabpanel">
+          <FormularioPago persona={persona} />
         </div>
       )}
     </div>
@@ -460,5 +552,77 @@ function FormularioClave({ persona }: { persona: Persona }) {
       </div>
       <Mensaje resultado={resultado} />
     </form>
+  );
+}
+
+const fechaCorta = (f: string) => f.split("-").reverse().join("/");
+const textoPago = (p: Pago) =>
+  `${p.tipo === "fijo" ? "Sueldo fijo" : "A destajo"} · S/ ${p.monto.toFixed(2)} ${p.tipo === "fijo" ? (NOMBRE_FRECUENCIA[p.frecuencia] ?? "") : "por trabajo"}${p.tipo === "destajo" ? ` · se le paga ${p.frecuencia === "semanal" ? "cada semana" : p.frecuencia === "quincenal" ? "cada quincena" : "cada mes"}` : ""}${p.comision ? ` · ${p.comision} % de comisión` : ""}`;
+
+/** El pago de la persona: el vigente, su historial y el cambio desde una fecha (lo pasado no se toca). */
+function FormularioPago({ persona }: { persona: Persona }) {
+  const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
+  const [resultado, setResultado] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  const rol = persona.roles.includes("asesor") ? "asesor" : persona.roles.includes("tecnico") ? "tecnico" : "";
+  return (
+    <div className="flex flex-col gap-5">
+      <section className="rounded-2xl bg-interna px-4 py-3">
+        <p className="text-[13px] text-tinta-2">Pago vigente</p>
+        <p className="mt-0.5 text-[15px] font-medium">{persona.pago ? textoPago(persona.pago) : "Sin esquema de pago todavía"}</p>
+        {persona.pago ? <p className="text-[13px] text-tinta-3">Desde el {fechaCorta(persona.pago.desde)}</p> : null}
+      </section>
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          const f = new FormData(ev.currentTarget);
+          iniciar(async () =>
+            setResultado(
+              await cambiarPago(persona.id, {
+                tipo: f.get("tipo"),
+                monto: f.get("monto"),
+                frecuencia: f.get("frecuencia"),
+                comision: f.get("comision") || undefined,
+                desde: f.get("desde"),
+                motivo: f.get("motivo"),
+              }),
+            ),
+          );
+        }}
+      >
+        <h3 className="text-[15px] font-semibold">{persona.pago ? "Cambiar el pago" : "Poner su pago"}</h3>
+        <CamposPago rol={rol} errores={resultado.errores ?? {}} valores={persona.pago} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Campo etiqueta="Vale desde" error={resultado.errores?.desde} ayuda="Hoy o una fecha futura.">
+            {(p) => <Entrada {...p} name="desde" type="date" min={hoy} defaultValue={hoy} className="num" required />}
+          </Campo>
+          <Campo etiqueta="Motivo" error={resultado.errores?.motivo}>
+            {(p) => <Entrada {...p} name="motivo" placeholder="Aumento, cambio de puesto…" maxLength={200} required />}
+          </Campo>
+        </div>
+        <Mensaje resultado={{ ok: resultado.ok, error: resultado.error }} />
+        <Boton type="submit" disabled={pendiente} className="w-full">
+          {pendiente ? "Guardando…" : "Guardar pago"}
+        </Boton>
+      </form>
+      {persona.historialPago?.length ? (
+        <details className="text-sm text-tinta-2">
+          <summary className="cursor-pointer text-[13px] text-tinta-3">Historial de pago ({persona.historialPago.length})</summary>
+          <ul className="mt-2 flex flex-col gap-2">
+            {persona.historialPago.map((h) => (
+              <li key={h.desde} className="border-t border-regla pt-2 first:border-t-0 first:pt-0">
+                <span className="text-tinta">{textoPago(h)}</span>
+                <span className="block text-[13px] text-tinta-3">
+                  Del {fechaCorta(h.desde)}
+                  {h.hasta ? ` al ${fechaCorta(h.hasta)}` : " en adelante"}
+                  {h.motivo ? ` · ${h.motivo}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
   );
 }

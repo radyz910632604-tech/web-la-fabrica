@@ -37,9 +37,14 @@ export async function costosVigentes(empresaId: string, antesDe?: string): Promi
   const supabase = await clienteServidor();
   let q = supabase.from("costos_personal").select("perfil_id, costo_mensual, vigente_desde").eq("empresa_id", empresaId);
   if (antesDe) q = q.lt("vigente_desde", antesDe);
-  const { data } = await q.order("vigente_desde", { ascending: true });
+  let e = supabase.from("esquemas_pago").select("perfil_id, tipo, monto, frecuencia, vigente_desde").eq("empresa_id", empresaId);
+  if (antesDe) e = e.lt("vigente_desde", antesDe);
+  const [{ data }, { data: esquemas }] = await Promise.all([q.order("vigente_desde", { ascending: true }), e.order("vigente_desde", { ascending: true })]);
   const mapa = new Map<string, number>();
   for (const c of data ?? []) mapa.set(c.perfil_id, n(c.costo_mensual));
+  // El esquema de pago (sueldo fijo) manda sobre el costo anotado a mano: llevado a un mes.
+  const porMes: Record<string, number> = { semanal: 52 / 12, quincenal: 2, mensual: 1 };
+  for (const x of esquemas ?? []) if (x.tipo === "fijo") mapa.set(x.perfil_id, redondear(n(x.monto) * (porMes[x.frecuencia] ?? 1)));
   return mapa;
 }
 

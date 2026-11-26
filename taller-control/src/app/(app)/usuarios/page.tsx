@@ -5,7 +5,7 @@ import { esGestor, esRol, rolesAsignables, ROLES, type Rol } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { cn } from "@/lib/utils";
-import { AgregarPersona, ListaPersonal, type Persona } from "./personal";
+import { AgregarPersona, ListaPersonal, type Pago, type Persona } from "./personal";
 
 export const metadata = { title: "Personal" };
 
@@ -54,7 +54,24 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
     persona.bajaMotivo ??= fila.baja_motivo;
     porPersona.set(p.id, persona);
   }
-  const todas = [...porPersona.values()].map((p) => ({ ...p, roles: ROLES.filter((r) => p.roles.includes(r)) }));
+  // Esquemas de pago (la base solo los muestra a gerencia y administración).
+  const { data: esquemas } = await supabase
+    .from("esquemas_pago")
+    .select("perfil_id, tipo, monto, frecuencia, comision_pct, vigente_desde, vigente_hasta, motivo")
+    .eq("empresa_id", ctx.taller.id)
+    .order("vigente_desde", { ascending: false });
+  const pagos = new Map<string, Pago[]>();
+  for (const x of esquemas ?? []) {
+    const l = pagos.get(x.perfil_id) ?? [];
+    l.push({ tipo: x.tipo, monto: Number(x.monto), frecuencia: x.frecuencia, comision: x.comision_pct == null ? null : Number(x.comision_pct), desde: x.vigente_desde, hasta: x.vigente_hasta, motivo: x.motivo });
+    pagos.set(x.perfil_id, l);
+  }
+  const todas = [...porPersona.values()].map((p) => ({
+    ...p,
+    roles: ROLES.filter((r) => p.roles.includes(r)),
+    pago: pagos.get(p.id)?.find((x) => !x.hasta) ?? null,
+    historialPago: pagos.get(p.id) ?? [],
+  }));
   const activas = todas.filter((p) => p.activo).sort((a, b) => Number(b.dueno) - Number(a.dueno) || a.nombre.localeCompare(b.nombre, "es"));
   const bajas = todas.filter((p) => !p.activo).sort((a, b) => (b.bajaEn ?? "").localeCompare(a.bajaEn ?? "") || a.nombre.localeCompare(b.nombre, "es"));
   const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date());
@@ -69,7 +86,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
             celular, que también la identifica por WhatsApp.
           </p>
         </div>
-        <AgregarPersona asignables={rolesAsignables(ctx.roles)} />
+        <AgregarPersona asignables={rolesAsignables(ctx.roles)} hoy={new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date())} />
       </header>
       <nav aria-label="Ver" className="flex w-fit gap-1 rounded-full bg-hundida p-1">
         {(
