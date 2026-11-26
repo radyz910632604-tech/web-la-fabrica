@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(4);
+select plan(5);
 
 insert into empresas (id, nombre) values ('a0000000-0000-0000-0000-0000000000b8', 'Taller Tecnicos');
 insert into auth.users (id, email, raw_app_meta_data) values
@@ -30,4 +30,5 @@ select is((select count(*)::int from orden_avances where orden_id = 'f8000000-00
 select ok(exists (select 1 from orden_avances where orden_id = 'f8000000-0000-0000-0000-0000000000b8' and texto = 'Técnico asignado: Luis'), 'Queda «Técnico asignado: Luis»');
 select ok(exists (select 1 from orden_avances where orden_id = 'f8000000-0000-0000-0000-0000000000b8' and texto = 'Técnico: Luis → Mario'), 'Queda «Técnico: Luis → Mario»');
 select is((select autor_id from orden_avances where orden_id = 'f8000000-0000-0000-0000-0000000000b8' and texto = 'Técnico: Luis → Mario'), '87000000-0000-0000-0000-000000000001'::uuid, 'Con quién hizo el cambio');
+select isnt((select tecnico_asignado_en from ordenes_trabajo where id = 'f8000000-0000-0000-0000-0000000000b8'), null, 'Queda desde cuándo lo tiene el técnico actual');
 select * from finish();

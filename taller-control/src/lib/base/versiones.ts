@@ -42,7 +42,7 @@ export const VERSIONES: Version[] = [
   { version: "20261116000015", nombre: "Diagnóstico, facturado y alertas del agente", sql: columna("ordenes_trabajo", "facturado_en"), rest: ["ordenes_trabajo", "facturado_en"] },
   { version: "20261116000016", nombre: "Importar desde Excel", sql: columna("ordenes_trabajo", "importada"), rest: ["ordenes_trabajo", "importada"] },
   { version: "20261116000017", nombre: "Gastos desde la caja", sql: columna("gastos", "movimiento_caja_id"), rest: ["gastos", "movimiento_caja_id"] },
-  { version: "20261116000018", nombre: "Historial de técnicos", sql: "select exists (select 1 from pg_trigger where tgname = 'ordenes_historial_tecnico')" },
+  { version: "20261116000018", nombre: "Historial de técnicos", sql: columna("ordenes_trabajo", "tecnico_asignado_en"), rest: ["ordenes_trabajo", "tecnico_asignado_en"] },
 ];
 
 export const versionDe = (archivo: string) => /^(\d{14})_/.exec(archivo)?.[1] ?? null;
