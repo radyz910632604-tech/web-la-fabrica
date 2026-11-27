@@ -1,0 +1,338 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { correoNuevo } from "@/lib/acceso";
+import { normalizarCelular } from "@/lib/celulares";
+import { esUsuarioValido, normalizarUsuario, REGLA_USUARIO } from "@/lib/usuarios";
+import { esGestor, esRol, rolesAsignables, NOMBRE_ROL, type Rol } from "@/lib/roles";
+import { obtenerContexto } from "@/lib/sesion";
+import { clienteAdmin } from "@/lib/supabase/admin";
+import { clienteServidor } from "@/lib/supabase/servidor";
+
+/** Lo que se comparte por WhatsApp después de crear o cambiar el acceso de alguien. */
+export type Acceso = { nombre: string; usuario: string; clave: string | null; celular: string };
+export type Resultado = { ok?: string; error?: string; errores?: Record<string, string>; acceso?: Acceso };
+
+const CLAVE_MINIMA = 8;
+
+async function exigirGestor() {
+  const ctx = await obtenerContexto();
+  if (!esGestor(ctx.roles)) throw new Error("Solo gerencia o administración pueden hacer esto.");
+  return ctx;
+}
+
+const esquemaPersona = z.object({
+  nombre: z.string().trim().min(2, "Escribe el nombre y apellido.").max(80, "Máximo 80 letras."),
+  celular: z.string().transform((v, c) => {
+    const n = normalizarCelular(v);
+    if (!n) c.addIssue({ code: "custom", message: "Celular de 9 dígitos, por ejemplo 987 654 321." });
+    return n ?? "";
+  }),
+  documento: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\s/g, "").toUpperCase())
+    .refine((v) => /^[0-9A-Z]{6,15}$/.test(v), "DNI de 8 números (o carné de 6 a 15 letras o números)."),
+  usuario: z.string().transform(normalizarUsuario).refine(esUsuarioValido, REGLA_USUARIO),
+  cargo: z.string().trim().max(60, "Máximo 60 letras.").optional(),
+  fechaIngreso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elige la fecha de ingreso."),
+  rol: z.string().refine(esRol, "Elige un rol."),
+  clave: z.string().min(CLAVE_MINIMA, `Mínimo ${CLAVE_MINIMA} caracteres.`).max(72, "Máximo 72 caracteres."),
+  tipoPago: z.enum(["fijo", "destajo"], { error: "Elige cómo se le paga." }),
+  monto: z.coerce.number({ error: "Escribe el monto." }).min(0, "No puede ser negativo.").max(100000, "Revisa el monto."),
+  frecuencia: z.enum(["semanal", "quincenal", "mensual"], { error: "Elige cada cuánto se le paga." }),
+  comision: z.coerce.number().min(0).max(100, "Un porcentaje va de 0 a 100.").optional(),
+});
+
+/**
+ * Alta del trabajador en un solo paso: acceso (celular y contraseña), datos, rol y esquema de pago.
+ * Si ya tenía acceso en otro taller, solo se le suma el rol (su contraseña no cambia).
+ */
+export async function agregarPersona(_previo: Resultado, form: FormData): Promise<Resultado> {
+  const ctx = await exigirGestor();
+  const datos = esquemaPersona.safeParse(Object.fromEntries(form));
+  if (!datos.success) {
+    const errores: Record<string, string> = {};
+    for (const problema of datos.error.issues) errores[String(problema.path[0])] ??= problema.message;
+    return { errores };
+  }
+  const { nombre, celular, clave, documento, usuario } = datos.data;
+  const rol = datos.data.rol as Rol;
+  if (!rolesAsignables(ctx.roles).includes(rol)) {
+    return { errores: { rol: "Tu rol no puede asignar ese rol." } };
+  }
+
+  const admin = clienteAdmin();
+  const supabase = await clienteServidor();
+
+  const [{ data: existente }, { data: conDni }, { data: conUsuario }] = await Promise.all([
+    admin.from("perfiles").select("id, nombre").eq("celular", celular).maybeSingle(),
+    admin.from("perfiles").select("id, nombre").ilike("documento", documento).maybeSingle(),
+    admin.from("perfiles").select("id").eq("usuario", usuario).maybeSingle(),
+  ]);
+  // El DNI y el usuario no se repiten: se avisa antes de crear nada.
+  if (conDni && conDni.id !== existente?.id) return { errores: { documento: `Ese DNI ya está registrado a nombre de ${conDni.nombre}.` } };
+  if (!existente && conUsuario) {
+    const { data: otro } = await supabase.rpc("sugerir_usuario", { p_texto: usuario });
+    return { errores: { usuario: `Ese usuario ya está en uso. Prueba con «${otro ?? `${usuario}2`}».` } };
+  }
+  let perfilId = existente?.id as string | undefined;
+  let creado = false;
+
+  if (!perfilId) {
+    // El correo interno no depende del celular: así el número se puede cambiar después.
+    const { data, error } = await admin.auth.admin.createUser({
+      email: correoNuevo(),
+      password: clave,
+      email_confirm: true,
+      app_metadata: { nombre, celular, usuario },
+    });
+    if (error || !data.user) return { error: "No se pudo crear el acceso. Intenta otra vez en un momento." };
+    perfilId = data.user.id;
+    creado = true;
+  }
+
+  // Todo lo demás va junto, con la sesión de quien lo hace: rol, datos y esquema de pago.
+  const { error } = await supabase.rpc("alta_persona", {
+    p_empresa: ctx.taller.id,
+    p_perfil: perfilId,
+    p_rol: rol,
+    p_documento: documento,
+    p_cargo: datos.data.cargo ?? "",
+    p_fecha_ingreso: datos.data.fechaIngreso,
+    p_tipo: datos.data.tipoPago,
+    p_monto: Math.round(datos.data.monto * 100) / 100,
+    p_frecuencia: datos.data.frecuencia,
+    p_comision: rol === "asesor" ? (datos.data.comision ?? 0) : 0,
+  });
+  if (error) {
+    if (creado) await admin.auth.admin.deleteUser(perfilId);
+    if (error.code === "23505") return error.message.includes("DNI") ? { errores: { documento: error.message } } : { error: `Esa persona ya tiene el rol ${NOMBRE_ROL[rol]} en este taller.` };
+    if (error.code === "42501" || error.code === "23514") return { error: error.message };
+    return { error: "La base de datos no permitió el alta." };
+  }
+
+  // La primera vez que entre podrá cambiar su usuario y su contraseña.
+  if (creado) await admin.from("perfiles").update({ debe_cambiar_clave: true }).eq("id", perfilId);
+
+  revalidatePath("/usuarios");
+  return {
+    ok: creado
+      ? `${nombre} ya puede entrar con el usuario «${usuario}» y la contraseña que le diste.`
+      : `${existente?.nombre} ya tenía acceso en otro taller: se le agregó el rol. Su contraseña no cambió.`,
+    acceso: creado ? { nombre, usuario, clave, celular } : undefined,
+  };
+}
+
+/** Deja a la persona con exactamente estos roles en el taller actual. */
+export async function cambiarRoles(perfilId: string, roles: string[]): Promise<Resultado> {
+  const ctx = await exigirGestor();
+  const pedidos = [...new Set(roles)].filter(esRol);
+  if (pedidos.length === 0) return { error: "Elige al menos un rol. Para quitarle el acceso, desactívala." };
+
+  const supabase = await clienteServidor();
+  const { data: actuales, error: errorLeer } = await supabase
+    .from("miembros")
+    .select("id, rol")
+    .eq("empresa_id", ctx.taller.id)
+    .eq("perfil_id", perfilId);
+  if (errorLeer) return { error: "No se pudieron leer los roles actuales." };
+
+  const asignables = rolesAsignables(ctx.roles);
+  const agregar = pedidos.filter((r) => !actuales?.some((a) => a.rol === r));
+  const quitar = (actuales ?? []).filter((a) => !pedidos.includes(a.rol as Rol));
+  if ([...agregar, ...quitar.map((q) => q.rol as Rol)].some((r) => !asignables.includes(r))) {
+    return { error: "Tu rol no puede dar ni quitar el rol de gerencia." };
+  }
+
+  if (agregar.length > 0) {
+    const { error } = await supabase
+      .from("miembros")
+      .insert(agregar.map((rol) => ({ empresa_id: ctx.taller.id, perfil_id: perfilId, rol })));
+    if (error) return { error: "La base de datos no permitió agregar esos roles." };
+  }
+  if (quitar.length > 0) {
+    const { error, count } = await supabase
+      .from("miembros")
+      .delete({ count: "exact" })
+      .in("id", quitar.map((q) => q.id));
+    if (error) {
+      return {
+        error: error.message.includes("gerencia")
+          ? "El taller debe tener al menos una persona con rol gerencia."
+          : "La base de datos no permitió quitar esos roles.",
+      };
+    }
+    if (count !== quitar.length) return { error: "Algunos roles no se pudieron quitar." };
+  }
+
+  revalidatePath("/usuarios");
+  return { ok: "Roles actualizados." };
+}
+
+/**
+ * Usuario y contraseña juntos: crea o cambia el usuario y, si se escribe, pone una contraseña nueva.
+ * Devuelve lo necesario para compartirlo por WhatsApp.
+ */
+export async function cambiarAcceso(perfilId: string, usuarioTexto: string, clave: string): Promise<Resultado> {
+  await exigirGestor();
+  const usuario = normalizarUsuario(usuarioTexto);
+  if (!esUsuarioValido(usuario)) return { errores: { usuario: REGLA_USUARIO } };
+  if (clave && clave.length < CLAVE_MINIMA) return { errores: { clave: `Mínimo ${CLAVE_MINIMA} caracteres.` } };
+  if (clave.length > 72) return { errores: { clave: "Máximo 72 caracteres." } };
+
+  const supabase = await clienteServidor();
+  const { data: puede } = await supabase.rpc("puedo_gestionar_perfil", { p_perfil: perfilId });
+  if (puede !== true) return { error: "No puedes cambiar el acceso de esta persona." };
+  const { data: persona } = await supabase.from("perfiles").select("nombre, usuario, celular").eq("id", perfilId).maybeSingle();
+  if (!persona) return { error: "No se encontró a esta persona." };
+
+  if (persona.usuario !== usuario) {
+    const { error, count } = await supabase.from("perfiles").update({ usuario }, { count: "exact" }).eq("id", perfilId);
+    if (error?.code === "23505") {
+      const { data: otro } = await supabase.rpc("sugerir_usuario", { p_texto: usuario });
+      return { errores: { usuario: `Ese usuario ya está en uso. Prueba con «${otro ?? `${usuario}2`}».` } };
+    }
+    if (error || count !== 1) return { error: "No se pudo guardar el usuario." };
+  }
+  if (clave) {
+    const { error } = await clienteAdmin().auth.admin.updateUserById(perfilId, { password: clave });
+    if (error) return { error: "El usuario se guardó, pero la contraseña no. Intenta otra vez." };
+    // Al entrar con esta contraseña temporal podrá poner la suya.
+    await clienteAdmin().from("perfiles").update({ debe_cambiar_clave: true }).eq("id", perfilId);
+  }
+  revalidatePath("/usuarios");
+  return {
+    ok: clave ? "Usuario y contraseña guardados." : "Usuario guardado. La contraseña sigue igual.",
+    acceso: { nombre: persona.nombre, usuario, clave: clave || null, celular: persona.celular },
+  };
+}
+
+const esquemaDatos = z.object({
+  nombre: z.string().trim().min(2, "Escribe el nombre y apellido.").max(80, "Máximo 80 letras."),
+  documento: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\s/g, "").toUpperCase())
+    .refine((v) => v === "" || /^[0-9A-Z]{6,15}$/.test(v), "DNI o carné: de 6 a 15 letras o números."),
+  cargo: z.string().trim().max(60, "Máximo 60 letras.").refine((v) => v === "" || v.length >= 2, "Muy corto."),
+  fechaIngreso: z.string().refine((v) => v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v), "Fecha no válida."),
+  usuario: z.string().transform(normalizarUsuario).refine(esUsuarioValido, REGLA_USUARIO).optional(),
+  celular: z.string().transform((v, c) => {
+    const n = normalizarCelular(v);
+    if (!n) c.addIssue({ code: "custom", message: "Celular de 9 dígitos, por ejemplo 987 654 321." });
+    return n ?? "";
+  }),
+});
+
+/** Datos de la persona: nombre, documento, cargo y fecha de ingreso. El celular no se cambia aquí. */
+export async function editarDatos(perfilId: string, datos: unknown): Promise<Resultado> {
+  await exigirGestor();
+  const r = esquemaDatos.safeParse(datos);
+  if (!r.success) {
+    const errores: Record<string, string> = {};
+    for (const problema of r.error.issues) errores[String(problema.path[0])] ??= problema.message;
+    return { errores };
+  }
+  const { nombre, documento, cargo, fechaIngreso, usuario, celular } = r.data;
+  const supabase = await clienteServidor();
+  const { data: antes } = await supabase.from("perfiles").select("celular").eq("id", perfilId).maybeSingle();
+  const { error, count } = await supabase
+    .from("perfiles")
+    .update({ nombre, ...(usuario ? { usuario } : {}), documento: documento || null, cargo: cargo || null, fecha_ingreso: fechaIngreso || null }, { count: "exact" })
+    .eq("id", perfilId);
+  if (error?.code === "23505") {
+    if (error.message.includes("usuario")) {
+      const { data: otro } = await supabase.rpc("sugerir_usuario", { p_texto: usuario ?? nombre });
+      return { errores: { usuario: `Ese usuario ya está en uso. Prueba con «${otro ?? `${usuario}2`}».` } };
+    }
+    return { errores: { documento: "Ese DNI ya está registrado a otra persona." } };
+  }
+  if (error || count !== 1) return { error: "No tienes permiso para cambiar los datos de esta persona." };
+  // El celular (su WhatsApp) se cambia aparte: solo gerencia o administración, y sin repetirse.
+  if (antes && antes.celular !== celular) {
+    const { error: e2 } = await supabase.rpc("cambiar_celular", { p_perfil: perfilId, p_celular: celular });
+    if (e2) return { errores: { celular: e2.code === "23505" || e2.code === "42501" || e2.code === "23514" ? e2.message : "No se pudo cambiar el celular." } };
+  }
+  revalidatePath("/usuarios");
+  return { ok: "Datos guardados." };
+}
+
+/** Bloquea o desbloquea el ingreso según si le queda algún taller activo. */
+async function ajustarIngreso(perfilId: string) {
+  const admin = clienteAdmin();
+  const [{ data: activas }, { data: perfil }] = await Promise.all([
+    admin.from("miembros").select("id").eq("perfil_id", perfilId).eq("activo", true).limit(1),
+    admin.from("perfiles").select("activo").eq("id", perfilId).maybeSingle(),
+  ]);
+  const puedeEntrar = (activas?.length ?? 0) > 0 && perfil?.activo !== false;
+  // Bloquear el ingreso también invalida sus sesiones abiertas (no puede renovarlas).
+  await admin.auth.admin.updateUserById(perfilId, { ban_duration: puedeEntrar ? "none" : "876000h" });
+}
+
+/**
+ * Dar de baja en este taller: pierde el acceso al instante y no se borra nada
+ * (sus órdenes, movimientos y gastos siguen a su nombre).
+ */
+export async function darDeBaja(perfilId: string, motivo: string, fecha: string): Promise<Resultado> {
+  const ctx = await exigirGestor();
+  if (perfilId === ctx.perfil.id) return { error: "No puedes darte de baja a ti mismo." };
+  if (motivo.trim().length < 3) return { error: "Escribe el motivo de la baja." };
+  const supabase = await clienteServidor();
+  const { error } = await supabase.rpc("dar_de_baja", {
+    p_empresa: ctx.taller.id,
+    p_perfil: perfilId,
+    p_motivo: motivo.trim(),
+    p_fecha: /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : undefined,
+  });
+  if (error) return { error: error.code === "23514" || error.code === "42501" || error.code === "P0002" ? error.message : "No se pudo dar de baja." };
+  await ajustarIngreso(perfilId);
+  revalidatePath("/usuarios");
+  return { ok: "Listo: ya no puede entrar. Su historial se conserva." };
+}
+
+/** Devolver el acceso a alguien dado de baja. */
+export async function reactivar(perfilId: string): Promise<Resultado> {
+  const ctx = await exigirGestor();
+  const supabase = await clienteServidor();
+  const { error } = await supabase.rpc("reactivar", { p_empresa: ctx.taller.id, p_perfil: perfilId });
+  if (error) return { error: error.code === "42501" ? error.message : "No se pudo reactivar." };
+  await ajustarIngreso(perfilId);
+  revalidatePath("/usuarios");
+  return { ok: "Acceso devuelto. Entra con su misma contraseña." };
+}
+
+const esquemaCambioPago = z.object({
+  tipo: z.enum(["fijo", "destajo"]),
+  monto: z.coerce.number({ error: "Escribe el monto." }).min(0).max(100000),
+  frecuencia: z.enum(["semanal", "quincenal", "mensual"]),
+  comision: z.coerce.number().min(0).max(100).optional(),
+  desde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elige desde cuándo."),
+  motivo: z.string().trim().min(3, "Escribe el motivo.").max(200),
+});
+
+/** Cambiar el pago: crea una versión nueva desde hoy o una fecha futura; lo ya pagado no se toca. */
+export async function cambiarPago(perfilId: string, datos: unknown): Promise<Resultado> {
+  const ctx = await exigirGestor();
+  const r = esquemaCambioPago.safeParse(datos);
+  if (!r.success) {
+    const errores: Record<string, string> = {};
+    for (const i of r.error.issues) errores[String(i.path[0])] ??= i.message;
+    return { errores };
+  }
+  const supabase = await clienteServidor();
+  const { error } = await supabase.rpc("cambiar_esquema_pago", {
+    p_empresa: ctx.taller.id,
+    p_perfil: perfilId,
+    p_tipo: r.data.tipo,
+    p_monto: Math.round(r.data.monto * 100) / 100,
+    p_frecuencia: r.data.frecuencia,
+    p_comision: r.data.comision ?? 0,
+    p_desde: r.data.desde,
+    p_motivo: r.data.motivo,
+  });
+  if (error) return { error: error.code === "23514" || error.code === "42501" ? error.message : "No se pudo guardar el cambio." };
+  revalidatePath("/usuarios");
+  return { ok: "Pago actualizado. Lo anterior queda en su historial." };
+}
