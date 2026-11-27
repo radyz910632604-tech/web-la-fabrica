@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(17);
+select plan(18);
 
 insert into empresas (id, nombre) values ('a0000000-0000-0000-0000-0000000000fa', 'Taller Caja');
 insert into auth.users (id, email, raw_app_meta_data) values
@@ -81,6 +81,7 @@ select lives_ok($$ select registrar_devolucion((select id from pagos where orden
 reset role;
 select is((select medio || '|' || (devuelve_pago_id is not null) from pagos where orden_id = 'f0f00000-0000-0000-0000-0000000000fa' and tipo = 'devolucion'), 'yape|true', 'La devolución va por el mismo medio y apunta al pago original');
 select is((select saldo from privado.cuenta_orden('f0f00000-0000-0000-0000-0000000000fa')), 0.00::numeric, 'Queda en cero');
+select is((select string_agg(descripcion, ',' order by descripcion) from orden_servicios where orden_id = 'f0f00000-0000-0000-0000-0000000000fa'), 'Mantenimiento preventivo', 'La lista de trabajos sigue a los servicios con precio (el lavado quitado salió)');
 select is(privado.lineas_desde_base(null, '[{"tipo":"servicio","descripcion":"Cambio de aceite","cantidad":1,"precio":120}]', 0.18) -> 0 ->> 'total', '120.00', 'Precio con IGV: se respeta exacto');
 select * from finish();
 rollback;

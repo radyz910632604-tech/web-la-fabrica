@@ -175,6 +175,23 @@ begin
     end if;
   end if;
 
+  -- La lista de trabajos (lo que ve el técnico) sigue a los servicios con precio:
+  -- un servicio nuevo entra; uno que se quitó de todas las cotizaciones vigentes sale.
+  insert into public.orden_servicios (empresa_id, orden_id, descripcion, es_adicional)
+  select distinct on (lower(btrim(i.descripcion))) v_orden.empresa_id, p_orden, btrim(i.descripcion),
+         exists (select 1 from public.cotizaciones c2 where c2.orden_id = p_orden and c2.estado = 'aprobada' and c2.id <> coalesce(v_nueva, '00000000-0000-0000-0000-000000000000'::uuid))
+  from public.cotizacion_items i join public.cotizaciones c on c.id = i.cotizacion_id
+  where c.orden_id = p_orden and c.estado in ('borrador', 'enviada', 'aprobada') and i.tipo = 'servicio'
+    and not exists (select 1 from public.orden_servicios s where s.orden_id = p_orden and lower(btrim(s.descripcion)) = lower(btrim(i.descripcion)));
+  if p_cotizacion is not null and v_orden.estado <> 'entregado' then
+    delete from public.orden_servicios s
+    where s.orden_id = p_orden
+      and exists (select 1 from public.cotizacion_items i where i.cotizacion_id = p_cotizacion and i.tipo = 'servicio' and lower(btrim(i.descripcion)) = lower(btrim(s.descripcion)))
+      and not exists (select 1 from public.cotizacion_items i join public.cotizaciones c on c.id = i.cotizacion_id
+                      where c.orden_id = p_orden and c.estado in ('borrador', 'enviada', 'aprobada') and i.tipo = 'servicio'
+                        and lower(btrim(i.descripcion)) = lower(btrim(s.descripcion)));
+  end if;
+
   -- Si el nuevo total queda por debajo de lo ya pagado, solo gerencia o administración.
   select * into v_cuenta from privado.cuenta_orden(p_orden);
   if v_cuenta.saldo < -0.009 and not privado.es_gestor(v_orden.empresa_id) then
