@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { formatearCelular } from "@/lib/celulares";
-import { tieneAlguno } from "@/lib/roles";
+import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { catalogo, nombresPersonal, tecnicosMecanicos } from "@/lib/taller/consultas";
@@ -42,7 +42,25 @@ export default async function EditarOrden({ params }: { params: Promise<{ id: st
       ? [...tecnicosBase, { id: o.tecnico_id, nombre: nombres.get(o.tecnico_id) ?? "Asignado antes" }]
       : tecnicosBase;
 
+  // Precios (solo roles de caja): de las cotizaciones vigentes, CON IGV por unidad.
+  const verPrecios = tieneAlguno(ctx.roles, CAJA);
+  let precios: Edicion["precios"];
+  let preciosBase: Edicion["preciosBase"];
+  if (verPrecios) {
+    const [{ data: cots }, { data: cat }] = await Promise.all([
+      supabase.from("cotizaciones").select("estado, version, cotizacion_items (tipo, descripcion, cantidad, total)").eq("orden_id", o.id).in("estado", ["borrador", "enviada", "aprobada"]).order("version"),
+      supabase.from("catalogo_servicios").select("nombre, precio_referencial").eq("empresa_id", ctx.taller.id).eq("activo", true),
+    ]);
+    precios = {};
+    for (const c of cots ?? [])
+      for (const i of (c.cotizacion_items ?? []) as { tipo: string; descripcion: string; cantidad: number; total: number }[])
+        if (i.tipo === "servicio") precios[i.descripcion.trim().toLowerCase()] = { precio: Math.round((Number(i.total) / Number(i.cantidad)) * 100) / 100, aprobada: c.estado === "aprobada" };
+    preciosBase = Object.fromEntries((cat ?? []).filter((x) => x.precio_referencial != null).map((x) => [x.nombre.trim().toLowerCase(), Number(x.precio_referencial)]));
+  }
+
   const edicion: Edicion = {
+    precios,
+    preciosBase,
     ordenId: o.id,
     placa: v?.placa ?? "",
     cliente: {

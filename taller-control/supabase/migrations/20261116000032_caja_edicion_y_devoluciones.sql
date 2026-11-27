@@ -39,6 +39,20 @@ begin
     v_tipo := coalesce(v_item ->> 'tipo', 'servicio');
     v_cant := (v_item ->> 'cantidad')::numeric;
     v_base := (v_item ->> 'base')::numeric;
+    -- También se acepta el precio CON IGV por unidad («precio»): se respeta exacto, sin céntimos de diferencia.
+    if v_item ? 'precio' and v_base is null then
+      v_cant := (v_item ->> 'cantidad')::numeric;
+      if v_cant is null or v_cant <= 0 or v_cant > 9999 then raise exception 'Revisa la cantidad de «%».', v_desc using errcode = '22023'; end if;
+      if (v_item ->> 'precio')::numeric is null or (v_item ->> 'precio')::numeric < 0 or (v_item ->> 'precio')::numeric > 9999999 then
+        raise exception 'Revisa el precio de «%».', v_desc using errcode = '22023';
+      end if;
+      if char_length(v_desc) not between 2 and 200 then raise exception 'Cada línea necesita una descripción (2 a 200 letras).' using errcode = '22023'; end if;
+      v_total := round(v_cant * (v_item ->> 'precio')::numeric, 2);
+      v_sin := round(v_total / (1 + p_tasa), 2);
+      v_out := v_out || jsonb_build_array(jsonb_build_object('tipo', v_tipo, 'descripcion', v_desc, 'cantidad', v_cant,
+        'precio', round(v_total / v_cant, 2), 'sin_igv', v_sin, 'igv', v_total - v_sin, 'total', v_total));
+      continue;
+    end if;
     if char_length(v_desc) not between 2 and 200 then raise exception 'Cada línea necesita una descripción (2 a 200 letras).' using errcode = '22023'; end if;
     if v_tipo not in ('servicio', 'repuesto') then raise exception 'Tipo de línea no válido.' using errcode = '22023'; end if;
     if v_cant is null or v_cant <= 0 or v_cant > 9999 then raise exception 'Revisa la cantidad de «%».', v_desc using errcode = '22023'; end if;

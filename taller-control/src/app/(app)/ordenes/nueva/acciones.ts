@@ -120,6 +120,8 @@ const esquemaIngreso = z.object({
   tecnicoId: z.preprocess(vacioANulo, z.string().uuid().nullable()),
   citaId: z.preprocess(vacioANulo, z.string().uuid().nullable()),
   entrega: z.object({ dia: z.string(), hora: z.string(), porDefinir: z.boolean() }),
+  // Solo al editar (roles de caja): el precio CON IGV de cada servicio; vacío = sin precio.
+  precios: z.array(z.object({ descripcion: z.string().trim().min(2).max(160), precio: z.preprocess(vacioANulo, z.coerce.number().min(0, "El precio no puede ser negativo.").max(9_999_999).nullable()) })).optional(),
 });
 
 
@@ -320,8 +322,93 @@ export async function editarIngreso(ordenId: string, datos: unknown): Promise<Re
     if (e) return { error: "Se guardó la orden, pero no se agregaron los servicios nuevos." };
   }
 
+  // Precios de los servicios (si quien edita es de caja y los mandó).
+  if (d.precios && tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "recepcion"])) {
+    const fallo = await sincronizarPrecios(supabase, ordenId, d.servicios, d.precios);
+    if (fallo) {
+      revalidatePath("/", "layout");
+      return { error: `Se guardaron los datos de la orden, pero no los precios: ${fallo}` };
+    }
+  }
+
   revalidatePath("/", "layout");
   return { ordenId };
+}
+
+type LineaCot = { tipo: "servicio" | "repuesto"; descripcion: string; cantidad: number; base?: number; precio?: number };
+
+/**
+ * Deja los precios de la orden como en la pantalla de edición, sin duplicar el total:
+ * cambia el precio de las líneas que ya existían, agrega las nuevas (a la última cotización
+ * aprobada o vigente) y quita las de los servicios que se sacaron. Los productos no se tocan.
+ * Cada cambio es una versión nueva de la cotización (editar_lineas_orden) con quién la hizo.
+ */
+async function sincronizarPrecios(
+  supabase: Awaited<ReturnType<typeof clienteServidor>>,
+  ordenId: string,
+  servicios: { descripcion: string }[],
+  precios: { descripcion: string; precio: number | null }[],
+): Promise<string | null> {
+  const clave = (t: string) => t.trim().toLowerCase();
+  const elegidos = new Set(servicios.map((sv) => clave(sv.descripcion)));
+  const precioDe = new Map(precios.filter((x) => x.precio != null).map((x) => [clave(x.descripcion), x.precio as number]));
+  const { data: cots } = await supabase
+    .from("cotizaciones")
+    .select("id, estado, version, tasa_igv, cotizacion_items (tipo, descripcion, cantidad, subtotal_sin_igv, total, creado_en)")
+    .eq("orden_id", ordenId)
+    .in("estado", ["borrador", "enviada", "aprobada"])
+    .order("version");
+  type Item = { tipo: "servicio" | "repuesto"; descripcion: string; cantidad: number; subtotal_sin_igv: number; total: number; creado_en: string | null };
+  const conPrecio = new Set<string>();
+  const cambios: { cot: string | null; conIgv: boolean; lineas: LineaCot[] }[] = [];
+  for (const c of cots ?? []) {
+    const items = ((c.cotizacion_items ?? []) as Item[]).sort((a, b) => String(a.creado_en).localeCompare(String(b.creado_en)));
+    let cambio = false;
+    const lineas: LineaCot[] = [];
+    for (const i of items) {
+      const cant = Number(i.cantidad);
+      const base = Math.round((Number(i.subtotal_sin_igv) / cant) * 10000) / 10000;
+      if (i.tipo === "repuesto") {
+        lineas.push({ tipo: i.tipo, descripcion: i.descripcion, cantidad: cant, base });
+        continue;
+      }
+      const k = clave(i.descripcion);
+      if (!elegidos.has(k)) {
+        cambio = true; // el servicio se quitó de la orden: su precio también
+        continue;
+      }
+      conPrecio.add(k);
+      const nuevo = precioDe.get(k);
+      const actual = Math.round((Number(i.total) / cant) * 100) / 100;
+      if (nuevo != null && Math.abs(nuevo - actual) > 0.004) {
+        cambio = true;
+        lineas.push({ tipo: "servicio", descripcion: i.descripcion, cantidad: cant, precio: nuevo });
+      } else lineas.push({ tipo: "servicio", descripcion: i.descripcion, cantidad: cant, base });
+    }
+    if (cambio) cambios.push({ cot: c.id, conIgv: Number(c.tasa_igv) > 0, lineas });
+  }
+  // Servicios con precio que todavía no estaban en ninguna cotización.
+  const nuevos = servicios.filter((sv) => !conPrecio.has(clave(sv.descripcion)) && precioDe.has(clave(sv.descripcion)));
+  if (nuevos.length) {
+    const vigentes = cots ?? [];
+    const destino = [...vigentes].reverse().find((c) => c.estado === "aprobada") ?? vigentes.at(-1) ?? null;
+    const lineasNuevas = nuevos.map((sv) => ({ tipo: "servicio" as const, descripcion: sv.descripcion.trim(), cantidad: 1, precio: precioDe.get(clave(sv.descripcion))! }));
+    const yaCambia = destino ? cambios.find((x) => x.cot === destino.id) : null;
+    if (yaCambia) yaCambia.lineas.push(...lineasNuevas);
+    else if (destino) {
+      const items = ((destino.cotizacion_items ?? []) as Item[]).sort((a, b) => String(a.creado_en).localeCompare(String(b.creado_en)));
+      cambios.push({
+        cot: destino.id,
+        conIgv: Number(destino.tasa_igv) > 0,
+        lineas: [...items.map((i) => ({ tipo: i.tipo, descripcion: i.descripcion, cantidad: Number(i.cantidad), base: Math.round((Number(i.subtotal_sin_igv) / Number(i.cantidad)) * 10000) / 10000 })), ...lineasNuevas],
+      });
+    } else cambios.push({ cot: null, conIgv: true, lineas: lineasNuevas });
+  }
+  for (const x of cambios) {
+    const { error } = await supabase.rpc("editar_lineas_orden", { p_orden: ordenId, p_cotizacion: x.cot, p_items: x.lineas, p_con_igv: x.conIgv, p_aprobar: true });
+    if (error) return ["23514", "22023", "42501"].includes(error.code ?? "") ? error.message : "intenta otra vez.";
+  }
+  return null;
 }
 
 /** Sube una foto (ya reducida en el celular) a la orden. */

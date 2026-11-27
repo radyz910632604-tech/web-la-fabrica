@@ -35,6 +35,10 @@ export type Edicion = {
   observaciones: string;
   tecnicoId: string;
   servicios: { id: string | null; descripcion: string }[];
+  /** Solo para roles de caja: precio CON IGV por servicio (clave en minúsculas). Si viene, se pueden poner y cambiar precios. */
+  precios?: Record<string, { precio: number; aprobada: boolean }>;
+  /** Precio base del catálogo por servicio (clave en minúsculas), para prellenar. */
+  preciosBase?: Record<string, number>;
 };
 
 type Foto = { clave: string; archivo: File; vista: string };
@@ -81,6 +85,13 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora, edicion }:
   const [otro, setOtro] = useState("");
   const [observaciones, setObservaciones] = useState(edicion?.observaciones ?? "");
   const [tecnicoId, setTecnicoId] = useState(edicion?.tecnicoId ?? "");
+  const [precios, setPrecios] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(edicion?.precios ?? {}).map(([k, v]) => [k, v.precio.toFixed(2)])),
+  );
+  const conPrecios = Boolean(edicion?.precios);
+  const clavePrecio = (t: string) => t.trim().toLowerCase();
+  const precioDe = (t: string) => precios[clavePrecio(t)] ?? (edicion?.preciosBase?.[clavePrecio(t)] != null ? edicion.preciosBase[clavePrecio(t)].toFixed(2) : "");
+  const totalPrecios = elegidos.reduce((a, e) => a + (Number(precioDe(e.descripcion).replace(",", ".")) || 0), 0);
   const [entrega, setEntrega] = useState<ValorEntrega>({ dia: "", hora: "", porDefinir: false });
   const [fotos, setFotos] = useState<Foto[]>([]);
   const entradaFotos = useRef<HTMLInputElement>(null);
@@ -167,6 +178,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora, edicion }:
           citaId: "",
           entrega: { dia: "", hora: "", porDefinir: true },
           combustible: nivel,
+          ...(conPrecios ? { precios: elegidos.map((e) => ({ descripcion: e.descripcion, precio: precioDe(e.descripcion).replace(",", ".") })) } : {}),
         });
         if (r.errores) {
           setErrores(r.errores);
@@ -499,6 +511,46 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora, edicion }:
               <Plus />
             </Boton>
           </div>
+          {conPrecios && elegidos.length ? (
+            <div className="mt-4 flex flex-col gap-2 border-t border-regla pt-4">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-sm font-medium">Precio de cada servicio</span>
+                <span className="text-[12px] text-tinta-3">S/ con IGV · vacío = sin precio</span>
+              </div>
+              <ul className="flex flex-col gap-1.5">
+                {elegidos.map((e) => {
+                  const k = clavePrecio(e.descripcion);
+                  const previo = edicion?.precios?.[k];
+                  return (
+                    <li key={k} className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-2 rounded-xl bg-interna px-3 py-2">
+                      <span className="min-w-0 text-[14px]">
+                        <span className="line-clamp-2">{e.descripcion}</span>
+                        <span className={cn("text-[12px]", previo ? (previo.aprobada ? "text-positivo" : "text-aviso") : "text-tinta-3")}>
+                          {previo ? (previo.aprobada ? "Aprobado" : "Por aprobar") : "Nuevo"}
+                        </span>
+                      </span>
+                      <span className="relative">
+                        <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[13px] text-tinta-3">S/</span>
+                        <Entrada
+                          value={precioDe(e.descripcion)}
+                          onChange={(ev) => setPrecios((p) => ({ ...p, [k]: ev.target.value.replace(/[^\d.,]/g, "") }))}
+                          inputMode="decimal"
+                          placeholder="0.00"
+                          aria-label={`Precio de ${e.descripcion}`}
+                          className="num h-11 pl-9 text-right"
+                        />
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="num flex justify-between px-1 text-[15px] font-semibold">
+                <span>Total servicios</span>
+                <span>S/ {totalPrecios.toFixed(2)}</span>
+              </p>
+              <p className="text-[12px] text-tinta-3">Al guardar, lo que quites también sale del total. Los productos y descuentos se manejan en Caja.</p>
+            </div>
+          ) : null}
           {errores.servicios ? <p className="mt-2 text-sm text-negativo">{errores.servicios}</p> : null}
         </Tarjeta>
 
