@@ -97,7 +97,8 @@ export async function responderCotizacion(id: string, ordenId: string, datos: un
   const supabase = await clienteServidor();
   const { error, count } = await supabase.from("cotizaciones").update(cambios, { count: "exact" }).eq("id", id);
   if (error || count !== 1) return { error: "No se pudo guardar la respuesta." };
-  revalidatePath(`/ordenes/${ordenId}`);
+  if (ordenId) revalidatePath(`/ordenes/${ordenId}`);
+  revalidatePath("/cotizaciones", "layout");
   return { ok: "Listo." };
 }
 

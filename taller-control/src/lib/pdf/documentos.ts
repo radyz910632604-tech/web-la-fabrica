@@ -66,7 +66,9 @@ const docCliente = (cl?: { tipo_documento?: string | null; numero_documento?: st
   cl?.numero_documento ? `${DOC[cl.tipo_documento ?? ""] ?? ""} ${cl.numero_documento}`.trim() : null;
 
 /** Totales para el pie del documento: Otros cargos, Gravado/Exento, Subtotal, Descuento, IGV. */
-function gruposTotales(sinIgv: number, igv: number, total: number, tasa: number): [string, string][][] {
+function gruposTotales(sinIgv: number, igv: number, total: number, tasa: number, descuento = 0): [string, string][][] {
+  // Con descuento: Subtotal − Descuento + IGV = Total (los dos primeros, sin IGV).
+  const descSin = descuento > 0 ? Math.round((descuento / (1 + tasa)) * 100) / 100 : 0;
   return [
     [
       ["Otros Cargos", soles(0)],
@@ -74,8 +76,8 @@ function gruposTotales(sinIgv: number, igv: number, total: number, tasa: number)
       ["Total Exento", soles(tasa > 0 ? 0 : total)],
     ],
     [
-      ["Subtotal", soles(tasa > 0 ? sinIgv : total)],
-      ["Descuento", soles(0)],
+      ["Subtotal", soles((tasa > 0 ? sinIgv : total) + descSin)],
+      ["Descuento", descSin ? `-${soles(descSin)}` : soles(0)],
       [`IGV${tasa > 0 ? ` ${Math.round(tasa * 100)}%` : ""}`, soles(igv)],
     ],
   ];
@@ -107,7 +109,7 @@ export async function pdfCotizacion(ctx: Contexto, id: string, modo: ModoIgv): P
   const supabase = await clienteServidor();
   const { data: c } = await supabase
     .from("cotizaciones")
-    .select("version, es_adicional, estado, respuesta_en, aprobada_por_medio, tasa_igv, subtotal_sin_igv, igv, total, creado_en, cotizacion_items (tipo, descripcion, cantidad, precio_unitario_total, subtotal_sin_igv, igv, total), ordenes_trabajo (numero, kilometraje_ingreso, vehiculos (placa, marca, modelo, anio, color), clientes (nombre, celular, tipo_documento, numero_documento))")
+    .select("numero, version, es_adicional, estado, respuesta_en, aprobada_por_medio, tasa_igv, subtotal_sin_igv, igv, total, descuento, descuento_tipo, descuento_valor, descuento_motivo, cliente_nombre, cliente_celular, cliente_documento, placa, vehiculo, creado_en, cotizacion_items (tipo, descripcion, cantidad, precio_unitario_total, subtotal_sin_igv, igv, total), ordenes_trabajo (numero, kilometraje_ingreso, vehiculos (placa, marca, modelo, anio, color), clientes (nombre, celular, tipo_documento, numero_documento))")
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
     .maybeSingle();
@@ -117,7 +119,7 @@ export async function pdfCotizacion(ctx: Contexto, id: string, modo: ModoIgv): P
   const cl = uno(o?.clientes);
   const tasa = n(c.tasa_igv);
   const { taller, pie } = await base(ctx);
-  const numero = `N° ${o ? String(o.numero).padStart(6, "0") : ""}-${c.version}`;
+  const numero = c.numero ? `N° ${String(c.numero).padStart(6, "0")}` : `N° ${o ? String(o.numero).padStart(6, "0") : ""}-${c.version}`;
   const vence = new Date(new Date(c.creado_en).getTime() + 30 * 86_400_000).toISOString();
   const d = await Documento.crear(taller, c.es_adicional ? "Proforma adicional" : "Proforma", numero, pie, {
     colorTitulo: "azul",
@@ -128,20 +130,21 @@ export async function pdfCotizacion(ctx: Contexto, id: string, modo: ModoIgv): P
     ],
   });
   d.recuadro(null, [
-    ["Cliente", cl?.nombre],
-    ["Documento", docCliente(cl)],
-    ["Teléfono", telefono(cl?.celular)],
-    ["Placa", placa(v?.placa)],
-    ["Vehículo", carro(v)],
+    ["Cliente", cl?.nombre ?? c.cliente_nombre],
+    ["Documento", cl ? docCliente(cl) : c.cliente_documento],
+    ["Teléfono", telefono(cl?.celular ?? c.cliente_celular)],
+    ["Placa", placa(v?.placa ?? c.placa)],
+    ["Vehículo", v ? carro(v) : c.vehiculo],
     ["Kilometraje", o?.kilometraje_ingreso != null ? `${Number(o.kilometraje_ingreso).toLocaleString("es-PE")} km` : null],
   ]);
   const verSinIgv = modo === "sin" && tasa > 0;
   d.tabla(COLUMNAS_DETALLE, filasDetalle((c.cotizacion_items ?? []) as ItemCot[], tasa, verSinIgv), { cebra: true });
   d.ultimaLinea();
-  d.cierre(`Firmado por ${taller.razonSocial || taller.nombre}`, gruposTotales(n(c.subtotal_sin_igv), n(c.igv), n(c.total), tasa), ["Total", soles(n(c.total))]);
+  d.cierre(`Firmado por ${taller.razonSocial || taller.nombre}`, gruposTotales(n(c.subtotal_sin_igv), n(c.igv), n(c.total), tasa, n(c.descuento)), ["Total", soles(n(c.total))]);
+  const textoDescuento = n(c.descuento) > 0 ? ` Descuento${c.descuento_tipo === "porcentaje" ? ` del ${n(c.descuento_valor)} %` : ""} de ${soles(n(c.descuento))}${c.descuento_motivo ? ` (${c.descuento_motivo})` : ""}.` : "";
   const MEDIO: Record<string, string> = { whatsapp: "por WhatsApp", presencial: "en persona", llamada: "por llamada" };
   const estado = c.estado === "aprobada" ? `Aprobada por el cliente${c.aprobada_por_medio ? ` ${MEDIO[c.aprobada_por_medio]}` : ""}${c.respuesta_en ? ` el ${fechaCorta(c.respuesta_en)}` : ""}.` : c.estado === "rechazada" ? "El cliente no la aprobó." : "";
-  d.nota(`PRECIOS SUJETOS A CAMBIOS SIN PREVIO AVISO.${estado ? ` ${estado}` : ""}`);
+  d.nota(`PRECIOS SUJETOS A CAMBIOS SIN PREVIO AVISO.${textoDescuento}${estado ? ` ${estado}` : ""}`);
   return { bytes: await d.bytes(), archivo: `proforma-${numero.replace(/\D+/g, "-")}.pdf` };
 }
 

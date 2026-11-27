@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { PackagePlus } from "lucide-react";
+import { FilePlus2, PackagePlus, Pencil } from "lucide-react";
 import { anularPago } from "@/app/(app)/cobros/acciones";
 import { anularComprobante, anularRecibo } from "@/app/(app)/ventas/acciones";
 import { RegistrarComprobante } from "@/app/(app)/ventas/formulario";
 import { Anular, EmitirRecibo, RegistrarPago } from "@/components/caja/controles";
-import { NuevaCotizacion, RespuestaCotizacion } from "@/components/caja/cotizaciones";
+import { RespuestaCotizacion } from "@/components/caja/cotizaciones";
 import { Boton } from "@/components/ui/boton";
 import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
@@ -41,7 +41,6 @@ export function TarjetaDinero({
   ordenId,
   etiqueta,
   entregada,
-  servicios,
   hoy,
   puedeCotizar = true,
 }: {
@@ -50,7 +49,7 @@ export function TarjetaDinero({
   ordenId: string;
   etiqueta: string;
   entregada: boolean;
-  servicios: string[];
+  servicios?: string[];
   hoy: string;
 }) {
   const ahora = new Date();
@@ -75,7 +74,17 @@ export function TarjetaDinero({
       {d.aCobrar === 0 ? <p className="mt-2 text-sm text-tinta-3">El monto a cobrar sale del comprobante o, si aún no hay, de la cotización aprobada.</p> : null}
 
       <div className="mt-4 flex flex-col gap-4">
-        <Seccion titulo="Cotizaciones" accion={!entregada && puedeCotizar ? <NuevaCotizacion ordenId={ordenId} servicios={servicios} hayAprobada={d.cotizaciones.some((c) => c.estado === "aprobada")} /> : undefined}>
+        <Seccion titulo="Cotizaciones" accion={
+            !entregada && puedeCotizar ? (
+              <Boton asChild variante="secundario" tamano="chico">
+                <Link href={`/cotizaciones/nueva?orden=${ordenId}`}>
+                  <FilePlus2 />
+                  Nueva cotización
+                </Link>
+              </Boton>
+            ) : undefined
+          }
+        >
           {d.cotizaciones.length === 0 ? (
             <p className="text-sm text-tinta-2">Sin cotización todavía.</p>
           ) : (
@@ -114,7 +123,12 @@ export function TarjetaDinero({
                     <EnlacePdf href={`/pdf/cotizacion/${c.id}?igv=con`} texto="PDF con IGV" />
                     <EnlacePdf href={`/pdf/cotizacion/${c.id}?igv=sin`} texto="PDF sin IGV" />
                     {puedeCotizar && !entregada && !documentada && c.estado !== "anulada" && c.estado !== "rechazada" ? (
-                      <NuevaCotizacion ordenId={ordenId} editar={{ id: c.id, version: c.version, estado: c.estado, conIgv: c.conIgv, items: c.items }} />
+                      <Boton asChild variante="fantasma" tamano="chico">
+                        <Link href={`/cotizaciones/${c.id}/editar`}>
+                          <Pencil />
+                          Editar
+                        </Link>
+                      </Boton>
                     ) : null}
                   </div>
                   {puedeCotizar ? (

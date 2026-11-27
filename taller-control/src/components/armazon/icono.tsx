@@ -9,6 +9,7 @@ import {
   ChartColumn,
   ClipboardList,
   HandCoins,
+  FileText,
   LayoutGrid,
   MessageCircle,
   Package,
@@ -50,6 +51,7 @@ const ICONOS = {
   sistema: ShieldCheck,
   importar: FileSpreadsheet,
   comisiones: HandCoins,
+  cotizaciones: FileText,
 } satisfies Record<NombreIcono, unknown>;
 
 export function Icono({ nombre, ...props }: { nombre: NombreIcono } & LucideProps) {

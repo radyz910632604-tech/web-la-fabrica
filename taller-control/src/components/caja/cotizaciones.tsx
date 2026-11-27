@@ -183,19 +183,21 @@ export function NuevaCotizacion({ ordenId, servicios = [], hayAprobada = false, 
 }
 
 /** Botones según el estado: enviar, aprobar (con el medio), rechazar. */
-export function RespuestaCotizacion({ id, ordenId, estado }: { id: string; ordenId: string; estado: string }) {
+export function RespuestaCotizacion({ id, ordenId, estado }: { id: string; ordenId: string | null; estado: string }) {
   const [pendiente, iniciar] = useTransition();
   const [aprobando, setAprobando] = useState(false);
   const [r, setR] = useState<Resultado>({});
-  const responder = (datos: Record<string, string>) => iniciar(async () => setR(await responderCotizacion(id, ordenId, datos)));
+  const responder = (datos: Record<string, string>) => iniciar(async () => setR(await responderCotizacion(id, ordenId ?? "", datos)));
   if (estado !== "borrador" && estado !== "enviada") return null;
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap gap-2">
-        <Boton variante="secundario" tamano="chico" disabled={pendiente} onClick={() => iniciar(async () => setR(await enviarCotizacionWhatsapp(id, ordenId)))}>
-          <Send />
-          {estado === "enviada" ? "Reenviar por WhatsApp" : "Enviar por WhatsApp"}
-        </Boton>
+        {ordenId ? (
+          <Boton variante="secundario" tamano="chico" disabled={pendiente} onClick={() => iniciar(async () => setR(await enviarCotizacionWhatsapp(id, ordenId)))}>
+            <Send />
+            {estado === "enviada" ? "Reenviar por WhatsApp" : "Enviar por WhatsApp"}
+          </Boton>
+        ) : null}
         {estado === "borrador" ? (
           <Boton variante="secundario" tamano="chico" disabled={pendiente} onClick={() => responder({ estado: "enviada" })}>
             Marcar enviada
