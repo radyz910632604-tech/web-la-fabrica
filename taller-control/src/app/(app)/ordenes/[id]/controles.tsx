@@ -1,15 +1,16 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { Camera, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Ban, Camera, Plus } from "lucide-react";
 import { ElegirEntrega, type ValorEntrega } from "@/components/taller/elegir-entrega";
 import { Boton } from "@/components/ui/boton";
-import { ContenidoVentana, Ventana } from "@/components/ui/ventana";
-import { Entrada, Selector } from "@/components/ui/campo";
+import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ventana";
+import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { siguientesEstados, type EstadoOrden } from "@/lib/taller/estados";
 import { reducirFoto } from "@/lib/taller/fotos";
 import { subirFoto } from "../nueva/acciones";
-import { agregarAvance, agregarServicio, guardarDiagnostico, asignarAsesor, asignarTecnico, cambiarEntrega, cambiarEstado, type Resultado } from "./acciones";
+import { agregarAvance, agregarServicio, anularOrden, guardarDiagnostico, asignarAsesor, asignarTecnico, cambiarEntrega, cambiarEstado, type Resultado } from "./acciones";
 
 function Mensaje({ r }: { r: Resultado }) {
   if (r.error) return <p role="alert" className="mt-3 text-sm text-negativo">{r.error}</p>;
@@ -345,6 +346,46 @@ export function CambiarEntrega({ ordenId, actual, ahora, cliente }: { ordenId: s
           />
           <Boton type="submit" disabled={pendiente} className="mt-5 h-12 w-full">
             {pendiente ? "Guardando…" : "Guardar hora"}
+          </Boton>
+        </form>
+      </ContenidoVentana>
+    </Ventana>
+  );
+}
+
+/** Anular la orden (no se borra): pide el motivo y avisa qué falta anular antes si hay dinero. */
+export function AnularOrden({ ordenId }: { ordenId: string }) {
+  const [abierta, setAbierta] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [r, setR] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  const router = useRouter();
+  return (
+    <Ventana open={abierta} onOpenChange={(v) => (setAbierta(v), setR({}))}>
+      <DisparadorVentana asChild>
+        <Boton variante="fantasma" tamano="chico" className="text-negativo [&_svg]:text-negativo">
+          <Ban />
+          Anular orden
+        </Boton>
+      </DisparadorVentana>
+      <ContenidoVentana titulo="Anular orden" descripcion="La orden no se borra: queda anulada, fuera de las listas, con el motivo y quién la anuló. Si tiene pagos, recibo, boleta o repuestos del almacén, primero se anulan esos.">
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            iniciar(async () => {
+              const res = await anularOrden(ordenId, motivo);
+              setR(res);
+              if (res.ok) router.push("/ordenes");
+            });
+          }}
+        >
+          <Campo etiqueta="Motivo" ayuda="Por ejemplo: «Se registró por error», «El cliente no dejó el carro».">
+            {(p) => <Entrada {...p} value={motivo} onChange={(e) => setMotivo(e.target.value)} minLength={5} maxLength={300} required autoComplete="off" />}
+          </Campo>
+          <Mensaje r={r} />
+          <Boton type="submit" variante="peligro" disabled={pendiente || motivo.trim().length < 5} className="w-full">
+            {pendiente ? "Anulando…" : "Anular orden"}
           </Boton>
         </form>
       </ContenidoVentana>

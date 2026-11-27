@@ -51,6 +51,7 @@ export const VERSIONES: Version[] = [
   { version: "20261116000024", nombre: "Esquema de pago del personal", sql: columna("esquemas_pago", "frecuencia"), rest: ["esquemas_pago", "frecuencia"] },
   { version: "20261116000025", nombre: "Usuario propio para entrar", sql: columna("perfiles", "usuario"), rest: ["perfiles", "usuario"] },
   { version: "20261116000026", nombre: "Cotizaciones sueltas y descuento", sql: columna("cotizaciones", "descuento_motivo"), rest: ["cotizaciones", "descuento_motivo"] },
+  { version: "20261116000027", nombre: "Anular órdenes", sql: columna("ordenes_trabajo", "anulada_en"), rest: ["ordenes_trabajo", "anulada_en"] },
 ];
 
 export const versionDe = (archivo: string) => /^(\d{14})_/.exec(archivo)?.[1] ?? null;

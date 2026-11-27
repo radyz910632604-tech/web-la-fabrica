@@ -112,3 +112,15 @@ export async function cambiarEntrega(ordenId: string, valor: { dia: string; hora
   revalidatePath("/", "layout");
   return { ok: entrega.instante ? "Hora de entrega guardada." : "La hora de entrega quedó por definir." };
 }
+
+/** Anular la orden (no se borra): gerencia o administración, con motivo. Sin dinero ni repuestos vigentes. */
+export async function anularOrden(ordenId: string, motivo: string): Promise<Resultado> {
+  const ctx = await obtenerContexto();
+  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador"])) return { error: "Solo gerencia o administración anulan órdenes." };
+  if (motivo.trim().length < 5) return { error: "Escribe el motivo (mínimo 5 letras)." };
+  const supabase = await clienteServidor();
+  const { error } = await supabase.rpc("anular_orden", { p_orden: ordenId, p_motivo: motivo.trim() });
+  if (error) return { error: error.code === "23514" || error.code === "42501" ? error.message : "No se pudo anular la orden." };
+  revalidatePath("/", "layout");
+  return { ok: "Orden anulada." };
+}

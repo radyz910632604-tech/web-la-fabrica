@@ -19,7 +19,7 @@ import { listarRepuestos } from "@/lib/taller/inventario-consultas";
 import { colorSituacion, cuandoEntrega, partesLima, situacionEntrega, textoSituacion } from "@/lib/taller/entrega";
 import { SacarDelInventario } from "../../inventario/controles";
 import { FirmarCliente } from "@/components/taller/firma-cliente";
-import { AgregarServicio, AsignarAsesor, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, FormDiagnostico, SubirFotos } from "./controles";
+import { AgregarServicio, AnularOrden, AsignarAsesor, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, FormDiagnostico, SubirFotos } from "./controles";
 import { guardarFirma } from "./firma-acciones";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -39,7 +39,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
   const { data: o } = await supabase
     .from("ordenes_trabajo")
     .select(
-      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, entrega_cambiada_por, entrega_cambiada_en, asesor_id, es_reingreso_garantia, orden_garantia_origen_id, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, diagnostico, diagnostico_en, facturado_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
+      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, entrega_cambiada_por, entrega_cambiada_en, asesor_id, anulada, motivo_anulacion, es_reingreso_garantia, orden_garantia_origen_id, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, diagnostico, diagnostico_en, facturado_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
     )
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
@@ -191,8 +191,16 @@ export default async function Orden({ params, searchParams }: { params: Promise<
               className="rounded-full bg-tarjeta px-3 py-1.5 text-[15px] shadow-reposo"
             />
           ) : null}
-          <EnlacePdf href={`/pdf/orden/${o.id}`} texto="Orden de trabajo" boton className="md:ml-auto" />
+          <div className="flex flex-wrap gap-2 md:ml-auto">
+            <EnlacePdf href={`/pdf/orden/${o.id}`} texto="Orden de trabajo" boton />
+            {esGestorOrden && !o.anulada ? <AnularOrden ordenId={o.id} /> : null}
+          </div>
         </div>
+        {o.anulada ? (
+          <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-3 text-[15px] text-negativo">
+            Orden anulada{o.motivo_anulacion ? `: ${o.motivo_anulacion}` : ""}. Ya no sale en las listas ni cuenta en reportes.
+          </p>
+        ) : null}
         <p className="text-[15px] text-tinta-2 md:text-base">
           {datosCarro.join(" · ") || "Carro sin datos"} · Ingresó {formatearMomento(new Date(o.ingresado_en), ahora).toLowerCase()}
           {o.kilometraje_ingreso != null ? ` con ${o.kilometraje_ingreso.toLocaleString("es-PE")} km` : ""}
