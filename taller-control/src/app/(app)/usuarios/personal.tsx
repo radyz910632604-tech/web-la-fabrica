@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { startTransition, useActionState, useState, useTransition } from "react";
 import { Check, Copy, Crown, MessageCircle, Pencil, Plus, UserRoundCheck, UserRoundX, UsersRound } from "lucide-react";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
@@ -181,8 +181,14 @@ export function AgregarPersona({ asignables, hoy }: { asignables: Rol[]; hoy: st
   const [rol, setRol] = useState("");
   const [usuario, setUsuario] = useState("");
   const [usuarioTocado, setUsuarioTocado] = useState(false);
-  const [estado, accion, enviando] = useActionState(agregarPersona, {});
+  const [estado, accion, enviando] = useActionState(async (previo: Resultado, form: FormData) => {
+    const r = await agregarPersona(previo, form);
+    // Si algo de arriba está mal, se sube hasta ese campo para que se vea.
+    if (r.errores && Object.keys(r.errores).length) setTimeout(() => document.querySelector("[role=dialog] [aria-invalid=true]")?.scrollIntoView({ block: "center", behavior: "smooth" }), 50);
+    return r;
+  }, {} as Resultado);
   const e = estado.errores ?? {};
+  const resumenErrores = Object.values(e);
   return (
     <Ventana open={abierta} onOpenChange={setAbierta}>
       <DisparadorVentana asChild>
@@ -192,7 +198,15 @@ export function AgregarPersona({ asignables, hoy }: { asignables: Rol[]; hoy: st
         </Boton>
       </DisparadorVentana>
       <ContenidoVentana titulo="Agregar persona" descripcion="Queda lista para entrar, trabajar y cobrar. Su contraseña dásela en persona.">
-        <form action={accion} className="flex flex-col gap-4">
+        <form
+          // Se envía sin «action» para que, si hay un error, no se borre lo que ya se escribió.
+          onSubmit={(ev) => {
+            ev.preventDefault();
+            const datos = new FormData(ev.currentTarget);
+            startTransition(() => accion(datos));
+          }}
+          className="flex flex-col gap-4"
+        >
           <Subtitulo>Datos</Subtitulo>
           <Campo etiqueta="Nombre y apellido" error={e.nombre}>
             {(p) => <Entrada {...p} name="nombre" autoComplete="off" required onChange={(ev) => !usuarioTocado && setUsuario(sugerirUsuario(ev.target.value))} />}
@@ -254,7 +268,11 @@ export function AgregarPersona({ asignables, hoy }: { asignables: Rol[]; hoy: st
           <CamposPago rol={rol} errores={e} />
           <p className="-mt-1 text-[13px] text-tinta-3">Solo lo ven gerencia y administración. Si cambia, se registra desde una fecha y lo pasado queda igual.</p>
 
-          {estado.acceso ? <CompartirAcceso acceso={estado.acceso} /> : <Mensaje resultado={{ ok: estado.ok, error: estado.error }} />}
+          {estado.acceso ? (
+            <CompartirAcceso acceso={estado.acceso} />
+          ) : (
+            <Mensaje resultado={{ ok: estado.ok, error: estado.error ?? (resumenErrores.length ? `No se guardó. Revisa: ${resumenErrores.join(" ")}` : undefined) }} />
+          )}
           {estado.acceso ? <Mensaje resultado={{ error: estado.error }} /> : null}
           <Boton type="submit" disabled={enviando} className="mt-1 w-full">
             {enviando ? "Guardando…" : "Agregar"}
