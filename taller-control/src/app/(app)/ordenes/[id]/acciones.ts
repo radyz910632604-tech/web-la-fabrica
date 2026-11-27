@@ -124,3 +124,35 @@ export async function anularOrden(ordenId: string, motivo: string): Promise<Resu
   revalidatePath("/", "layout");
   return { ok: "Orden anulada." };
 }
+
+const esquemaConPrecio = z.object({
+  tipo: z.enum(["servicio", "repuesto"]),
+  descripcion: z.string().trim().min(2, "Escribe qué es.").max(160, "Máximo 160 letras."),
+  cantidad: z.coerce.number({ error: "Revisa la cantidad." }).positive("La cantidad debe ser mayor que cero.").max(9999),
+  precio: z.coerce.number({ error: "Escribe el precio." }).min(0, "El precio no puede ser negativo.").max(9_999_999, "Revisa el precio."),
+});
+
+/**
+ * Agrega un servicio o producto a la orden con su precio (gerencia, administración, asesor y recepción).
+ * El precio va a la cotización de la orden (en borrador, o una nueva adicional si ya hubo una aprobada),
+ * que es la que ve el bloque Dinero y el cobro: no se duplica. La base guarda quién lo puso.
+ */
+export async function agregarConPrecio(ordenId: string, datos: unknown, soloPrecio = false): Promise<Resultado> {
+  const ctx = await obtenerContexto();
+  if (!tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor", "recepcion"])) return { error: "Tu rol no pone precios." };
+  const r = esquemaConPrecio.safeParse(datos);
+  if (!r.success) return { error: r.error.issues[0]?.message ?? "Revisa los datos." };
+  const supabase = await clienteServidor();
+  const { error } = await supabase.rpc("agregar_a_orden", {
+    p_orden: ordenId,
+    p_tipo: r.data.tipo,
+    p_descripcion: r.data.descripcion,
+    p_cantidad: r.data.cantidad,
+    p_precio: Math.round(r.data.precio * 100) / 100,
+    p_nuevo_trabajo: !soloPrecio,
+  });
+  if (error) return { error: ["23514", "22023", "42501"].includes(error.code ?? "") ? error.message : "No se pudo agregar. Intenta otra vez." };
+  revalidatePath(`/ordenes/${ordenId}`);
+  const total = Math.round(r.data.cantidad * r.data.precio * 100) / 100;
+  return { ok: soloPrecio ? `Precio puesto: S/ ${total.toFixed(2)}. Queda por aprobar.` : `${r.data.tipo === "servicio" ? "Servicio" : "Producto"} agregado por S/ ${total.toFixed(2)}. Queda por aprobar.` };
+}

@@ -10,6 +10,7 @@ import { Estado } from "@/components/ui/estado";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
 import { TarjetaDinero, TarjetaRepuestos, TarjetaUtilidad } from "@/components/caja/tarjeta-dinero";
+import { RespuestaCotizacion } from "@/components/caja/cotizaciones";
 import { estadoPago, NOMBRE_ESTADO_PAGO } from "@/lib/dinero";
 import { diaEnLima, formatearMomento, formatearSoles } from "@/lib/formato";
 import { CAJA, tieneAlguno } from "@/lib/roles";
@@ -22,7 +23,7 @@ import { listarRepuestos } from "@/lib/taller/inventario-consultas";
 import { colorSituacion, cuandoEntrega, partesLima, situacionEntrega, textoSituacion } from "@/lib/taller/entrega";
 import { SacarDelInventario } from "../../inventario/controles";
 import { FirmarCliente } from "@/components/taller/firma-cliente";
-import { AgregarServicio, AnularOrden, AsignarAsesor, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, FormDiagnostico, SubirFotos } from "./controles";
+import { AgregarConPrecio, AgregarServicio, PonerPrecio, AnularOrden, AsignarAsesor, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, FormDiagnostico, SubirFotos } from "./controles";
 import { guardarFirma } from "./firma-acciones";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -85,6 +86,36 @@ export default async function Orden({ params, searchParams }: { params: Promise<
         mueveInventario && o.estado !== "entregado" ? listarRepuestos(ctx.taller.id).then((l) => l.filter((r) => r.stock > 0)) : Promise.resolve([]),
       ])
     : [null, null, []];
+  // Precios en la lista de Servicios (solo para quien ve dinero): salen de las cotizaciones vigentes.
+  const ponePrecios = verDinero && !o.anulada && estado !== "entregado";
+  const [{ data: catPrecios }, { data: repPrecios }] = ponePrecios
+    ? await Promise.all([
+        supabase.from("catalogo_servicios").select("nombre, precio_referencial").eq("empresa_id", ctx.taller.id).eq("activo", true).order("nombre"),
+        supabase.from("repuestos").select("nombre, precio_venta_sin_igv").eq("empresa_id", ctx.taller.id).eq("activo", true).order("nombre").limit(500),
+      ])
+    : [{ data: [] as { nombre: string; precio_referencial: number | null }[] }, { data: [] as { nombre: string; precio_venta_sin_igv: number | null }[] }];
+  const tasa = config?.tasaIgv ?? 0.18;
+  const sugerenciasPrecio = [
+    ...(catPrecios ?? []).map((x) => ({ nombre: x.nombre, tipo: "servicio" as const, precio: x.precio_referencial == null ? null : Number(x.precio_referencial) })),
+    ...(repPrecios ?? []).map((x) => ({ nombre: x.nombre, tipo: "repuesto" as const, precio: x.precio_venta_sin_igv == null ? null : Math.round(Number(x.precio_venta_sin_igv) * (1 + tasa) * 100) / 100 })),
+  ];
+  const cotVigentes = verDinero && dinero ? dinero.cotizaciones.filter((c) => ["borrador", "enviada", "aprobada"].includes(c.estado)) : [];
+  const lineasPrecio = cotVigentes.flatMap((c) => c.items.map((i) => ({ ...i, aprobada: c.estado === "aprobada" })));
+  const usadas = new Set<number>();
+  const precioDe = (descripcion: string) => {
+    // La línea con el mismo nombre (primero la aprobada); cada línea se usa una vez.
+    const orden = lineasPrecio.map((l, k) => [l, k] as const).sort((a, b) => Number(b[0].aprobada) - Number(a[0].aprobada));
+    const hit = orden.find(([l, k]) => !usadas.has(k) && l.tipo !== "repuesto" && l.descripcion.trim().toLowerCase() === descripcion.trim().toLowerCase());
+    if (!hit) return null;
+    usadas.add(hit[1]);
+    return hit[0];
+  };
+  const preciosServicios = new Map((servicios ?? []).map((sv) => [sv.id, verDinero ? precioDe(sv.descripcion) : null]));
+  const otrasLineas = lineasPrecio.filter((_, k) => !usadas.has(k));
+  const totalAprobado = cotVigentes.filter((c) => c.estado === "aprobada").reduce((a, c) => a + c.total, 0);
+  const porAprobar = cotVigentes.filter((c) => c.estado !== "aprobada");
+  const totalPorAprobar = porAprobar.reduce((a, c) => a + c.total, 0);
+
   const ahora = new Date();
   const prometida = o.entrega_prometida ? new Date(o.entrega_prometida) : null;
   const situacion = situacionEntrega({ entregaPrometida: prometida, estado, listoEn: o.listo_en ? new Date(o.listo_en) : null }, ahora, ctx.configuracion.minutosAvisoEntrega);
@@ -284,14 +315,74 @@ export default async function Orden({ params, searchParams }: { params: Promise<
           <Tarjeta aria-labelledby="t-servicios">
             <CabeceraTarjeta id="t-servicios" titulo="Servicios" detalle={`${servicios?.length ?? 0} ${servicios?.length === 1 ? "servicio" : "servicios"}`} />
             <ul className="flex flex-col gap-2">
-              {(servicios ?? []).map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-3 rounded-2xl bg-interna px-4 py-3 text-[15px]">
-                  {s.descripcion}
-                  {s.es_adicional ? <span className="rounded-full bg-tarjeta px-2.5 py-0.5 text-[12px] text-tinta-2">Adicional</span> : null}
+              {(servicios ?? []).map((s) => {
+                const pr = preciosServicios.get(s.id);
+                return (
+                  <li key={s.id} className="flex items-center justify-between gap-3 rounded-2xl bg-interna px-4 py-3 text-[15px]">
+                    <span className="min-w-0">
+                      {s.descripcion}
+                      {s.es_adicional ? <span className="ml-2 rounded-full bg-tarjeta px-2.5 py-0.5 text-[12px] text-tinta-2">Adicional</span> : null}
+                      {pr && pr.cantidad !== 1 ? <span className="num block text-[13px] text-tinta-3">{pr.cantidad} × {formatearSoles(pr.precio)}</span> : null}
+                    </span>
+                    {verDinero ? (
+                      pr ? (
+                        <span className="flex shrink-0 flex-col items-end">
+                          <span className="num font-semibold">{formatearSoles(pr.total)}</span>
+                          <span className={cn("text-[12px]", pr.aprobada ? "text-positivo" : "text-aviso")}>{pr.aprobada ? "Aprobado" : "Por aprobar"}</span>
+                        </span>
+                      ) : ponePrecios ? (
+                        <PonerPrecio ordenId={o.id} descripcion={s.descripcion} base={sugerenciasPrecio.find((x) => x.tipo === "servicio" && x.nombre.toLowerCase() === s.descripcion.toLowerCase())?.precio ?? null} />
+                      ) : (
+                        <span className="shrink-0 text-[13px] text-tinta-3">Sin precio</span>
+                      )
+                    ) : null}
+                  </li>
+                );
+              })}
+              {otrasLineas.map((l, k) => (
+                <li key={`l${k}`} className="flex items-center justify-between gap-3 rounded-2xl bg-interna px-4 py-3 text-[15px]">
+                  <span className="min-w-0">
+                    {l.descripcion}
+                    <span className="num block text-[13px] text-tinta-3">
+                      {l.tipo === "repuesto" ? "Producto" : "Servicio"} · {l.cantidad} × {formatearSoles(l.precio)}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 flex-col items-end">
+                    <span className="num font-semibold">{formatearSoles(l.total)}</span>
+                    <span className={cn("text-[12px]", l.aprobada ? "text-positivo" : "text-aviso")}>{l.aprobada ? "Aprobado" : "Por aprobar"}</span>
+                  </span>
                 </li>
               ))}
             </ul>
-            {gestiona && estado !== "entregado" ? <AgregarServicio ordenId={o.id} sugerencias={servCatalogo.map((s) => s.nombre)} /> : null}
+            {verDinero && cotVigentes.length ? (
+              <div className="mt-3 flex flex-col gap-2 border-t border-regla pt-3">
+                <dl className="num flex flex-wrap gap-x-5 gap-y-1 text-[15px]">
+                  <div className="flex gap-2">
+                    <dt className="text-tinta-2">Aprobado</dt>
+                    <dd className="font-semibold text-positivo">{formatearSoles(totalAprobado)}</dd>
+                  </div>
+                  {totalPorAprobar > 0 ? (
+                    <div className="flex gap-2">
+                      <dt className="text-tinta-2">Por aprobar</dt>
+                      <dd className="font-semibold text-aviso">{formatearSoles(totalPorAprobar)}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+                {porAprobar.map((c) => (
+                  <div key={c.id} className="flex flex-col gap-1">
+                    <p className="text-[13px] text-tinta-3">
+                      Cotización versión {c.version} · {formatearSoles(c.total)} · ¿el cliente la aprobó?
+                    </p>
+                    <RespuestaCotizacion id={c.id} ordenId={o.id} estado={c.estado} />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {ponePrecios ? (
+              <AgregarConPrecio ordenId={o.id} sugerencias={sugerenciasPrecio} />
+            ) : gestiona && estado !== "entregado" ? (
+              <AgregarServicio ordenId={o.id} sugerencias={servCatalogo.map((s) => s.nombre)} />
+            ) : null}
             {o.observaciones_ingreso ? (
               <div className="mt-4">
                 <h3 className="mb-1 text-sm font-medium text-tinta-2">Observaciones de ingreso</h3>

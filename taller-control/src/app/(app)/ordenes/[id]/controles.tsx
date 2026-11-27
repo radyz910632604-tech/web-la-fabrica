@@ -9,8 +9,9 @@ import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ve
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { siguientesEstados, type EstadoOrden } from "@/lib/taller/estados";
 import { reducirFoto } from "@/lib/taller/fotos";
+import { cn } from "@/lib/utils";
 import { subirFoto } from "../nueva/acciones";
-import { agregarAvance, agregarServicio, anularOrden, guardarDiagnostico, asignarAsesor, asignarTecnico, cambiarEntrega, cambiarEstado, type Resultado } from "./acciones";
+import { agregarAvance, agregarConPrecio, agregarServicio, anularOrden, guardarDiagnostico, asignarAsesor, asignarTecnico, cambiarEntrega, cambiarEstado, type Resultado } from "./acciones";
 
 function Mensaje({ r }: { r: Resultado }) {
   if (r.error) return <p role="alert" className="mt-3 text-sm text-negativo">{r.error}</p>;
@@ -244,6 +245,161 @@ export function AgregarServicio({ ordenId, sugerencias }: { ordenId: string; sug
       </div>
       <p className="mt-2 text-[13px] text-tinta-3">Para cobrarlo, arma una cotización adicional en Dinero y envíasela al cliente para que la apruebe.</p>
       <Mensaje r={r} />
+    </form>
+  );
+}
+
+export type Sugerencia = { nombre: string; tipo: "servicio" | "repuesto"; precio: number | null };
+
+/**
+ * Agregar un servicio o producto a la orden con su precio, en un solo paso
+ * (gerencia, administración, asesor y recepción). Si el nombre está en el catálogo
+ * o en el inventario, el precio base se pone solo; se puede cambiar.
+ */
+export function AgregarConPrecio({ ordenId, sugerencias }: { ordenId: string; sugerencias: Sugerencia[] }) {
+  const [tipo, setTipo] = useState<"servicio" | "repuesto">("servicio");
+  const [texto, setTexto] = useState("");
+  const [cantidad, setCantidad] = useState("1");
+  const [precio, setPrecio] = useState("");
+  const [precioTocado, setPrecioTocado] = useState(false);
+  const [r, setR] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  const lista = sugerencias.filter((x) => x.tipo === tipo);
+  const total = Math.round((Number(cantidad.replace(",", ".")) || 0) * (Number(precio.replace(",", ".")) || 0) * 100) / 100;
+
+  function elegirTexto(valor: string) {
+    setTexto(valor);
+    const base = lista.find((x) => x.nombre.toLowerCase() === valor.trim().toLowerCase());
+    if (base?.precio != null && !precioTocado) setPrecio(base.precio.toFixed(2));
+  }
+
+  return (
+    <form
+      className="mt-4 flex flex-col gap-3 rounded-2xl border border-borde p-3.5"
+      onSubmit={(e) => {
+        e.preventDefault();
+        iniciar(async () => {
+          const res = await agregarConPrecio(ordenId, { tipo, descripcion: texto, cantidad: cantidad.replace(",", "."), precio: precio.replace(",", ".") });
+          setR(res);
+          if (res.ok) {
+            setTexto("");
+            setCantidad("1");
+            setPrecio("");
+            setPrecioTocado(false);
+          }
+        });
+      }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">Agregar a la orden</span>
+        <div role="group" aria-label="Qué agregas" className="grid grid-cols-2 gap-1 rounded-full bg-hundida p-1">
+          {(
+            [
+              ["servicio", "Servicio"],
+              ["repuesto", "Producto"],
+            ] as const
+          ).map(([v, t]) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={tipo === v}
+              onClick={() => {
+                setTipo(v);
+                setR({});
+              }}
+              className={cn("h-9 cursor-pointer rounded-full px-3.5 text-[13px] font-medium", tipo === v ? "bg-tarjeta text-tinta shadow-sm" : "text-tinta-2")}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Entrada
+        value={texto}
+        onChange={(e) => {
+          elegirTexto(e.target.value);
+          setR({});
+        }}
+        list={`sugerencias-${tipo}`}
+        placeholder={tipo === "servicio" ? "Ej.: Cambio de aceite" : "Ej.: Filtro de aceite"}
+        aria-label={tipo === "servicio" ? "Servicio" : "Producto"}
+        autoComplete="off"
+      />
+      <datalist id={`sugerencias-${tipo}`}>
+        {lista.map((x) => (
+          <option key={x.nombre} value={x.nombre}>
+            {x.precio != null ? `S/ ${x.precio.toFixed(2)}` : undefined}
+          </option>
+        ))}
+      </datalist>
+      <div className="grid grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)_auto] items-end gap-2">
+        <label className="flex flex-col gap-1.5 text-sm">
+          Cant.
+          <Entrada value={cantidad} onChange={(e) => setCantidad(e.target.value.replace(/[^\d.,]/g, ""))} inputMode="decimal" className="num px-3" aria-label="Cantidad" />
+        </label>
+        <label className="flex flex-col gap-1.5 text-sm">
+          Precio c/u (S/)
+          <Entrada
+            value={precio}
+            onChange={(e) => {
+              setPrecio(e.target.value.replace(/[^\d.,]/g, ""));
+              setPrecioTocado(true);
+              setR({});
+            }}
+            inputMode="decimal"
+            placeholder="0.00"
+            className="num px-3"
+            aria-label="Precio (S/)"
+          />
+        </label>
+        <Boton type="submit" disabled={pendiente || texto.trim().length < 2 || precio === ""} aria-label="Agregar con precio" className="h-12">
+          <Plus />
+          {pendiente ? "…" : "Agregar"}
+        </Boton>
+      </div>
+      <p className="num text-[13px] text-tinta-3">
+        {total > 0 ? `Suma S/ ${total.toFixed(2)} a la cotización de la orden (queda por aprobar).` : "Con IGV incluido. Va a la cotización de la orden y se aprueba con el cliente."}
+      </p>
+      <Mensaje r={r} />
+    </form>
+  );
+}
+
+/** «Sin precio» en un servicio que vino del ingreso: se le pone precio ahí mismo, sin repetirlo. */
+export function PonerPrecio({ ordenId, descripcion, base }: { ordenId: string; descripcion: string; base: number | null }) {
+  const [abierto, setAbierto] = useState(false);
+  const [precio, setPrecio] = useState(base != null ? base.toFixed(2) : "");
+  const [r, setR] = useState<Resultado>({});
+  const [pendiente, iniciar] = useTransition();
+  if (!abierto)
+    return (
+      <button type="button" onClick={() => setAbierto(true)} className="shrink-0 cursor-pointer rounded-full bg-aviso-fondo px-3 py-1 text-[13px] font-medium text-aviso hover:opacity-80">
+        Poner precio
+      </button>
+    );
+  return (
+    <form
+      className="flex shrink-0 flex-col items-end gap-1"
+      onSubmit={(e) => {
+        e.preventDefault();
+        iniciar(async () => setR(await agregarConPrecio(ordenId, { tipo: "servicio", descripcion, cantidad: "1", precio: precio.replace(",", ".") }, true)));
+      }}
+    >
+      <span className="flex items-center gap-1.5">
+        <span className="text-[13px] text-tinta-3">S/</span>
+        <Entrada
+          value={precio}
+          onChange={(e) => setPrecio(e.target.value.replace(/[^\d.,]/g, ""))}
+          inputMode="decimal"
+          autoFocus
+          className="num h-10 w-24 px-3 text-right"
+          aria-label={`Precio de ${descripcion}`}
+        />
+        <Boton type="submit" tamano="chico" disabled={pendiente || precio === ""}>
+          {pendiente ? "…" : "Guardar"}
+        </Boton>
+      </span>
+      {r.error ? <span className="max-w-56 text-right text-[12px] text-negativo">{r.error}</span> : null}
     </form>
   );
 }
