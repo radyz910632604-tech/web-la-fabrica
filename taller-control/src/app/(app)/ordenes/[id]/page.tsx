@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarCheck, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, Banknote, CalendarCheck, Pencil, Phone } from "lucide-react";
 import { Placa } from "@/components/marca/placa";
 import { GarantiaChip } from "@/components/taller/lista-ordenes";
 import { Boton } from "@/components/ui/boton";
+import { cn } from "@/lib/utils";
 import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { Estado } from "@/components/ui/estado";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
 import { TarjetaDinero, TarjetaRepuestos, TarjetaUtilidad } from "@/components/caja/tarjeta-dinero";
-import { diaEnLima, formatearMomento } from "@/lib/formato";
+import { estadoPago, NOMBRE_ESTADO_PAGO } from "@/lib/dinero";
+import { diaEnLima, formatearMomento, formatearSoles } from "@/lib/formato";
 import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
@@ -194,6 +196,35 @@ export default async function Orden({ params, searchParams }: { params: Promise<
             />
           ) : null}
           <div className="flex flex-wrap gap-2 md:ml-auto">
+            {/* Estado de pago y paso a caja: para quien cobra. */}
+            {verDinero && dinero && !o.anulada ? (
+              <>
+                <span
+                  className={cn(
+                    "inline-flex min-h-11 items-center rounded-full px-4 text-[14px] font-medium",
+                    { sin_precio: "bg-hundida text-tinta-2", pendiente: "bg-aviso-fondo text-aviso", parcial: "bg-aviso-fondo text-aviso", pagada: "bg-positivo-fondo text-positivo", a_favor: "bg-positivo-fondo text-positivo" }[estadoPago(dinero)],
+                  )}
+                >
+                  {NOMBRE_ESTADO_PAGO[estadoPago(dinero)]}
+                  {dinero.saldo > 0.009 && dinero.aCobrar > 0 ? ` · debe ${formatearSoles(dinero.saldo)}` : ""}
+                </span>
+                {estadoPago(dinero) !== "pagada" && estadoPago(dinero) !== "a_favor" ? (
+                  <Boton asChild>
+                    <Link href={`/ordenes/${o.id}/cobrar`}>
+                      <Banknote />
+                      Cobrar
+                    </Link>
+                  </Boton>
+                ) : (
+                  <Boton asChild variante="secundario">
+                    <Link href={`/ordenes/${o.id}/cobrar`}>
+                      <Banknote />
+                      Ver cobro
+                    </Link>
+                  </Boton>
+                )}
+              </>
+            ) : null}
             {/* Mientras el carro está en el taller, la orden se corrige (entregada o anulada, ya no). */}
             {tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]) && !o.anulada && estado !== "entregado" ? (
               <Boton asChild variante="secundario">

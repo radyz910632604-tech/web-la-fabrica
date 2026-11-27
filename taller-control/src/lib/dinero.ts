@@ -194,3 +194,21 @@ export function normalizarDescripcion(texto: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
 }
+
+export type EstadoPago = "sin_precio" | "pendiente" | "parcial" | "pagada" | "a_favor";
+export const NOMBRE_ESTADO_PAGO: Record<EstadoPago, string> = {
+  sin_precio: "Sin precio",
+  pendiente: "Pendiente de pago",
+  parcial: "Pago parcial",
+  pagada: "Pagada",
+  a_favor: "Saldo a favor",
+};
+
+/** Estado de pago de una orden a partir de lo que se cobra y lo pagado (no se guarda: se calcula). */
+export function estadoPago(c: { aCobrar: number; pagado: number }): EstadoPago {
+  const saldo = redondear(c.aCobrar - c.pagado);
+  if (c.aCobrar <= 0.009) return c.pagado > 0.009 ? "parcial" : "sin_precio";
+  if (saldo < -0.009) return "a_favor";
+  if (saldo <= 0.009) return "pagada";
+  return c.pagado > 0.009 ? "parcial" : "pendiente";
+}

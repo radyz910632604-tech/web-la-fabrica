@@ -71,3 +71,43 @@ export async function confirmarPago(id: string): Promise<Resultado> {
   revalidatePath("/", "layout");
   return { ok: "Pago confirmado." };
 }
+
+const esquemaCobro = z.object({
+  orden: z.string().uuid(),
+  cobro: z.string().uuid(),
+  lineas: z
+    .array(
+      z.object({
+        medio: z.enum(["efectivo", "yape", "plin", "tarjeta", "transferencia"], { error: "Elige cómo pagó." }),
+        monto: z.coerce.number({ error: "Escribe el monto." }).positive("Cada monto debe ser mayor que cero.").max(9_999_999, "Monto muy alto."),
+        operacion: z.string().trim().max(40, "Máximo 40 caracteres."),
+      }),
+    )
+    .min(1, "Agrega al menos un monto.")
+    .max(6, "Máximo 6 medios en un cobro."),
+});
+
+export type ResultadoCobro = Resultado & { saldo?: number; repetido?: boolean };
+
+/**
+ * Cobro de una orden en uno o varios medios (pago mixto). La base lo hace todo o nada,
+ * calcula el saldo y no deja duplicarlo (el código `cobro` lo crea la pantalla una vez).
+ */
+export async function registrarCobro(datos: unknown): Promise<ResultadoCobro> {
+  const ctx = await obtenerContexto();
+  if (!tieneAlguno(ctx.roles, CAJA)) return { error: "Tu rol no registra pagos." };
+  const r = esquemaCobro.safeParse(datos);
+  if (!r.success) return { error: r.error.issues[0]?.message ?? "Revisa los montos." };
+  const supabase = await clienteServidor();
+  const { data, error } = await supabase.rpc("registrar_cobro", {
+    p_orden: r.data.orden,
+    p_cobro: r.data.cobro,
+    p_lineas: r.data.lineas.map((l) => ({ medio: l.medio, monto: Math.round(l.monto * 100) / 100, operacion: l.operacion || null })),
+  });
+  if (error) return { error: ["23514", "22023", "42501"].includes(error.code ?? "") ? error.message : "No se pudo registrar el cobro. Intenta otra vez." };
+  const res = data as { repetido: boolean; saldo: number; cobrado?: number };
+  revalidatePath("/", "layout");
+  if (res.repetido) return { ok: "Este cobro ya estaba registrado: no se repitió.", saldo: Number(res.saldo), repetido: true };
+  const saldo = Number(res.saldo);
+  return { ok: saldo > 0.009 ? `Cobro registrado. Queda un saldo de S/ ${saldo.toFixed(2)}.` : "Cobro registrado. La orden quedó pagada.", saldo };
+}
