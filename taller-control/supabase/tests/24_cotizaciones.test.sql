@@ -10,7 +10,9 @@ insert into auth.users (id, email, raw_app_meta_data) values
   ('90000000-0000-0000-0000-000000000002', 'ct@prueba.invalid', '{"nombre":"Técnico Q","celular":"+51955509102"}');
 insert into miembros (empresa_id, perfil_id, rol) values
   ('a0000000-0000-0000-0000-0000000000f4', '90000000-0000-0000-0000-000000000001', 'recepcion'),
-  ('a0000000-0000-0000-0000-0000000000f4', '90000000-0000-0000-0000-000000000002', 'tecnico');
+  ('a0000000-0000-0000-0000-0000000000f4', '90000000-0000-0000-0000-000000000002', 'tecnico'),
+  -- Desde la migración 0030 los descuentos los autoriza gerencia o administración.
+  ('a0000000-0000-0000-0000-0000000000f4', '90000000-0000-0000-0000-000000000001', 'administrador');
 insert into clientes (id, empresa_id, nombre, celular) values ('cf000000-0000-0000-0000-0000000000f4', 'a0000000-0000-0000-0000-0000000000f4', 'Cliente Q', '+51966600611');
 insert into vehiculos (id, empresa_id, placa, cliente_id) values ('df000000-0000-0000-0000-0000000000f4', 'a0000000-0000-0000-0000-0000000000f4', 'QTE123', 'cf000000-0000-0000-0000-0000000000f4');
 insert into ordenes_trabajo (id, empresa_id, vehiculo_id, cliente_id) values ('ff000000-0000-0000-0000-0000000000f4', 'a0000000-0000-0000-0000-0000000000f4', 'df000000-0000-0000-0000-0000000000f4', 'cf000000-0000-0000-0000-0000000000f4');
