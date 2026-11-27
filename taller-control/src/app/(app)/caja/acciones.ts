@@ -55,7 +55,7 @@ export async function registrarMovimiento(_previo: Resultado, form: FormData): P
   }
   // Una salida de caja dice si es gasto del taller (con su categoría) o un retiro.
   const categoria = r.data.tipo === "egreso" ? r.data.categoria_gasto ?? "" : "";
-  if (r.data.tipo === "egreso" && !categoria) return { errores: { categoria_gasto: "Elige si es un gasto o un retiro." } };
+  if (r.data.tipo === "egreso" && !categoria) return { errores: { categoria_gasto: "Toca en qué fue (o «Retiro» si no es gasto)." } };
   if (categoria && categoria !== "retiro" && !(categoria in CATEGORIAS_GASTO)) return { errores: { categoria_gasto: "Categoría no válida." } };
   const supabase = await clienteServidor();
   const { error } = await supabase.from("movimientos_caja").insert({

@@ -11,12 +11,12 @@ export type Resultado = { ok?: string; error?: string; errores?: Record<string, 
 
 const esquema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elige la fecha."),
-  categoria: z.enum(Object.keys(CATEGORIAS_GASTO) as [keyof typeof CATEGORIAS_GASTO, ...(keyof typeof CATEGORIAS_GASTO)[]], { error: "Elige la categoría." }),
-  descripcion: z.string().trim().min(2, "Escribe qué se pagó.").max(200, "Máximo 200 caracteres."),
+  categoria: z.enum(Object.keys(CATEGORIAS_GASTO) as [keyof typeof CATEGORIAS_GASTO, ...(keyof typeof CATEGORIAS_GASTO)[]], { error: "Toca en qué fue el gasto." }),
+  descripcion: z.string().trim().min(2, "Toca en qué fue el gasto.").max(200, "Máximo 200 caracteres."),
   monto: z.coerce.number({ error: "Escribe el monto." }).positive("El monto debe ser mayor que cero.").max(10_000_000, "Revisa el monto."),
-  medio: z.enum(["", "efectivo", "yape", "plin", "tarjeta", "transferencia"]).transform((v) => v || null),
+  medio: z.enum(["", "efectivo", "yape", "plin", "tarjeta", "transferencia"]).optional().transform((v) => v || null),
   tipo_comprobante: z.enum(["factura", "boleta", "recibo", "otro", "sin_comprobante"]).default("sin_comprobante"),
-  comprobante: z.string().trim().max(40, "Máximo 40 caracteres.").transform((v) => v || null),
+  comprobante: z.string().trim().max(40, "Máximo 40 caracteres.").optional().transform((v) => v || null),
 });
 
 /** Registra un gasto del taller (gerencia y administración). */
@@ -27,7 +27,9 @@ export async function registrarGasto(_previo: Resultado, form: FormData): Promis
   if (!datos.success) {
     const errores: Record<string, string> = {};
     for (const p of datos.error.issues) errores[String(p.path[0])] ??= p.message;
-    return { errores };
+    const visibles = ["monto", "categoria", "descripcion", "fecha", "comprobante"];
+    const otro = Object.keys(errores).find((k) => !visibles.includes(k));
+    return otro ? { errores, error: errores[otro] } : { errores };
   }
   const supabase = await clienteServidor();
   const { error } = await supabase.from("gastos").insert({ empresa_id: ctx.taller.id, ...datos.data, monto: Math.round(datos.data.monto * 100) / 100 });
