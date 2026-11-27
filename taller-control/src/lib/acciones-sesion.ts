@@ -4,33 +4,26 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { clienteServidor } from "./supabase/servidor";
-import { celularAEmail, normalizarCelular } from "./celulares";
+import { correoDeAcceso } from "./acceso";
 import { COOKIE_TALLER, obtenerContexto } from "./sesion";
 
-export type EstadoIngreso = { error?: string; celular?: string };
+export type EstadoIngreso = { error?: string; usuario?: string };
 
 export async function ingresar(_previo: EstadoIngreso, form: FormData): Promise<EstadoIngreso> {
-  const escrito = String(form.get("celular") ?? "");
+  const escrito = String(form.get("usuario") ?? "").trim();
   const clave = String(form.get("clave") ?? "");
-  const celular = normalizarCelular(escrito);
+  if (!escrito) return { error: "Escribe tu usuario.", usuario: escrito };
+  if (!clave) return { error: "Escribe tu contraseña.", usuario: escrito };
 
-  if (!celular) {
-    return { error: "Escribe tu celular de 9 dígitos, por ejemplo 987 654 321.", celular: escrito };
-  }
-  if (!clave) {
-    return { error: "Escribe tu contraseña.", celular: escrito };
-  }
+  // Se acepta el usuario o, por compatibilidad, el celular.
+  const email = await correoDeAcceso(escrito);
+  const mensaje = "Ese usuario y esa contraseña no coinciden. Revísalos e intenta otra vez.";
+  if (!email) return { error: mensaje, usuario: escrito };
 
   const supabase = await clienteServidor();
-  const { error } = await supabase.auth.signInWithPassword({ email: celularAEmail(celular), password: clave });
+  const { error } = await supabase.auth.signInWithPassword({ email, password: clave });
   if (error) {
-    const muchos = error.status === 429;
-    return {
-      error: muchos
-        ? "Demasiados intentos seguidos. Espera unos minutos y vuelve a intentar."
-        : "Ese celular y esa contraseña no coinciden. Revísalos e intenta otra vez.",
-      celular: escrito,
-    };
+    return { error: error.status === 429 ? "Demasiados intentos seguidos. Espera unos minutos y vuelve a intentar." : mensaje, usuario: escrito };
   }
   redirect("/");
 }

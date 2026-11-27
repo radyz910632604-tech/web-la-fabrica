@@ -2,10 +2,13 @@ import { BarraSuperior } from "@/components/armazon/barra-superior";
 import { BarraInferior, BarraLateral } from "@/components/armazon/barras-de-acciones";
 import { accionesPara, gestionPara, seccionesPara } from "@/lib/navegacion";
 import { NOMBRE_ROL, tieneAlguno } from "@/lib/roles";
+import { redirect } from "next/navigation";
 import { obtenerContexto } from "@/lib/sesion";
 
 export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const ctx = await obtenerContexto();
+  // Entró con una contraseña temporal: primero puede elegir su usuario y su contraseña.
+  if (ctx.perfil.debeCambiarClave) redirect("/bienvenida");
   const secciones = seccionesPara(ctx.roles);
   const acciones = accionesPara(ctx.roles);
   const gestion = gestionPara(ctx.roles);

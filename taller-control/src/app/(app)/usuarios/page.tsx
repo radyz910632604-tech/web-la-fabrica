@@ -17,7 +17,7 @@ type Fila = {
   baja_motivo: string | null;
   perfiles: PerfilCrudo | PerfilCrudo[] | null;
 };
-type PerfilCrudo = { id: string; nombre: string; celular: string; activo: boolean; documento: string | null; cargo: string | null; fecha_ingreso: string | null };
+type PerfilCrudo = { id: string; nombre: string; usuario: string | null; celular: string; activo: boolean; documento: string | null; cargo: string | null; fecha_ingreso: string | null };
 
 export default async function Usuarios({ searchParams }: { searchParams: Promise<{ ver?: string }> }) {
   const ctx = await obtenerContexto();
@@ -27,7 +27,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
   const supabase = await clienteServidor();
   const { data } = await supabase
     .from("miembros")
-    .select("rol, activo, es_dueno, baja_en, baja_motivo, perfiles (id, nombre, celular, activo, documento, cargo, fecha_ingreso)")
+    .select("rol, activo, es_dueno, baja_en, baja_motivo, perfiles (id, nombre, usuario, celular, activo, documento, cargo, fecha_ingreso)")
     .eq("empresa_id", ctx.taller.id);
 
   const porPersona = new Map<string, Persona>();
@@ -37,6 +37,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
     const persona = porPersona.get(p.id) ?? {
       id: p.id,
       nombre: p.nombre,
+      usuario: p.usuario,
       celular: formatearCelular(p.celular),
       documento: p.documento,
       cargo: p.cargo,
@@ -83,7 +84,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
           <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.025em] md:text-[32px]">Personal</h1>
           <p className="mt-1.5 max-w-[62ch] text-[15px] text-tinta-2 md:text-base">
             {activas.length} {activas.length === 1 ? "persona con acceso" : "personas con acceso"} en {ctx.taller.nombre}. Cada una entra con su
-            celular, que también la identifica por WhatsApp.
+            usuario; su celular la identifica por WhatsApp.
           </p>
         </div>
         <AgregarPersona asignables={rolesAsignables(ctx.roles)} hoy={new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" }).format(new Date())} />

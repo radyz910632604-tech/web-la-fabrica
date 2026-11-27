@@ -11,7 +11,7 @@ export const COOKIE_TALLER = "tc_taller";
 export type TallerDeUsuario = { id: string; nombre: string; roles: Rol[] };
 
 export type Contexto = {
-  perfil: { id: string; nombre: string; celular: string };
+  perfil: { id: string; nombre: string; celular: string; usuario: string | null; debeCambiarClave: boolean };
   talleres: TallerDeUsuario[];
   taller: TallerDeUsuario;
   roles: Rol[];
@@ -34,7 +34,7 @@ export const obtenerContexto = cache(async (): Promise<Contexto> => {
   if (!usuarioId) redirect("/ingresar");
 
   const [{ data: perfil }, { data: membresias }] = await Promise.all([
-    supabase.from("perfiles").select("id, nombre, celular, activo").eq("id", usuarioId).maybeSingle(),
+    supabase.from("perfiles").select("id, nombre, celular, activo, usuario, debe_cambiar_clave").eq("id", usuarioId).maybeSingle(),
     supabase
       .from("miembros")
       // La configuración del taller viene en la misma consulta: una ida a la base menos por página.
@@ -66,7 +66,7 @@ export const obtenerContexto = cache(async (): Promise<Contexto> => {
   const config = configPorTaller.get(taller.id);
 
   return {
-    perfil: { id: perfil.id, nombre: perfil.nombre, celular: perfil.celular },
+    perfil: { id: perfil.id, nombre: perfil.nombre, celular: perfil.celular, usuario: perfil.usuario, debeCambiarClave: Boolean(perfil.debe_cambiar_clave) },
     talleres,
     taller,
     roles: taller.roles,

@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { celularAEmail, normalizarCelular } from "@/lib/celulares";
+import { correoNuevo } from "@/lib/acceso";
+import { normalizarCelular } from "@/lib/celulares";
+import { esUsuarioValido, normalizarUsuario, REGLA_USUARIO } from "@/lib/usuarios";
 import { esGestor, esRol, rolesAsignables, NOMBRE_ROL, type Rol } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteAdmin } from "@/lib/supabase/admin";
@@ -30,6 +32,7 @@ const esquemaPersona = z.object({
     .trim()
     .transform((v) => v.replace(/\s/g, "").toUpperCase())
     .refine((v) => /^[0-9A-Z]{6,15}$/.test(v), "DNI de 8 números (o carné de 6 a 15 letras o números)."),
+  usuario: z.string().transform(normalizarUsuario).refine(esUsuarioValido, REGLA_USUARIO),
   cargo: z.string().trim().max(60, "Máximo 60 letras.").optional(),
   fechaIngreso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Elige la fecha de ingreso."),
   rol: z.string().refine(esRol, "Elige un rol."),
@@ -52,7 +55,7 @@ export async function agregarPersona(_previo: Resultado, form: FormData): Promis
     for (const problema of datos.error.issues) errores[String(problema.path[0])] ??= problema.message;
     return { errores };
   }
-  const { nombre, celular, clave, documento } = datos.data;
+  const { nombre, celular, clave, documento, usuario } = datos.data;
   const rol = datos.data.rol as Rol;
   if (!rolesAsignables(ctx.roles).includes(rol)) {
     return { errores: { rol: "Tu rol no puede asignar ese rol." } };
@@ -61,21 +64,27 @@ export async function agregarPersona(_previo: Resultado, form: FormData): Promis
   const admin = clienteAdmin();
   const supabase = await clienteServidor();
 
-  const [{ data: existente }, { data: conDni }] = await Promise.all([
+  const [{ data: existente }, { data: conDni }, { data: conUsuario }] = await Promise.all([
     admin.from("perfiles").select("id, nombre").eq("celular", celular).maybeSingle(),
     admin.from("perfiles").select("id, nombre").ilike("documento", documento).maybeSingle(),
+    admin.from("perfiles").select("id").eq("usuario", usuario).maybeSingle(),
   ]);
-  // El DNI no se repite: si ya es de otra persona, se avisa antes de crear nada.
+  // El DNI y el usuario no se repiten: se avisa antes de crear nada.
   if (conDni && conDni.id !== existente?.id) return { errores: { documento: `Ese DNI ya está registrado a nombre de ${conDni.nombre}.` } };
+  if (!existente && conUsuario) {
+    const { data: otro } = await supabase.rpc("sugerir_usuario", { p_texto: usuario });
+    return { errores: { usuario: `Ese usuario ya está en uso. Prueba con «${otro ?? `${usuario}2`}».` } };
+  }
   let perfilId = existente?.id as string | undefined;
   let creado = false;
 
   if (!perfilId) {
+    // El correo interno no depende del celular: así el número se puede cambiar después.
     const { data, error } = await admin.auth.admin.createUser({
-      email: celularAEmail(celular),
+      email: correoNuevo(),
       password: clave,
       email_confirm: true,
-      app_metadata: { nombre, celular },
+      app_metadata: { nombre, celular, usuario },
     });
     if (error || !data.user) return { error: "No se pudo crear el acceso. Intenta otra vez en un momento." };
     perfilId = data.user.id;
@@ -102,10 +111,13 @@ export async function agregarPersona(_previo: Resultado, form: FormData): Promis
     return { error: "La base de datos no permitió el alta." };
   }
 
+  // La primera vez que entre podrá cambiar su usuario y su contraseña.
+  if (creado) await admin.from("perfiles").update({ debe_cambiar_clave: true }).eq("id", perfilId);
+
   revalidatePath("/usuarios");
   return {
     ok: creado
-      ? `${nombre} ya puede entrar con su celular y la contraseña que le diste.`
+      ? `${nombre} ya puede entrar con el usuario «${usuario}» y la contraseña que le diste.`
       : `${existente?.nombre} ya tenía acceso en otro taller: se le agregó el rol. Su contraseña no cambió.`,
   };
 }
@@ -169,7 +181,9 @@ export async function asignarClave(perfilId: string, clave: string): Promise<Res
 
   const { error } = await clienteAdmin().auth.admin.updateUserById(perfilId, { password: clave });
   if (error) return { error: "No se pudo cambiar la contraseña. Intenta otra vez." };
-  return { ok: "Contraseña cambiada. Dásela en persona." };
+  // Al entrar con esta contraseña temporal podrá poner la suya.
+  await clienteAdmin().from("perfiles").update({ debe_cambiar_clave: true }).eq("id", perfilId);
+  return { ok: "Contraseña cambiada. Dásela en persona: al entrar podrá cambiarla." };
 }
 
 const esquemaDatos = z.object({
@@ -181,6 +195,12 @@ const esquemaDatos = z.object({
     .refine((v) => v === "" || /^[0-9A-Z]{6,15}$/.test(v), "DNI o carné: de 6 a 15 letras o números."),
   cargo: z.string().trim().max(60, "Máximo 60 letras.").refine((v) => v === "" || v.length >= 2, "Muy corto."),
   fechaIngreso: z.string().refine((v) => v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v), "Fecha no válida."),
+  usuario: z.string().transform(normalizarUsuario).refine(esUsuarioValido, REGLA_USUARIO),
+  celular: z.string().transform((v, c) => {
+    const n = normalizarCelular(v);
+    if (!n) c.addIssue({ code: "custom", message: "Celular de 9 dígitos, por ejemplo 987 654 321." });
+    return n ?? "";
+  }),
 });
 
 /** Datos de la persona: nombre, documento, cargo y fecha de ingreso. El celular no se cambia aquí. */
@@ -192,13 +212,26 @@ export async function editarDatos(perfilId: string, datos: unknown): Promise<Res
     for (const problema of r.error.issues) errores[String(problema.path[0])] ??= problema.message;
     return { errores };
   }
-  const { nombre, documento, cargo, fechaIngreso } = r.data;
+  const { nombre, documento, cargo, fechaIngreso, usuario, celular } = r.data;
   const supabase = await clienteServidor();
+  const { data: antes } = await supabase.from("perfiles").select("celular").eq("id", perfilId).maybeSingle();
   const { error, count } = await supabase
     .from("perfiles")
-    .update({ nombre, documento: documento || null, cargo: cargo || null, fecha_ingreso: fechaIngreso || null }, { count: "exact" })
+    .update({ nombre, usuario, documento: documento || null, cargo: cargo || null, fecha_ingreso: fechaIngreso || null }, { count: "exact" })
     .eq("id", perfilId);
+  if (error?.code === "23505") {
+    if (error.message.includes("usuario")) {
+      const { data: otro } = await supabase.rpc("sugerir_usuario", { p_texto: usuario });
+      return { errores: { usuario: `Ese usuario ya está en uso. Prueba con «${otro ?? `${usuario}2`}».` } };
+    }
+    return { errores: { documento: "Ese DNI ya está registrado a otra persona." } };
+  }
   if (error || count !== 1) return { error: "No tienes permiso para cambiar los datos de esta persona." };
+  // El celular (su WhatsApp) se cambia aparte: solo gerencia o administración, y sin repetirse.
+  if (antes && antes.celular !== celular) {
+    const { error: e2 } = await supabase.rpc("cambiar_celular", { p_perfil: perfilId, p_celular: celular });
+    if (e2) return { errores: { celular: e2.code === "23505" || e2.code === "42501" || e2.code === "23514" ? e2.message : "No se pudo cambiar el celular." } };
+  }
   revalidatePath("/usuarios");
   return { ok: "Datos guardados." };
 }

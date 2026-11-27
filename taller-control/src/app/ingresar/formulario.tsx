@@ -12,16 +12,18 @@ export function FormularioIngreso() {
 
   return (
     <form action={accion} className="mt-8 flex flex-col gap-5" noValidate>
-      <Campo etiqueta="Celular">
+      <Campo etiqueta="Usuario" ayuda="Si todavía no tienes usuario, entra con tu celular.">
         {(p) => (
           <Entrada
             {...p}
-            name="celular"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel-national"
-            placeholder="987 654 321"
-            defaultValue={estado.celular}
+            name="usuario"
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="tu.usuario"
+            defaultValue={estado.usuario}
             required
           />
         )}

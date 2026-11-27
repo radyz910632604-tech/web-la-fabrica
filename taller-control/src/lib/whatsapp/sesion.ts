@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { celularAEmail } from "@/lib/celulares";
+import { correoDeAcceso } from "@/lib/acceso";
 import { clienteAdmin } from "@/lib/supabase/admin";
 
 /**
@@ -11,7 +11,10 @@ import { clienteAdmin } from "@/lib/supabase/admin";
  */
 export async function sesionDe(celular: string): Promise<{ db: SupabaseClient; cerrar: () => Promise<void> } | null> {
   const admin = clienteAdmin();
-  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: celularAEmail(celular) });
+  // El correo interno de la persona (no se arma con el celular: este puede haber cambiado).
+  const email = await correoDeAcceso(celular);
+  if (!email) return null;
+  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (error || !data.properties?.hashed_token) return null;
   const db = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data: s, error: e2 } = await db.auth.verifyOtp({ token_hash: data.properties.hashed_token, type: "magiclink" });

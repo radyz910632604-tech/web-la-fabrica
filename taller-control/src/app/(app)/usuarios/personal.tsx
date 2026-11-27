@@ -9,12 +9,14 @@ import { Tarjeta } from "@/components/ui/tarjeta";
 import { ContenidoVentana, DisparadorVentana, Ventana } from "@/components/ui/ventana";
 import { iniciales } from "@/lib/formato";
 import { NOMBRE_ROL, type Rol } from "@/lib/roles";
+import { REGLA_USUARIO, sugerirUsuario } from "@/lib/usuarios";
 import { cn } from "@/lib/utils";
 import { agregarPersona, asignarClave, cambiarPago, cambiarRoles, darDeBaja, editarDatos, reactivar, type Resultado } from "./acciones";
 
 export type Persona = {
   id: string;
   nombre: string;
+  usuario: string | null;
   celular: string;
   documento: string | null;
   cargo: string | null;
@@ -119,6 +121,8 @@ export function AgregarPersona({ asignables, hoy }: { asignables: Rol[]; hoy: st
   const [abierta, setAbierta] = useState(false);
   const [clave] = useState(generarClave);
   const [rol, setRol] = useState("");
+  const [usuario, setUsuario] = useState("");
+  const [usuarioTocado, setUsuarioTocado] = useState(false);
   const [estado, accion, enviando] = useActionState(agregarPersona, {});
   const e = estado.errores ?? {};
   return (
@@ -133,7 +137,7 @@ export function AgregarPersona({ asignables, hoy }: { asignables: Rol[]; hoy: st
         <form action={accion} className="flex flex-col gap-4">
           <Subtitulo>Datos</Subtitulo>
           <Campo etiqueta="Nombre y apellido" error={e.nombre}>
-            {(p) => <Entrada {...p} name="nombre" autoComplete="off" required />}
+            {(p) => <Entrada {...p} name="nombre" autoComplete="off" required onChange={(ev) => !usuarioTocado && setUsuario(sugerirUsuario(ev.target.value))} />}
           </Campo>
           <div className="grid gap-4 sm:grid-cols-2">
             <Campo etiqueta="DNI o carné" error={e.documento}>
@@ -162,7 +166,26 @@ export function AgregarPersona({ asignables, hoy }: { asignables: Rol[]; hoy: st
               </Selector>
             )}
           </Campo>
-          <Campo etiqueta="Celular" error={e.celular} ayuda="Es su usuario para entrar y su número para el WhatsApp del taller.">
+          <Campo etiqueta="Usuario para entrar" error={e.usuario} ayuda={`${REGLA_USUARIO} La primera vez que entre podrá cambiarlo.`}>
+            {(p) => (
+              <Entrada
+                {...p}
+                name="usuario"
+                value={usuario}
+                onChange={(ev) => {
+                  setUsuarioTocado(true);
+                  setUsuario(ev.target.value.toLowerCase().replace(/\s/g, ""));
+                }}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="nombre.apellido"
+                maxLength={30}
+                required
+              />
+            )}
+          </Campo>
+          <Campo etiqueta="Celular" error={e.celular} ayuda="Para el WhatsApp del taller. Se puede cambiar después.">
             {(p) => <Entrada {...p} name="celular" type="tel" inputMode="tel" placeholder="987 654 321" required />}
           </Campo>
           <Campo etiqueta="Contraseña inicial" error={e.clave} ayuda="Mínimo 8 caracteres. Te sugerimos esta; puedes cambiarla.">
@@ -249,7 +272,7 @@ export function ListaPersonal({
                     ) : null}
                   </p>
                   <p className="truncate text-[13px] text-tinta-3">
-                    {[p.cargo, p.celular].filter(Boolean).join(" · ")}
+                    {[p.usuario ? `@${p.usuario}` : null, p.cargo, p.celular].filter(Boolean).join(" · ")}
                   </p>
                 </div>
                 {deBaja ? (
@@ -419,6 +442,8 @@ function FormularioDatos({ persona }: { persona: Persona }) {
               documento: f.get("documento"),
               cargo: f.get("cargo"),
               fechaIngreso: f.get("fechaIngreso"),
+              usuario: f.get("usuario"),
+              celular: f.get("celular"),
             }),
           ),
         );
@@ -438,9 +463,14 @@ function FormularioDatos({ persona }: { persona: Persona }) {
       <Campo etiqueta="Cargo" error={resultado.errores?.cargo} ayuda="Cómo lo llaman en el taller. Lo que puede hacer depende de sus roles.">
         {(p) => <Entrada {...p} name="cargo" defaultValue={persona.cargo ?? ""} maxLength={60} autoComplete="off" />}
       </Campo>
-      <p className="text-[13px] text-tinta-3">
-        Celular: <span className="num">{persona.celular}</span>. Es su usuario y su WhatsApp; para cambiarlo, agrégalo de nuevo con el número nuevo.
-      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Campo etiqueta="Usuario para entrar" error={resultado.errores?.usuario} ayuda={REGLA_USUARIO}>
+          {(p) => <Entrada {...p} name="usuario" defaultValue={persona.usuario ?? ""} autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={30} required />}
+        </Campo>
+        <Campo etiqueta="Celular (WhatsApp)" error={resultado.errores?.celular}>
+          {(p) => <Entrada {...p} name="celular" type="tel" inputMode="tel" defaultValue={persona.celular} required className="num" />}
+        </Campo>
+      </div>
       <Mensaje resultado={{ ok: resultado.ok, error: resultado.error }} />
       <Boton type="submit" disabled={pendiente} className="w-full">
         {pendiente ? "Guardando…" : "Guardar datos"}
