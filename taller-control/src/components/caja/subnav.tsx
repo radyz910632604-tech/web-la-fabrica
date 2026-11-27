@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 const CAJA = ["gerencia", "administrador", "asesor", "recepcion"];
 const ENLACES = [
   { href: "/caja", nombre: "Caja del día", roles: [...CAJA, "almacen"] },
+  { href: "/caja/resumen", nombre: "Resumen", roles: CAJA },
   { href: "/caja/maestra", nombre: "Caja Maestra", roles: ["gerencia", "administrador"] },
   { href: "/cobros", nombre: "Cobros y deudas", roles: CAJA },
   { href: "/ventas", nombre: "Comprobantes", roles: CAJA },
