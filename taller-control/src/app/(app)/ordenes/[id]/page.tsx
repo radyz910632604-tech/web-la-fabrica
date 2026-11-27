@@ -318,9 +318,9 @@ export default async function Orden({ params, searchParams }: { params: Promise<
         ) : null}
       </Tarjeta>
 
-      <div className="grid min-w-0 gap-4 xl:grid-cols-12">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-12">
         {/* 2. Columna principal: lo operativo */}
-        <div className="flex min-w-0 flex-col gap-4 xl:col-span-7">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-7">
           {puedeTrabajar ? (
             <Tarjeta aria-labelledby="t-estado">
               <CabeceraTarjeta id="t-estado" titulo="Estado y responsables" />
@@ -440,7 +440,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
         </div>
 
         {/* 3. Columna lateral: dinero y lo secundario */}
-        <div className="flex min-w-0 flex-col gap-4 xl:col-span-5">
+        <div className="flex min-w-0 flex-col gap-4 lg:col-span-5">
           {dinero && verDinero ? (
             <Tarjeta aria-labelledby="t-dinero-resumen" className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center justify-between gap-2">

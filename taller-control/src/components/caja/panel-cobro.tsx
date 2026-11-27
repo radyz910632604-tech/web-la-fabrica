@@ -109,8 +109,8 @@ export function TablaLineas({
 
   const filaEdicion = (alGuardar: () => void) => (
     <div className="flex flex-col gap-2 rounded-xl bg-positivo-fondo/60 p-2.5">
-      <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-2 sm:grid-cols-[11rem_minmax(0,1fr)_4.5rem_7rem]">
-        <Selector aria-label="Tipo" value={borrador.tipo} onChange={(e) => setBorrador({ ...borrador, tipo: e.target.value as Borrador["tipo"] })} className="col-span-2 h-11 text-sm sm:col-span-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-2 @xl:grid-cols-[11rem_minmax(0,1fr)_4.5rem_7rem]">
+        <Selector aria-label="Tipo" value={borrador.tipo} onChange={(e) => setBorrador({ ...borrador, tipo: e.target.value as Borrador["tipo"] })} className="col-span-2 h-11 text-sm @xl:col-span-1">
           <option value="servicio">Servicio / mano de obra</option>
           <option value="repuesto">Repuesto / producto</option>
         </Selector>
@@ -136,7 +136,7 @@ export function TablaLineas({
           </datalist>
         ) : null}
         <Entrada aria-label="Cantidad" value={borrador.cantidad} onChange={(e) => setBorrador({ ...borrador, cantidad: e.target.value.replace(/[^\d.,]/g, "") })} inputMode="decimal" className="num h-11 px-3 text-right" />
-        <Entrada aria-label="Precio (S/)" value={borrador.base} onChange={(e) => setBorrador({ ...borrador, base: e.target.value.replace(/[^\d.,]/g, "") })} inputMode="decimal" placeholder="0.00" className="num col-span-2 h-11 px-3 text-right sm:col-span-1" />
+        <Entrada aria-label="Precio (S/)" value={borrador.base} onChange={(e) => setBorrador({ ...borrador, base: e.target.value.replace(/[^\d.,]/g, "") })} inputMode="decimal" placeholder="0.00" className="num col-span-2 h-11 px-3 text-right @xl:col-span-1" />
       </div>
       <div className="flex items-center justify-end gap-2">
         <span className="num mr-auto text-[13px] text-tinta-2">Subtotal {formatearSoles(r2(aNumero(borrador.cantidad) * aNumero(borrador.base)))}</span>
@@ -153,8 +153,8 @@ export function TablaLineas({
   );
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="hidden grid-cols-[minmax(0,1fr)_3.5rem_6.5rem_6.5rem_5.5rem] gap-2 px-2 text-[12px] font-medium tracking-wide text-tinta-3 uppercase sm:grid">
+    <div className="@container flex flex-col gap-2">
+      <div className="hidden grid-cols-[minmax(0,1fr)_3.5rem_6.5rem_6.5rem_5.5rem] gap-2 px-2 text-[12px] font-medium tracking-wide text-tinta-3 uppercase @xl:grid">
         <span>Servicio</span>
         <span className="text-right">Cant.</span>
         <span className="text-right">{preciosConIgv ? "Precio c/IGV" : "Precio (S/)"}</span>
@@ -170,7 +170,7 @@ export function TablaLineas({
             <li
               key={i}
               className={cn(
-                "grid items-center gap-x-2 gap-y-1 rounded-xl bg-interna px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_3.5rem_6.5rem_6.5rem_5.5rem]",
+                "grid items-center gap-x-2 gap-y-1 rounded-xl bg-interna px-3 py-2.5 @xl:grid-cols-[minmax(0,1fr)_3.5rem_6.5rem_6.5rem_5.5rem]",
                 precioDirecto && editable ? "grid-cols-[minmax(0,1fr)_7rem]" : "grid-cols-[minmax(0,1fr)_auto]",
               )}
             >
@@ -178,11 +178,11 @@ export function TablaLineas({
                 {l.descripcion}
                 {l.tipo === "repuesto" ? <span className="ml-1.5 text-[12px] text-tinta-3">Producto</span> : null}
                 {!l.aprobada ? <span className="ml-1.5 rounded-full bg-aviso-fondo px-2 py-0.5 text-[11px] text-aviso">Por aprobar</span> : null}
-                <span className="num block text-[12px] text-tinta-3 sm:hidden">
+                <span className="num block text-[12px] text-tinta-3 @xl:hidden">
                   {l.cantidad} × {formatearSoles(unidad(l))}
                 </span>
               </span>
-              <span className="num hidden text-right sm:block">{l.cantidad}</span>
+              <span className="num hidden text-right @xl:block">{l.cantidad}</span>
               {precioDirecto && editable && l.cantidad === 1 ? (
                 <CampoPrecio
                   key={`${l.cotizacion}-${unidad(l)}`}
@@ -199,13 +199,13 @@ export function TablaLineas({
                   }
                 />
               ) : (
-                <span className="num hidden text-right sm:block">{unidad(l).toFixed(2)}</span>
+                <span className="num hidden text-right @xl:block">{unidad(l).toFixed(2)}</span>
               )}
-              <span className={cn("num font-semibold", precioDirecto && editable ? "text-[13px] text-tinta-2 sm:text-right sm:text-[15px] sm:text-tinta" : "text-right")}>
-                {precioDirecto && editable ? <span className="sm:hidden">Total </span> : null}
+              <span className={cn("num font-semibold", precioDirecto && editable ? "text-[13px] text-tinta-2 @xl:text-right @xl:text-[15px] @xl:text-tinta" : "text-right")}>
+                {precioDirecto && editable ? <span className="@xl:hidden">Total </span> : null}
                 {(preciosConIgv ? l.total : l.subtotal).toFixed(2)}
               </span>
-              <span className={cn("flex justify-end gap-1 sm:col-span-1", !(precioDirecto && editable) && "col-span-2")}>
+              <span className={cn("flex justify-end gap-1 @xl:col-span-1", !(precioDirecto && editable) && "col-span-2")}>
                 {quitando === i ? (
                   <>
                     <Boton type="button" tamano="chico" variante="peligro" disabled={pendiente} onClick={() => quitar(i)}>
@@ -287,7 +287,7 @@ function CampoPrecio({ valor, etiqueta, deshabilitado, alGuardar }: { valor: num
           }
         }}
         inputMode="decimal"
-        className="num h-10 w-28 pl-7 text-right sm:w-full"
+        className="num h-10 w-28 pl-7 text-right @xl:w-full"
       />
     </span>
   );
@@ -309,7 +309,7 @@ function FilaAgregar({
   const valido = f.descripcion.trim().length >= 2 && aNumero(f.cantidad) > 0 && f.base !== "";
   return (
     <form
-      className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] gap-2 rounded-xl border border-dashed border-borde p-2 sm:grid-cols-[minmax(0,1fr)_4.5rem_7rem_auto]"
+      className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] gap-2 rounded-xl border border-dashed border-borde p-2 @xl:grid-cols-[minmax(0,1fr)_4.5rem_7rem_auto]"
       onSubmit={(e) => {
         e.preventDefault();
         if (!valido) return;
@@ -329,7 +329,7 @@ function FilaAgregar({
           const base = sugerencias.find((x) => x.tipo === f.tipo && x.nombre.toLowerCase() === valor.trim().toLowerCase());
           setF({ ...f, descripcion: valor, base: base?.precio != null && f.base === "" ? base.precio.toFixed(2) : f.base });
         }}
-        className="col-span-3 h-11 sm:col-span-4"
+        className="col-span-3 h-11 @xl:col-span-4"
         maxLength={200}
         autoComplete="off"
       />
@@ -340,7 +340,7 @@ function FilaAgregar({
           ))}
         </datalist>
       ) : null}
-      <Selector aria-label="Tipo de lo que agregas" value={f.tipo} onChange={(e) => setF({ ...f, tipo: e.target.value as Borrador["tipo"] })} className="col-span-3 h-11 text-[13px] sm:col-span-1">
+      <Selector aria-label="Tipo de lo que agregas" value={f.tipo} onChange={(e) => setF({ ...f, tipo: e.target.value as Borrador["tipo"] })} className="col-span-3 h-11 text-[13px] @xl:col-span-1">
         <option value="servicio">Servicio / mano de obra</option>
         <option value="repuesto">Repuesto / producto</option>
       </Selector>
