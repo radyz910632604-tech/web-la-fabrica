@@ -10,7 +10,7 @@ import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
 import { validarPlaca } from "@/lib/placas";
-import { CARROCERIAS, COMBUSTIBLES, DOCUMENTOS, ORIGENES_CLIENTE, TRANSMISIONES } from "@/lib/taller/estados";
+import { CARROCERIAS, COMBUSTIBLES, DOCUMENTOS, NOMBRE_COMBUSTIBLE, ORIGENES_CLIENTE } from "@/lib/taller/estados";
 import { cuandoEntrega, instanteLima } from "@/lib/taller/entrega";
 import { reducirFoto } from "@/lib/taller/fotos";
 import { cn } from "@/lib/utils";
@@ -53,7 +53,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
     aceptaMensajes: false,
   });
   const [clienteConocido, setClienteConocido] = useState<ClienteConocido | null>(null);
-  const [vehiculo, setVehiculo] = useState({ marca: "", modelo: "", anio: "", color: "", combustible: "", transmision: "", carroceria: "" });
+  const [vehiculo, setVehiculo] = useState({ marca: "", modelo: "", anio: "", color: "", combustible: "", carroceria: "" });
   const [nivel, setNivel] = useState<string>("");
   const [kilometraje, setKilometraje] = useState("");
   const [elegidos, setElegidos] = useState<{ id: string | null; descripcion: string }[]>(() => {
@@ -98,7 +98,6 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
         anio: v.anio ? String(v.anio) : "",
         color: v.color ?? "",
         combustible: v.combustible ?? "",
-        transmision: v.transmision ?? "",
         carroceria: v.carroceria ?? "",
       });
       if (v.cliente && !cita) aplicarCliente(v.cliente);
@@ -310,22 +309,12 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
                       {n}
                     </option>
                   ))}
+                  {/* Un carro antiguo guardado como «Dual» lo conserva hasta que lo cambien. */}
+                  {vehiculo.combustible === "dual" ? <option value="dual">{NOMBRE_COMBUSTIBLE.dual}</option> : null}
                 </Selector>
               )}
             </Campo>
-            <Campo etiqueta="Caja">
-              {(p) => (
-                <Selector {...p} value={vehiculo.transmision} onChange={(e) => campoVehiculo("transmision", e.target.value)}>
-                  <option value="">Sin dato</option>
-                  {Object.entries(TRANSMISIONES).map(([v, n]) => (
-                    <option key={v} value={v}>
-                      {n}
-                    </option>
-                  ))}
-                </Selector>
-              )}
-            </Campo>
-            <Campo etiqueta="Tipo de carro">
+            <Campo etiqueta="Carrocería">
               {(p) => (
                 <Selector {...p} value={vehiculo.carroceria} onChange={(e) => campoVehiculo("carroceria", e.target.value)}>
                   <option value="">Sin dato</option>
@@ -341,7 +330,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
               etiqueta="Kilometraje de ingreso"
               error={errores.kilometraje}
               ayuda={conocido?.kilometraje ? `La vez pasada: ${conocido.kilometraje.toLocaleString("es-PE")} km` : undefined}
-              className="col-span-2 lg:col-span-2"
+              className="col-span-2 lg:col-span-3"
             >
               {(p) => (
                 <div className="relative">
@@ -352,12 +341,63 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
             </Campo>
           </div>
         </Tarjeta>
+
+        {/* 3b. Al recibir el carro: va justo debajo del kilometraje */}
+        <Tarjeta aria-labelledby="t-obs">
+          <CabeceraTarjeta id="t-obs" titulo="Al recibir el carro" />
+          <div className="flex flex-col gap-4">
+            <Campo etiqueta="Observaciones" ayuda="Golpes, ruidos, lo que dijo el cliente, nivel de gasolina…">
+              {(p) => (
+                <textarea
+                  {...p}
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  rows={3}
+                  className="w-full rounded-2xl border border-borde bg-tarjeta px-4 py-3 text-[15px] outline-none focus-visible:border-tinta focus-visible:ring-4 focus-visible:ring-acento/15"
+                />
+              )}
+            </Campo>
+            <div role="group" aria-labelledby="t-combustible" className="flex flex-col gap-2">
+              <span id="t-combustible" className="text-sm font-medium text-tinta">
+                Nivel de combustible
+              </span>
+              <div className="grid grid-cols-5 gap-1.5">
+                {NIVELES.map(([valor, texto]) => (
+                  <button
+                    key={valor}
+                    type="button"
+                    aria-pressed={nivel === valor}
+                    onClick={() => setNivel(nivel === valor ? "" : valor)}
+                    className={cn(
+                      "presionable min-h-11 cursor-pointer rounded-xl border px-1 text-[13px] sm:text-[14px]",
+                      nivel === valor ? "border-primario bg-primario text-primario-tinta" : "border-borde bg-tarjeta hover:bg-interna",
+                    )}
+                  >
+                    {texto}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Campo etiqueta="Técnico responsable">
+              {(p) => (
+                <Selector {...p} value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)}>
+                  <option value="">Asignar después</option>
+                  {tecnicos.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.nombre}
+                    </option>
+                  ))}
+                </Selector>
+              )}
+            </Campo>
+          </div>
+        </Tarjeta>
       </div>
 
       <div className="flex min-w-0 flex-col gap-4 xl:col-span-5">
         {/* 4. Servicios */}
         <Tarjeta aria-labelledby="t-servicios">
-          <CabeceraTarjeta id="t-servicios" titulo="¿Qué servicio pide?" detalle="Toca uno o varios" />
+          <CabeceraTarjeta id="t-servicios" titulo="Servicio a realizar" detalle="Toca uno o varios" />
           <div className="flex flex-wrap gap-2" role="group" aria-label="Servicios del taller">
             {servicios.map((s) => {
               const activo = elegidos.some((e) => e.id === s.id);
@@ -436,60 +476,9 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
           />
         </Tarjeta>
 
-        {/* 6. Observaciones y técnico */}
-        <Tarjeta aria-labelledby="t-obs">
-          <CabeceraTarjeta id="t-obs" titulo="Al recibir el carro" />
-          <div className="flex flex-col gap-4">
-            <Campo etiqueta="Observaciones" ayuda="Golpes, ruidos, lo que dijo el cliente, nivel de gasolina…">
-              {(p) => (
-                <textarea
-                  {...p}
-                  value={observaciones}
-                  onChange={(e) => setObservaciones(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-2xl border border-borde bg-tarjeta px-4 py-3 text-[15px] outline-none focus-visible:border-tinta focus-visible:ring-4 focus-visible:ring-acento/15"
-                />
-              )}
-            </Campo>
-            <div role="group" aria-labelledby="t-combustible" className="flex flex-col gap-2">
-              <span id="t-combustible" className="text-sm font-medium text-tinta">
-                Nivel de combustible
-              </span>
-              <div className="grid grid-cols-5 gap-1.5">
-                {NIVELES.map(([valor, texto]) => (
-                  <button
-                    key={valor}
-                    type="button"
-                    aria-pressed={nivel === valor}
-                    onClick={() => setNivel(nivel === valor ? "" : valor)}
-                    className={cn(
-                      "presionable min-h-11 cursor-pointer rounded-xl border px-1 text-[13px] sm:text-[14px]",
-                      nivel === valor ? "border-primario bg-primario text-primario-tinta" : "border-borde bg-tarjeta hover:bg-interna",
-                    )}
-                  >
-                    {texto}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <Campo etiqueta="Técnico responsable">
-              {(p) => (
-                <Selector {...p} value={tecnicoId} onChange={(e) => setTecnicoId(e.target.value)}>
-                  <option value="">Asignar después</option>
-                  {tecnicos.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.nombre}
-                    </option>
-                  ))}
-                </Selector>
-              )}
-            </Campo>
-          </div>
-        </Tarjeta>
-
         {/* 7. Fotos */}
         <Tarjeta aria-labelledby="t-fotos">
-          <CabeceraTarjeta id="t-fotos" titulo="Fotos del ingreso" detalle="Las cuatro esquinas, el tablero y cualquier golpe" />
+          <CabeceraTarjeta id="t-fotos" titulo="Fotos del ingreso" detalle="Opcional. Puedes agregarlas después desde la orden" />
           <input
             ref={entradaFotos}
             id="fotos-ingreso"

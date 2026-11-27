@@ -79,15 +79,21 @@ export type Red = keyof typeof REDES;
 
 export const ORIGENES_CLIENTE = { redes: "Redes sociales", referido: "Referido", recurrente: "Recurrente", otro: "Otro" } as const;
 export const DOCUMENTOS = { ninguno: "Sin documento", dni: "DNI", ruc: "RUC", ce: "Carné de extranjería" } as const;
+/** Combustibles que se ofrecen al registrar un carro (en este orden). */
 export const COMBUSTIBLES = {
   gasolina: "Gasolina",
   diesel: "Diésel",
   gnv: "GNV",
   glp: "GLP",
-  dual: "Dual (gasolina y gas)",
+  bi_glp: "Bi-GLP",
+  bi_gnv: "Bi-GNV",
   electrico: "Eléctrico",
   hibrido: "Híbrido",
 } as const;
+/** Para mostrar: incluye «dual», que ya no se ofrece pero puede estar en carros antiguos. */
+export const NOMBRE_COMBUSTIBLE: Record<string, string> = { ...COMBUSTIBLES, dual: "Dual (gasolina y gas)" };
+/** Valores que acepta la base (los ofrecidos y el antiguo «dual»). */
+export const VALORES_COMBUSTIBLE = ["gasolina", "diesel", "gnv", "glp", "bi_glp", "bi_gnv", "dual", "electrico", "hibrido"] as const;
 export const CARROCERIAS = { sedan: "Sedán", hatchback: "Hatchback", suv: "SUV", camioneta: "Camioneta", pickup: "Pickup", van: "Van", coupe: "Coupé", station_wagon: "Station wagon", otro: "Otro" } as const;
 export const TRANSMISIONES = { mecanica: "Mecánica", automatica: "Automática", cvt: "CVT", otra: "Otra" } as const;
 

@@ -187,7 +187,7 @@ export function aDocumento(v: unknown): { tipo: "dni" | "ruc" | "ce"; numero: st
   return null;
 }
 
-const COMBUSTIBLES: [RegExp, string][] = [[/dual|gnv.*gas|gas.*gnv|bi.?fuel/, "dual"], [/gnv|gas natural/, "gnv"], [/glp/, "glp"], [/diesel|petroleo/, "diesel"], [/electr/, "electrico"], [/hibrid/, "hibrido"], [/gasolin|nafta/, "gasolina"]];
+const COMBUSTIBLES: [RegExp, string][] = [[/bi.?glp|glp.*gasolin|gasolin.*glp/, "bi_glp"], [/bi.?gnv|gnv.*gasolin|gasolin.*gnv/, "bi_gnv"], [/dual|bi.?fuel/, "dual"], [/gnv|gas natural/, "gnv"], [/glp/, "glp"], [/diesel|petroleo/, "diesel"], [/electr/, "electrico"], [/hibrid/, "hibrido"], [/gasolin|nafta/, "gasolina"]];
 const CAJAS: [RegExp, string][] = [[/cvt/, "cvt"], [/auto|at\b/, "automatica"], [/mec|manual|sincr|mt\b/, "mecanica"]];
 const UNIDADES: [RegExp, string][] = [[/litro|lt|\bl\b/, "litro"], [/galon|gl\b|gln/, "galon"], [/juego|jgo/, "juego"], [/kit/, "kit"], [/metro|\bm\b|mt/, "metro"], [/kilo|kg/, "kilo"]];
 const CATEGORIAS: [RegExp, string][] = [

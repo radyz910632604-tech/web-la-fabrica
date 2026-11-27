@@ -52,6 +52,11 @@ export const VERSIONES: Version[] = [
   { version: "20261116000025", nombre: "Usuario propio para entrar", sql: columna("perfiles", "usuario"), rest: ["perfiles", "usuario"] },
   { version: "20261116000026", nombre: "Cotizaciones sueltas y descuento", sql: columna("cotizaciones", "descuento_motivo"), rest: ["cotizaciones", "descuento_motivo"] },
   { version: "20261116000027", nombre: "Anular órdenes", sql: columna("ordenes_trabajo", "anulada_en"), rest: ["ordenes_trabajo", "anulada_en"] },
+  {
+    version: "20261116000028",
+    nombre: "Combustible Bi-GLP y Bi-GNV",
+    sql: "select exists (select 1 from pg_constraint where conname = 'vehiculos_combustible_check' and pg_get_constraintdef(oid) like '%bi_glp%')",
+  },
 ];
 
 export const versionDe = (archivo: string) => /^(\d{14})_/.exec(archivo)?.[1] ?? null;
@@ -102,16 +107,17 @@ export function enBloques(pendientes: { archivo: string; sql: string }[]): { arc
 export function faltantesPorRest(existe: ReadonlyMap<string, boolean>): string[] {
   const faltan: string[] = [];
   let pendientesSinSonda: string[] = [];
+  let anteriorFalta = true;
   for (const v of VERSIONES) {
     if (!v.rest) {
       pendientesSinSonda.push(v.version);
       continue;
     }
-    if (existe.get(v.version)) pendientesSinSonda = [];
-    else {
-      faltan.push(...pendientesSinSonda, v.version);
-      pendientesSinSonda = [];
-    }
+    anteriorFalta = !existe.get(v.version);
+    if (anteriorFalta) faltan.push(...pendientesSinSonda, v.version);
+    pendientesSinSonda = [];
   }
+  // Las últimas sin sonda: faltan si la anterior con sonda también falta.
+  if (anteriorFalta) faltan.push(...pendientesSinSonda);
   return faltan;
 }

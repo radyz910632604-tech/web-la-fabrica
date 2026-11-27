@@ -14,7 +14,7 @@ import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { catalogo, nombresPersonal, personalConRol } from "@/lib/taller/consultas";
 import { configDinero, dineroDeOrden } from "@/lib/taller/dinero-consultas";
-import { COLOR_ESTADO, COMBUSTIBLES, enTrabajo, etiquetaOrden, nombreEstado, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "@/lib/taller/estados";
+import { CARROCERIAS, COLOR_ESTADO, NOMBRE_COMBUSTIBLE, enTrabajo, etiquetaOrden, nombreEstado, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "@/lib/taller/estados";
 import { listarRepuestos } from "@/lib/taller/inventario-consultas";
 import { colorSituacion, cuandoEntrega, partesLima, situacionEntrega, textoSituacion } from "@/lib/taller/entrega";
 import { SacarDelInventario } from "../../inventario/controles";
@@ -39,7 +39,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
   const { data: o } = await supabase
     .from("ordenes_trabajo")
     .select(
-      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, entrega_cambiada_por, entrega_cambiada_en, asesor_id, anulada, motivo_anulacion, es_reingreso_garantia, orden_garantia_origen_id, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, diagnostico, diagnostico_en, facturado_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision), clientes (id, nombre, celular)",
+      "id, numero, estado, tecnico_id, cita_id, kilometraje_ingreso, observaciones_ingreso, ingresado_en, listo_en, entregado_en, entrega_prometida, entrega_reprogramada, entrega_cambiada_por, entrega_cambiada_en, asesor_id, anulada, motivo_anulacion, es_reingreso_garantia, orden_garantia_origen_id, firma_ingreso_ruta, firma_ingreso_en, firma_entrega_ruta, firma_entrega_en, diagnostico, diagnostico_en, facturado_en, vehiculos (placa, marca, modelo, anio, color, combustible, transmision, carroceria), clientes (id, nombre, celular)",
     )
     .eq("id", id)
     .eq("empresa_id", ctx.taller.id)
@@ -89,7 +89,8 @@ export default async function Orden({ params, searchParams }: { params: Promise<
     v?.marca && v?.modelo ? `${v.marca} ${v.modelo}` : (v?.marca ?? v?.modelo),
     v?.anio ? String(v.anio) : null,
     v?.color,
-    v?.combustible ? COMBUSTIBLES[v.combustible as keyof typeof COMBUSTIBLES] : null,
+    v?.carroceria ? (CARROCERIAS as Record<string, string>)[v.carroceria] : null,
+    v?.combustible ? (NOMBRE_COMBUSTIBLE[v.combustible] ?? v.combustible) : null,
     v?.transmision ? `Caja ${v.transmision === "cvt" ? "CVT" : TRANSMISIONES[v.transmision as keyof typeof TRANSMISIONES].toLowerCase()}` : null,
   ].filter(Boolean);
 

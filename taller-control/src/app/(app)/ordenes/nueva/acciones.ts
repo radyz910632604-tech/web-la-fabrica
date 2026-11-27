@@ -6,6 +6,7 @@ import { normalizarCelular } from "@/lib/celulares";
 import { normalizarPlaca, validarPlaca } from "@/lib/placas";
 import { tieneAlguno } from "@/lib/roles";
 import { validarEntrega } from "@/lib/taller/entrega";
+import { VALORES_COMBUSTIBLE } from "@/lib/taller/estados";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 
@@ -107,8 +108,9 @@ const esquemaIngreso = z.object({
     modelo: z.preprocess(vacioANulo, z.string().trim().max(60).nullable()),
     anio: z.preprocess(vacioANulo, z.coerce.number().int().min(1950, "Año desde 1950.").max(2100).nullable()),
     color: z.preprocess(vacioANulo, z.string().trim().max(30).nullable()),
-    combustible: z.preprocess(vacioANulo, z.enum(["gasolina", "diesel", "gnv", "glp", "dual", "electrico", "hibrido"]).nullable()),
-    transmision: z.preprocess(vacioANulo, z.enum(["mecanica", "automatica", "cvt", "otra"]).nullable()),
+    combustible: z.preprocess(vacioANulo, z.enum(VALORES_COMBUSTIBLE).nullable()),
+    // La caja ya no se pide al ingresar: si no llega, se conserva la que tenía el carro.
+    transmision: z.preprocess(vacioANulo, z.enum(["mecanica", "automatica", "cvt", "otra"]).nullable()).optional(),
     carroceria: z.preprocess(vacioANulo, z.enum(["sedan", "hatchback", "suv", "camioneta", "pickup", "van", "coupe", "station_wagon", "otro"]).nullable()),
   }),
   combustible: z.preprocess(vacioANulo, z.coerce.number().int().refine((v) => [0, 25, 50, 75, 100].includes(v)).nullable()),
@@ -181,7 +183,8 @@ export async function registrarIngreso(datos: unknown): Promise<ResultadoIngreso
   }
 
   // 2. Carro (por placa)
-  const datosVehiculo = { ...d.vehiculo, cliente_id: clienteId };
+  const { transmision, ...restoVehiculo } = d.vehiculo;
+  const datosVehiculo = { ...restoVehiculo, ...(transmision !== undefined ? { transmision } : {}), cliente_id: clienteId };
   const { data: vehiculoExistente } = await supabase.from("vehiculos").select("id").eq("empresa_id", empresa).eq("placa", placa.placa).maybeSingle();
   let vehiculoId = vehiculoExistente?.id as string | undefined;
   if (vehiculoId) {

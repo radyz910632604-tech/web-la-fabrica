@@ -9,7 +9,7 @@ import { detalleCaja } from "../taller/caja-consultas";
 import { cierreDelDia } from "../taller/cierre-consultas";
 import { nombresPersonal } from "../taller/consultas";
 import { dineroDeOrden } from "../taller/dinero-consultas";
-import { CARROCERIAS as CARROCERIAS_ES, COMBUSTIBLES, numeroOrden, TRANSMISIONES } from "../taller/estados";
+import { CARROCERIAS as CARROCERIAS_ES, NOMBRE_COMBUSTIBLE, numeroOrden, TRANSMISIONES } from "../taller/estados";
 const CARROCERIAS: Record<string, string> = CARROCERIAS_ES;
 import { mesesHasta, personalDelMes, reporteMensual, sumarFilas } from "../taller/reportes";
 import { cantidadTexto, valorStock } from "../inventario";
@@ -191,10 +191,10 @@ export async function pdfOrden(ctx: Contexto, id: string, verDinero: boolean): P
       ["Placa", placa(v?.placa)],
       ["Marca", v?.marca],
       ["Modelo", v?.modelo],
-      ["Estilo", v?.carroceria ? CARROCERIAS[v.carroceria] : null],
+      ["Carrocería", v?.carroceria ? CARROCERIAS[v.carroceria] : null],
       ["Año", v?.anio ? String(v.anio) : null],
       ["Color", v?.color],
-      ["Combustible", v?.combustible ? COMBUSTIBLES[v.combustible as keyof typeof COMBUSTIBLES] : null],
+      ["Combustible", v?.combustible ? (NOMBRE_COMBUSTIBLE[v.combustible] ?? v.combustible) : null],
       ["Caja", v?.transmision ? TRANSMISIONES[v.transmision as keyof typeof TRANSMISIONES] : null],
       ["Kilometraje", o.kilometraje_ingreso != null ? `${Number(o.kilometraje_ingreso).toLocaleString("es-PE")} km` : null],
       ["Técnico", o.tecnico_id ? (nombres.get(o.tecnico_id) ?? null) : "Sin asignar"],
@@ -297,7 +297,7 @@ export async function pdfRecibo(ctx: Contexto, id: string): Promise<Pdf> {
     ["Placa", v?.placa ?? null],
     ["Marca", v?.marca?.toUpperCase()],
     ["Modelo", v?.modelo?.toUpperCase()],
-    ["Estilo", v?.carroceria ? CARROCERIAS[v.carroceria].toUpperCase() : null],
+    ["Carrocería", v?.carroceria ? CARROCERIAS[v.carroceria].toUpperCase() : null],
     ["Color", v?.color],
     ["Año", v?.anio ? String(v.anio) : null],
     ["Kilometraje", o?.kilometraje_ingreso != null ? String(o.kilometraje_ingreso) : null],
