@@ -16,7 +16,7 @@ Se construye sobre lo que ya existe; no se crean tablas paralelas de usuarios ni
 | `roles` | Tipo `rol_t` (gerencia, administrador, asesor, recepcion, tecnico, almacen, vendedor_redes, confirmador) + `miembros` (persona + rol + taller, varios roles por persona) | Se mantiene. «Dueño» = gerencia; «Mecánico» = técnico |
 | Protección del dueño | Disparador `proteger_ultima_gerencia` (siempre queda al menos una gerencia activa) | Se refuerza con un **dueño marcado** (ver 2.4) |
 | Desactivar acceso | `perfiles.activo` y `miembros.activo`; `privado.tiene_rol` ya exige ambos | Se usa `miembros.activo` por taller + cierre de sesión inmediato |
-| Restablecer contraseña | `asignarClave` en `usuarios/acciones.ts` | Se mueve dentro de «Modificar» |
+| Usuario y contraseña | `cambiarAcceso` en `usuarios/acciones.ts` | Dentro de «Modificar», con envío por WhatsApp |
 | Costo del personal | `costos_personal` (costo mensual con `vigente_desde`) | Lo reemplaza `esquemas_pago` (versionado) |
 | Comisiones | `reglas_comision` (por evento, fijo o %), sin liquidar | Se convierten en **comisiones por orden** liquidables |
 | `gastos` | Tabla `gastos` con anulación con motivo (`proteger_dinero`), categoría `sueldos`, enlace 1 a 1 con caja (`movimiento_caja_id`) | Se agrega el **origen** (manual, caja, personal) con referencia exacta |

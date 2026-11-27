@@ -10,7 +10,9 @@ import { obtenerContexto } from "@/lib/sesion";
 import { clienteAdmin } from "@/lib/supabase/admin";
 import { clienteServidor } from "@/lib/supabase/servidor";
 
-export type Resultado = { ok?: string; error?: string; errores?: Record<string, string> };
+/** Lo que se comparte por WhatsApp después de crear o cambiar el acceso de alguien. */
+export type Acceso = { nombre: string; usuario: string; clave: string | null; celular: string };
+export type Resultado = { ok?: string; error?: string; errores?: Record<string, string>; acceso?: Acceso };
 
 const CLAVE_MINIMA = 8;
 
@@ -119,6 +121,7 @@ export async function agregarPersona(_previo: Resultado, form: FormData): Promis
     ok: creado
       ? `${nombre} ya puede entrar con el usuario «${usuario}» y la contraseña que le diste.`
       : `${existente?.nombre} ya tenía acceso en otro taller: se le agregó el rol. Su contraseña no cambió.`,
+    acceso: creado ? { nombre, usuario, clave, celular } : undefined,
   };
 }
 
@@ -168,22 +171,42 @@ export async function cambiarRoles(perfilId: string, roles: string[]): Promise<R
   return { ok: "Roles actualizados." };
 }
 
-/** Asigna una contraseña nueva (la persona la olvidó o es su primer ingreso). */
-export async function asignarClave(perfilId: string, clave: string): Promise<Resultado> {
+/**
+ * Usuario y contraseña juntos: crea o cambia el usuario y, si se escribe, pone una contraseña nueva.
+ * Devuelve lo necesario para compartirlo por WhatsApp.
+ */
+export async function cambiarAcceso(perfilId: string, usuarioTexto: string, clave: string): Promise<Resultado> {
   await exigirGestor();
-  if (clave.length < CLAVE_MINIMA) return { error: `Mínimo ${CLAVE_MINIMA} caracteres.` };
-  if (clave.length > 72) return { error: "Máximo 72 caracteres." };
+  const usuario = normalizarUsuario(usuarioTexto);
+  if (!esUsuarioValido(usuario)) return { errores: { usuario: REGLA_USUARIO } };
+  if (clave && clave.length < CLAVE_MINIMA) return { errores: { clave: `Mínimo ${CLAVE_MINIMA} caracteres.` } };
+  if (clave.length > 72) return { errores: { clave: "Máximo 72 caracteres." } };
 
-  // Primero se pregunta a la base, con la sesión de quien lo pide, si puede gestionar a esta persona.
   const supabase = await clienteServidor();
   const { data: puede } = await supabase.rpc("puedo_gestionar_perfil", { p_perfil: perfilId });
-  if (puede !== true) return { error: "No puedes cambiar la contraseña de esta persona." };
+  if (puede !== true) return { error: "No puedes cambiar el acceso de esta persona." };
+  const { data: persona } = await supabase.from("perfiles").select("nombre, usuario, celular").eq("id", perfilId).maybeSingle();
+  if (!persona) return { error: "No se encontró a esta persona." };
 
-  const { error } = await clienteAdmin().auth.admin.updateUserById(perfilId, { password: clave });
-  if (error) return { error: "No se pudo cambiar la contraseña. Intenta otra vez." };
-  // Al entrar con esta contraseña temporal podrá poner la suya.
-  await clienteAdmin().from("perfiles").update({ debe_cambiar_clave: true }).eq("id", perfilId);
-  return { ok: "Contraseña cambiada. Dásela en persona: al entrar podrá cambiarla." };
+  if (persona.usuario !== usuario) {
+    const { error, count } = await supabase.from("perfiles").update({ usuario }, { count: "exact" }).eq("id", perfilId);
+    if (error?.code === "23505") {
+      const { data: otro } = await supabase.rpc("sugerir_usuario", { p_texto: usuario });
+      return { errores: { usuario: `Ese usuario ya está en uso. Prueba con «${otro ?? `${usuario}2`}».` } };
+    }
+    if (error || count !== 1) return { error: "No se pudo guardar el usuario." };
+  }
+  if (clave) {
+    const { error } = await clienteAdmin().auth.admin.updateUserById(perfilId, { password: clave });
+    if (error) return { error: "El usuario se guardó, pero la contraseña no. Intenta otra vez." };
+    // Al entrar con esta contraseña temporal podrá poner la suya.
+    await clienteAdmin().from("perfiles").update({ debe_cambiar_clave: true }).eq("id", perfilId);
+  }
+  revalidatePath("/usuarios");
+  return {
+    ok: clave ? "Usuario y contraseña guardados." : "Usuario guardado. La contraseña sigue igual.",
+    acceso: { nombre: persona.nombre, usuario, clave: clave || null, celular: persona.celular },
+  };
 }
 
 const esquemaDatos = z.object({
@@ -195,7 +218,7 @@ const esquemaDatos = z.object({
     .refine((v) => v === "" || /^[0-9A-Z]{6,15}$/.test(v), "DNI o carné: de 6 a 15 letras o números."),
   cargo: z.string().trim().max(60, "Máximo 60 letras.").refine((v) => v === "" || v.length >= 2, "Muy corto."),
   fechaIngreso: z.string().refine((v) => v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v), "Fecha no válida."),
-  usuario: z.string().transform(normalizarUsuario).refine(esUsuarioValido, REGLA_USUARIO),
+  usuario: z.string().transform(normalizarUsuario).refine(esUsuarioValido, REGLA_USUARIO).optional(),
   celular: z.string().transform((v, c) => {
     const n = normalizarCelular(v);
     if (!n) c.addIssue({ code: "custom", message: "Celular de 9 dígitos, por ejemplo 987 654 321." });
@@ -217,11 +240,11 @@ export async function editarDatos(perfilId: string, datos: unknown): Promise<Res
   const { data: antes } = await supabase.from("perfiles").select("celular").eq("id", perfilId).maybeSingle();
   const { error, count } = await supabase
     .from("perfiles")
-    .update({ nombre, usuario, documento: documento || null, cargo: cargo || null, fecha_ingreso: fechaIngreso || null }, { count: "exact" })
+    .update({ nombre, ...(usuario ? { usuario } : {}), documento: documento || null, cargo: cargo || null, fecha_ingreso: fechaIngreso || null }, { count: "exact" })
     .eq("id", perfilId);
   if (error?.code === "23505") {
     if (error.message.includes("usuario")) {
-      const { data: otro } = await supabase.rpc("sugerir_usuario", { p_texto: usuario });
+      const { data: otro } = await supabase.rpc("sugerir_usuario", { p_texto: usuario ?? nombre });
       return { errores: { usuario: `Ese usuario ya está en uso. Prueba con «${otro ?? `${usuario}2`}».` } };
     }
     return { errores: { documento: "Ese DNI ya está registrado a otra persona." } };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Crown, Pencil, Plus, UserRoundCheck, UserRoundX, UsersRound } from "lucide-react";
+import { Check, Copy, Crown, MessageCircle, Pencil, Plus, UserRoundCheck, UserRoundX, UsersRound } from "lucide-react";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Entrada, Selector } from "@/components/ui/campo";
 import { Casilla } from "@/components/ui/casilla";
@@ -11,7 +11,7 @@ import { iniciales } from "@/lib/formato";
 import { NOMBRE_ROL, type Rol } from "@/lib/roles";
 import { REGLA_USUARIO, sugerirUsuario } from "@/lib/usuarios";
 import { cn } from "@/lib/utils";
-import { agregarPersona, asignarClave, cambiarPago, cambiarRoles, darDeBaja, editarDatos, reactivar, type Resultado } from "./acciones";
+import { agregarPersona, cambiarAcceso, cambiarPago, cambiarRoles, darDeBaja, editarDatos, reactivar, type Acceso, type Resultado } from "./acciones";
 
 export type Persona = {
   id: string;
@@ -51,6 +51,64 @@ function Mensaje({ resultado }: { resultado: Resultado }) {
     );
   }
   return null;
+}
+
+/** El texto que recibe la persona con su usuario y contraseña. */
+function textoAcceso(a: Acceso) {
+  const web = typeof window === "undefined" ? "" : `${window.location.origin}/ingresar`;
+  return [
+    `Hola ${a.nombre.split(" ")[0]}, ya tienes acceso a Taller Control.`,
+    web ? `Entra aquí: ${web}` : null,
+    `Usuario: ${a.usuario}`,
+    a.clave ? `Contraseña: ${a.clave}` : "Tu contraseña sigue siendo la misma.",
+    a.clave ? "La primera vez que entres te pedirá poner tu propia contraseña." : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** Tarjeta para mandar el acceso por WhatsApp (abre el chat con el mensaje listo) o copiarlo. */
+function CompartirAcceso({ acceso }: { acceso: Acceso }) {
+  const [copiado, setCopiado] = useState(false);
+  const texto = textoAcceso(acceso);
+  const digitos = acceso.celular.replace(/\D/g, "");
+  const numero = digitos.length === 9 ? `51${digitos}` : digitos;
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl bg-positivo-fondo px-4 py-3.5">
+      <p className="text-sm font-medium text-positivo">Listo. Envíale sus datos para entrar:</p>
+      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
+        <dt className="text-tinta-2">Usuario</dt>
+        <dd className="num font-medium break-all">{acceso.usuario}</dd>
+        <dt className="text-tinta-2">Contraseña</dt>
+        <dd className="num font-medium break-all">{acceso.clave ?? "La misma de antes"}</dd>
+      </dl>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Boton asChild className="w-full">
+          <a href={`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer">
+            <MessageCircle />
+            Enviar por WhatsApp
+          </a>
+        </Boton>
+        <Boton
+          type="button"
+          variante="secundario"
+          className="w-full"
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(texto);
+              setCopiado(true);
+              setTimeout(() => setCopiado(false), 2000);
+            } catch {
+              window.prompt("Copia este mensaje:", texto);
+            }
+          }}
+        >
+          {copiado ? <Check /> : <Copy />}
+          {copiado ? "Copiado" : "Copiar mensaje"}
+        </Boton>
+      </div>
+    </div>
+  );
 }
 
 const FRECUENCIAS = [
@@ -196,7 +254,8 @@ export function AgregarPersona({ asignables, hoy }: { asignables: Rol[]; hoy: st
           <CamposPago rol={rol} errores={e} />
           <p className="-mt-1 text-[13px] text-tinta-3">Solo lo ven gerencia y administración. Si cambia, se registra desde una fecha y lo pasado queda igual.</p>
 
-          <Mensaje resultado={{ ok: estado.ok, error: estado.error }} />
+          {estado.acceso ? <CompartirAcceso acceso={estado.acceso} /> : <Mensaje resultado={{ ok: estado.ok, error: estado.error }} />}
+          {estado.acceso ? <Mensaje resultado={{ error: estado.error }} /> : null}
           <Boton type="submit" disabled={enviando} className="mt-1 w-full">
             {enviando ? "Guardando…" : "Agregar"}
           </Boton>
@@ -408,9 +467,9 @@ function Modificar({ persona, asignables }: { persona: Persona; asignables: Rol[
         <div role="tabpanel" className="flex flex-col gap-6">
           <FormularioDatos persona={persona} />
           <section className="flex flex-col gap-3 border-t border-regla pt-5">
-            <h3 className="text-[15px] font-semibold">Restablecer contraseña</h3>
-            <p className="-mt-1.5 text-sm text-tinta-2">Si la olvidó. La anterior deja de funcionar; dásela en persona.</p>
-            <FormularioClave persona={persona} />
+            <h3 className="text-[15px] font-semibold">Usuario y contraseña para entrar</h3>
+            <p className="-mt-1.5 text-sm text-tinta-2">Créalos o cámbialos aquí. Al guardar podrás enviárselos por WhatsApp.</p>
+            <FormularioAcceso persona={persona} />
           </section>
         </div>
       ) : pestana === "roles" ? (
@@ -442,7 +501,6 @@ function FormularioDatos({ persona }: { persona: Persona }) {
               documento: f.get("documento"),
               cargo: f.get("cargo"),
               fechaIngreso: f.get("fechaIngreso"),
-              usuario: f.get("usuario"),
               celular: f.get("celular"),
             }),
           ),
@@ -463,14 +521,9 @@ function FormularioDatos({ persona }: { persona: Persona }) {
       <Campo etiqueta="Cargo" error={resultado.errores?.cargo} ayuda="Cómo lo llaman en el taller. Lo que puede hacer depende de sus roles.">
         {(p) => <Entrada {...p} name="cargo" defaultValue={persona.cargo ?? ""} maxLength={60} autoComplete="off" />}
       </Campo>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Campo etiqueta="Usuario para entrar" error={resultado.errores?.usuario} ayuda={REGLA_USUARIO}>
-          {(p) => <Entrada {...p} name="usuario" defaultValue={persona.usuario ?? ""} autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={30} required />}
-        </Campo>
-        <Campo etiqueta="Celular (WhatsApp)" error={resultado.errores?.celular}>
-          {(p) => <Entrada {...p} name="celular" type="tel" inputMode="tel" defaultValue={persona.celular} required className="num" />}
-        </Campo>
-      </div>
+      <Campo etiqueta="Celular (WhatsApp)" error={resultado.errores?.celular} ayuda="A este número se le envía su usuario y contraseña.">
+        {(p) => <Entrada {...p} name="celular" type="tel" inputMode="tel" defaultValue={persona.celular} required className="num" />}
+      </Campo>
       <Mensaje resultado={{ ok: resultado.ok, error: resultado.error }} />
       <Boton type="submit" disabled={pendiente} className="w-full">
         {pendiente ? "Guardando…" : "Guardar datos"}
@@ -558,29 +611,44 @@ function FormularioRoles({ persona, asignables }: { persona: Persona; asignables
   );
 }
 
-function FormularioClave({ persona }: { persona: Persona }) {
+function FormularioAcceso({ persona }: { persona: Persona }) {
+  const [usuario, setUsuario] = useState(persona.usuario ?? sugerirUsuario(persona.nombre));
   const [clave, setClave] = useState(generarClave);
   const [resultado, setResultado] = useState<Resultado>({});
   const [pendiente, iniciar] = useTransition();
+  const e = resultado.errores ?? {};
   return (
     <form
-      className="flex flex-col gap-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        iniciar(async () => setResultado(await asignarClave(persona.id, clave)));
+      className="flex flex-col gap-4"
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        iniciar(async () => setResultado(await cambiarAcceso(persona.id, usuario, clave)));
       }}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="min-w-0 flex-1">
-          <Campo etiqueta="Contraseña nueva">
-            {(p) => <Entrada {...p} value={clave} onChange={(e) => setClave(e.target.value)} autoComplete="new-password" className="num" />}
-          </Campo>
-        </div>
-        <Boton type="submit" variante="secundario" disabled={pendiente || clave.length < 8}>
-          {pendiente ? "Guardando…" : "Cambiar contraseña"}
-        </Boton>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Campo etiqueta="Usuario" error={e.usuario} ayuda={REGLA_USUARIO}>
+          {(p) => (
+            <Entrada
+              {...p}
+              value={usuario}
+              onChange={(ev) => setUsuario(ev.target.value.toLowerCase().replace(/\s/g, ""))}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="nombre.apellido"
+              maxLength={30}
+              required
+            />
+          )}
+        </Campo>
+        <Campo etiqueta="Contraseña nueva" error={e.clave} ayuda="Mínimo 8. Déjala vacía para no cambiarla.">
+          {(p) => <Entrada {...p} value={clave} onChange={(ev) => setClave(ev.target.value)} autoComplete="new-password" className="num" maxLength={72} />}
+        </Campo>
       </div>
-      <Mensaje resultado={resultado} />
+      {resultado.acceso ? <CompartirAcceso acceso={resultado.acceso} /> : <Mensaje resultado={{ ok: resultado.ok, error: resultado.error }} />}
+      <Boton type="submit" variante="secundario" disabled={pendiente || usuario.length < 3 || (clave.length > 0 && clave.length < 8)} className="w-full">
+        {pendiente ? "Guardando…" : clave ? "Guardar usuario y contraseña" : "Guardar usuario"}
+      </Boton>
     </form>
   );
 }
