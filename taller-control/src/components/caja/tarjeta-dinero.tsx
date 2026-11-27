@@ -44,7 +44,10 @@ export function TarjetaDinero({
   hoy,
   puedeCotizar = true,
   soloDetalle = false,
+  partes = ["cotizaciones", "recibo", "comprobantes", "pagos"],
 }: {
+  /** Qué secciones mostrar (en orden fijo). */
+  partes?: ("cotizaciones" | "recibo" | "comprobantes" | "pagos")[];
   puedeCotizar?: boolean;
   /** Solo las secciones (cotizaciones, recibo, comprobantes, pagos), sin tarjeta ni totales: para una pestaña. */
   soloDetalle?: boolean;
@@ -110,6 +113,7 @@ export function TarjetaDinero({
               );
   const secciones = (
       <div className="mt-4 flex flex-col gap-4">
+        {partes.includes("cotizaciones") ? (
         <Seccion titulo="Cotizaciones" accion={
             !entregada && puedeCotizar ? (
               <Boton asChild variante="secundario" tamano="chico">
@@ -139,7 +143,9 @@ export function TarjetaDinero({
             </ul>
           )}
         </Seccion>
+        ) : null}
 
+        {partes.includes("recibo") ? (
         <Seccion
           titulo="Recibo de venta"
           accion={
@@ -166,7 +172,9 @@ export function TarjetaDinero({
             </ul>
           )}
         </Seccion>
+        ) : null}
 
+        {partes.includes("comprobantes") ? (
         <Seccion titulo="Comprobantes" accion={<RegistrarComprobante ordenes={[]} hoy={hoy} ordenFija={ordenId} variante="secundario" tamano="chico" ia={estadoIa().lectura} />}>
           {d.comprobantes.length === 0 ? (
             <p className="text-sm text-tinta-2">Sin boleta ni factura registrada.</p>
@@ -195,7 +203,9 @@ export function TarjetaDinero({
             </ul>
           )}
         </Seccion>
+        ) : null}
 
+        {partes.includes("pagos") ? (
         <Seccion titulo="Pagos" accion={<RegistrarPago ordenes={opcion} ordenFija={ordenId} variante="secundario" tamano="chico" />}>
           {d.pagos.length === 0 ? (
             <p className="text-sm text-tinta-2">Sin pagos todavía.</p>
@@ -215,6 +225,7 @@ export function TarjetaDinero({
             </ul>
           )}
         </Seccion>
+        ) : null}
       </div>
   );
   if (soloDetalle) return secciones;

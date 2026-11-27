@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Banknote, Car, ChevronDown, Clock, FileText, MessageCircle, Pencil } from "lucide-react";
+import { ArrowLeft, Banknote, Car, ChevronDown, Clock, FileText, MessageCircle, Pencil, Phone } from "lucide-react";
 import { Placa } from "@/components/marca/placa";
 import { GarantiaChip } from "@/components/taller/lista-ordenes";
 import { Boton } from "@/components/ui/boton";
@@ -13,7 +13,7 @@ import { TarjetaDinero, TarjetaRepuestos, TarjetaUtilidad } from "@/components/c
 import { EmitirRecibo } from "@/components/caja/controles";
 import { AprobarEnCaja, TablaLineas, type LineaCaja } from "@/components/caja/panel-cobro";
 import { Pestanas } from "@/components/ui/pestanas";
-import { estadoPago, NOMBRE_ESTADO_PAGO } from "@/lib/dinero";
+import { estadoPago, MEDIOS, NOMBRE_ESTADO_PAGO, TIPO_PAGO_CORTO, type MedioPago } from "@/lib/dinero";
 import { diaEnLima, formatearMomento, formatearSoles } from "@/lib/formato";
 import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
@@ -157,42 +157,6 @@ export default async function Orden({ params, searchParams }: { params: Promise<
 
   // La hora prometida la cambian recepción, gerencia y administración; los demás la ven.
   const cambiaHora = tieneAlguno(ctx.roles, ["gerencia", "administrador", "recepcion"]);
-  const tarjetaEntrega = (id: string) =>
-    estado !== "entregado" || prometida ? (
-      <Tarjeta aria-labelledby={id}>
-        <CabeceraTarjeta id={id} titulo="Entrega al cliente" detalle={prometida ? "Lo que se le prometió" : undefined} />
-        {prometida ? (
-          <>
-            <p className="text-[26px] leading-tight font-semibold tracking-[-0.02em] first-letter:uppercase">{cuandoEntrega(prometida, ahora)}</p>
-            <Estado color={colorSituacion(situacion)} texto={textoSituacion(situacion)} className="mt-2 text-[15px]" />
-            {situacion.tipo === "atrasada" ? (
-              <p role="alert" className="mt-3 rounded-2xl bg-negativo-fondo px-4 py-3 text-sm text-negativo">
-                Ya pasó la hora. Llama al cliente{c ? ` (${formatearCelular(c.celular)})` : ""}, dale la nueva hora y cámbiala aquí.
-              </p>
-            ) : situacion.tipo === "por_vencer" ? (
-              <p className="mt-3 rounded-2xl bg-aviso-fondo px-4 py-3 text-sm text-aviso">
-                Se acerca la hora y el carro no está listo. Si no llega, avísale al cliente antes.
-              </p>
-            ) : null}
-            {o.entrega_reprogramada > 0 ? (
-              <p className="mt-3 text-sm text-tinta-2">
-                Se cambió {o.entrega_reprogramada === 1 ? "una vez" : `${o.entrega_reprogramada} veces`}
-                {o.entrega_cambiada_por ? `; la última, ${nombres.get(o.entrega_cambiada_por) ?? "alguien del taller"}${o.entrega_cambiada_en ? ` (${cuandoEntrega(new Date(o.entrega_cambiada_en), ahora)})` : ""}` : ""}. Todos los cambios quedan en Avances.
-              </p>
-            ) : null}
-          </>
-        ) : (
-          <p className="text-[15px] text-tinta-2">
-            {cambiaHora ? "Todavía no hay hora prometida. Ponla apenas la sepas: así el sistema te avisa antes de que venza." : "Todavía no hay hora prometida. La ponen recepción o gerencia."}
-          </p>
-        )}
-        {!cambiaHora && prometida && enTrabajo(estado) ? <p className="mt-3 text-[13px] text-tinta-3">Para cambiarla, pídeselo a recepción o gerencia.</p> : null}
-        {cambiaHora && enTrabajo(estado) ? (
-          <CambiarEntrega ordenId={o.id} actual={prometida ? partesLima(prometida) : null} ahora={ahora.toISOString()} cliente={c?.nombre.split(" ")[0] ?? "el cliente"} />
-        ) : null}
-      </Tarjeta>
-    ) : null;
-
   // Firma del cliente: al dejar el carro la toma el asesor; al recogerlo, quien entrega (asesor o recepción).
   const tomaIngreso = gestiona && !o.firma_ingreso_ruta && estado !== "entregado";
   const tomaEntrega = verDinero && !o.firma_entrega_ruta && (estado === "listo" || estado === "entregado");
@@ -279,30 +243,45 @@ export default async function Orden({ params, searchParams }: { params: Promise<
           <Placa placa={v?.placa ?? ""} className="h-9 px-3 text-[16px]" />
           <Estado color={COLOR_ESTADO[estado]} texto={nombreEstado(estado, o.facturado_en)} className="rounded-full bg-interna px-3 py-1.5 text-[14px]" />
           {o.es_reingreso_garantia ? <GarantiaChip /> : null}
-          {prometida && estado !== "entregado" ? (
-            <span className="flex items-center gap-2 text-[14px]">
-              <Clock className="size-4 text-tinta-2" aria-hidden />
-              <Estado color={colorSituacion(situacion)} texto={`Entrega ${cuandoEntrega(prometida, ahora)}`} />
+          {estado !== "entregado" ? (
+            <span className="flex items-center gap-2.5">
+              <Clock className="size-4.5 shrink-0 text-tinta-2" aria-hidden />
+              <span className="flex flex-col leading-tight">
+                <span className="text-[12px] text-tinta-3">Entrega prometida</span>
+                {prometida ? (
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <Estado color={colorSituacion(situacion)} texto={cuandoEntrega(prometida, ahora).replace(/^./, (x) => x.toUpperCase())} className="text-[15px] font-medium" />
+                    {enTrabajo(estado) ? <span className="text-[12px] text-tinta-3">{textoSituacion(situacion)}</span> : null}
+                  </span>
+                ) : (
+                  <span className="text-[15px] text-tinta-2">Sin hora</span>
+                )}
+              </span>
+              {cambiaHora && enTrabajo(estado) ? (
+                <CambiarEntrega compacto ordenId={o.id} actual={prometida ? partesLima(prometida) : null} ahora={ahora.toISOString()} cliente={c?.nombre.split(" ")[0] ?? "el cliente"} />
+              ) : null}
             </span>
           ) : null}
-          {c ? (
-            <span className="flex min-w-0 items-center gap-2 text-[14px] text-tinta-2">
-              <span className="truncate">
-                <Link href={`/clientes/${c.id}`} className="font-medium text-tinta underline-offset-4 hover:underline">
+          <span className="flex flex-wrap items-center gap-2 md:ml-auto">
+            {c ? (
+              <span className="inline-flex min-h-9 min-w-0 items-center gap-2 rounded-full bg-interna px-3 text-[14px]">
+                <Phone className="size-3.5 shrink-0 text-tinta-2" aria-hidden />
+                <Link href={`/clientes/${c.id}`} className="truncate font-medium underline-offset-4 hover:underline">
                   {c.nombre}
                 </Link>
+                <span className="num text-tinta-2 select-all">{formatearCelular(c.celular)}</span>
               </span>
-              <span className="num select-all">{formatearCelular(c.celular)}</span>
-            </span>
-          ) : null}
-          <span className="flex flex-wrap gap-2 md:ml-auto">
+            ) : null}
             {celularWa ? (
-              <Boton asChild variante="secundario" tamano="chico">
-                <a href={`https://wa.me/${celularWa.length === 9 ? `51${celularWa}` : celularWa}`} target="_blank" rel="noreferrer">
-                  <MessageCircle />
-                  WhatsApp
-                </a>
-              </Boton>
+              <a
+                href={`https://wa.me/${celularWa.length === 9 ? `51${celularWa}` : celularWa}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-positivo-fondo px-3 text-[13px] font-medium text-positivo hover:opacity-85"
+              >
+                <MessageCircle className="size-3.5" aria-hidden />
+                WhatsApp
+              </a>
             ) : null}
             {v?.placa ? (
               <Boton asChild variante="secundario" tamano="chico">
@@ -320,6 +299,13 @@ export default async function Orden({ params, searchParams }: { params: Promise<
           {o.tecnico_id ? ` · Lo trabaja ${nombres.get(o.tecnico_id) ?? "un técnico"}` : " · Sin técnico"}
           {o.cita_id ? " · Llegó por una cita de redes" : ""}
         </p>
+        {prometida && situacion.tipo === "atrasada" && estado !== "entregado" ? (
+          <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-2.5 text-sm text-negativo">
+            Ya pasó la hora de entrega. Llama al cliente{c ? ` (${formatearCelular(c.celular)})` : ""}, dale la nueva hora y cámbiala arriba.
+          </p>
+        ) : prometida && situacion.tipo === "por_vencer" ? (
+          <p className="rounded-2xl bg-aviso-fondo px-4 py-2.5 text-sm text-aviso">Se acerca la hora y el carro no está listo. Si no llega, avísale al cliente antes.</p>
+        ) : null}
         {o.anulada ? (
           <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-3 text-[15px] text-negativo">
             Orden anulada{o.motivo_anulacion ? `: ${o.motivo_anulacion}` : ""}. Ya no sale en las listas ni cuenta en reportes.
@@ -376,7 +362,7 @@ export default async function Orden({ params, searchParams }: { params: Promise<
                     ))}
                   </ul>
                 ) : null}
-                <TablaLineas ordenId={o.id} lineas={lineas} conIgv editable={preciosEditables} motivoBloqueo={bloqueoPrecios} preciosConIgv sugerencias={sugerenciasPrecio} />
+                <TablaLineas ordenId={o.id} lineas={lineas} conIgv editable={preciosEditables} motivoBloqueo={bloqueoPrecios} preciosConIgv sugerencias={sugerenciasPrecio} precioDirecto agregarFijo />
                 {porAprobar.length ? (
                   <div className="flex flex-wrap items-center gap-2 rounded-xl bg-aviso-fondo px-3 py-2 text-[14px] text-aviso">
                     Por aprobar: {formatearSoles(totalPorAprobar)} (no cuenta en el total hasta que el cliente lo apruebe).
@@ -477,37 +463,78 @@ export default async function Orden({ params, searchParams }: { params: Promise<
               </dl>
               <p className="text-[13px] text-tinta-3">
                 {dinero.comprobantes.some((cp) => cp.estado === "confirmado")
-                  ? "El monto a cobrar sale de la boleta o factura registrada."
+                  ? "A cobrar = la boleta o factura registrada."
                   : dinero.aCobrar > 0
-                    ? "El monto a cobrar sale de los servicios y productos aprobados."
+                    ? `A cobrar = servicios y productos aprobados${totalPorAprobar > 0 ? ` (no incluye ${formatearSoles(totalPorAprobar)} por aprobar)` : ""}. Pagado = los pagos registrados, una sola vez cada uno.`
                     : "Todavía no hay precios aprobados: ponlos en Servicios."}
               </p>
-              {!o.anulada ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <Boton asChild className="w-full">
-                    <Link href={`/caja/cobro?orden=${o.id}`}>
-                      <Banknote />
-                      {pago === "pagada" || pago === "a_favor" ? "Ver cobro" : "Registrar pago"}
-                    </Link>
-                  </Boton>
-                  {reciboVigente ? (
-                    <Boton asChild variante="secundario" className="w-full">
-                      <a href={`/pdf/recibo/${reciboVigente.id}`} target="_blank" rel="noreferrer">
-                        <FileText />
-                        Ver comprobante
-                      </a>
-                    </Boton>
-                  ) : dinero.aCobrar > 0 && !dinero.comprobantes.some((cp) => cp.estado === "confirmado") ? (
-                    <span className="[&>button]:h-12 [&>button]:w-full">
-                      <EmitirRecibo ordenId={o.id} total={formatearSoles(dinero.aCobrar)} />
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
             </Tarjeta>
           ) : null}
 
-          {tarjetaEntrega("t-entrega")}
+          {dinero && verDinero && !o.anulada ? (
+            <Tarjeta aria-labelledby="t-pagos" className="flex flex-col gap-3">
+              <h2 id="t-pagos" className="text-[17px] font-semibold">
+                Pagos y comprobantes
+              </h2>
+              <div className="grid grid-cols-2 gap-2">
+                <Boton asChild className="w-full">
+                  <Link href={`/caja/cobro?orden=${o.id}`}>
+                    <Banknote />
+                    {pago === "pagada" || pago === "a_favor" ? "Ver cobro" : "Registrar pago"}
+                  </Link>
+                </Boton>
+                {reciboVigente ? (
+                  <Boton asChild variante="secundario" className="w-full">
+                    <a href={`/pdf/recibo/${reciboVigente.id}`} target="_blank" rel="noreferrer">
+                      <FileText />
+                      Ver comprobante
+                    </a>
+                  </Boton>
+                ) : dinero.aCobrar > 0 && !dinero.comprobantes.some((cp) => cp.estado === "confirmado") ? (
+                  <span className="[&>button]:h-12 [&>button]:w-full">
+                    <EmitirRecibo ordenId={o.id} total={formatearSoles(dinero.aCobrar)} />
+                  </span>
+                ) : (
+                  <Boton asChild variante="secundario" className="w-full">
+                    <Link href={`/caja/cobro?orden=${o.id}`}>
+                      <FileText />
+                      Comprobante
+                    </Link>
+                  </Boton>
+                )}
+              </div>
+              {dinero.pagos.length ? (
+                <ul className="flex flex-col">
+                  {dinero.pagos.map((p) => (
+                    <li key={p.id} className={cn("flex items-center justify-between gap-3 border-b border-regla py-2 text-[14px] last:border-0", p.estado === "anulado" && "text-tinta-3 line-through")}>
+                      <span className="min-w-0 truncate">
+                        {MEDIOS[p.medio as MedioPago]} · {TIPO_PAGO_CORTO[p.tipo]} · {formatearMomento(new Date(p.pagadoEn), ahora).toLowerCase()}
+                      </span>
+                      <span className={cn("num font-semibold", p.tipo === "devolucion" && "text-negativo")}>{formatearSoles(p.tipo === "devolucion" ? -p.monto : p.monto)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[14px] text-tinta-2">Sin pagos todavía.</p>
+              )}
+              <details className="rounded-xl border border-dashed border-borde px-3 py-2">
+                <summary className="cursor-pointer text-[13px] text-tinta-2">Detalle: constancias, anular, recibo, boleta o factura</summary>
+                <div className="pt-1">
+                  <TarjetaDinero
+                    soloDetalle
+                    partes={["recibo", "comprobantes", "pagos"]}
+                    puedeCotizar={verDinero}
+                    d={dinero}
+                    ordenId={o.id}
+                    etiqueta={etiquetaOrden({ numero: o.numero, placa: v?.placa ?? "", cliente: c?.nombre })}
+                    entregada={estado === "entregado"}
+                    hoy={diaEnLima(ahora)}
+                  />
+                </div>
+              </details>
+            </Tarjeta>
+          ) : null}
+
           {firmaPendiente ? tarjetaFirmas : null}
 
           <Tarjeta aria-label="Más de la orden">
@@ -518,10 +545,11 @@ export default async function Orden({ params, searchParams }: { params: Promise<
                   ? [
                       {
                         id: "cotizaciones",
-                        titulo: "Cotizaciones y pagos",
+                        titulo: "Cotizaciones",
                         contenido: (
                           <TarjetaDinero
                             soloDetalle
+                            partes={["cotizaciones"]}
                             puedeCotizar={verDinero}
                             d={dinero}
                             ordenId={o.id}
@@ -551,8 +579,22 @@ export default async function Orden({ params, searchParams }: { params: Promise<
                       },
                     ]
                   : []),
-                { id: "historial", titulo: "Historial", contenido: historialEstados },
-                ...(!firmaPendiente && tarjetaFirmas ? [{ id: "firmas", titulo: "Firmas", contenido: <div className={sinTarjeta}>{tarjetaFirmas}</div> }] : []),
+                {
+                  id: "historial",
+                  titulo: "Historial",
+                  contenido: (
+                    <div className="flex flex-col gap-4">
+                      {historialEstados}
+                      {o.entrega_reprogramada > 0 ? (
+                        <p className="text-[13px] text-tinta-2">
+                          La hora de entrega se cambió {o.entrega_reprogramada === 1 ? "una vez" : `${o.entrega_reprogramada} veces`}
+                          {o.entrega_cambiada_por ? `; la última, ${nombres.get(o.entrega_cambiada_por) ?? "alguien del taller"}` : ""}.
+                        </p>
+                      ) : null}
+                      {!firmaPendiente && tarjetaFirmas ? <div className={sinTarjeta}>{tarjetaFirmas}</div> : null}
+                    </div>
+                  ),
+                },
                 ...(dinero && config && verUtilidad ? [{ id: "utilidad", titulo: "Utilidad", contenido: <div className={sinTarjeta}><TarjetaUtilidad d={dinero} margenMinimo={config.margenMinimo} /></div> }] : []),
               ]}
             />

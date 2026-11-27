@@ -43,7 +43,13 @@ export function TablaLineas({
   motivoBloqueo,
   preciosConIgv = false,
   sugerencias = [],
+  precioDirecto = false,
+  agregarFijo = false,
 }: {
+  /** El precio de cada fila se escribe ahí mismo (se guarda al salir del campo o con Enter). */
+  precioDirecto?: boolean;
+  /** La fila para agregar siempre a la vista (sin botón previo). */
+  agregarFijo?: boolean;
   /** Nombres del catálogo o del inventario con su precio base (en la misma unidad que la tabla). */
   sugerencias?: { nombre: string; tipo: "servicio" | "repuesto"; precio: number | null }[];
   ordenId: string;
@@ -161,7 +167,13 @@ export function TablaLineas({
           editando === i ? (
             <li key={i}>{filaEdicion(() => guardarEdicion(i))}</li>
           ) : (
-            <li key={i} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-xl bg-interna px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_3.5rem_6.5rem_6.5rem_5.5rem]">
+            <li
+              key={i}
+              className={cn(
+                "grid items-center gap-x-2 gap-y-1 rounded-xl bg-interna px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_3.5rem_6.5rem_6.5rem_5.5rem]",
+                precioDirecto && editable ? "grid-cols-[minmax(0,1fr)_7rem]" : "grid-cols-[minmax(0,1fr)_auto]",
+              )}
+            >
               <span className="min-w-0 text-[15px]">
                 {l.descripcion}
                 {l.tipo === "repuesto" ? <span className="ml-1.5 text-[12px] text-tinta-3">Producto</span> : null}
@@ -171,9 +183,29 @@ export function TablaLineas({
                 </span>
               </span>
               <span className="num hidden text-right sm:block">{l.cantidad}</span>
-              <span className="num hidden text-right sm:block">{unidad(l).toFixed(2)}</span>
-              <span className="num text-right font-semibold">{(preciosConIgv ? l.total : l.subtotal).toFixed(2)}</span>
-              <span className="col-span-2 flex justify-end gap-1 sm:col-span-1">
+              {precioDirecto && editable && l.cantidad === 1 ? (
+                <CampoPrecio
+                  key={`${l.cotizacion}-${unidad(l)}`}
+                  valor={unidad(l)}
+                  etiqueta={`Precio de ${l.descripcion}`}
+                  deshabilitado={pendiente}
+                  alGuardar={(nuevo) =>
+                    guardar(
+                      l.cotizacion,
+                      deLaCotizacion(l.cotizacion).map((x) =>
+                        x === l ? (preciosConIgv ? { tipo: l.tipo, descripcion: l.descripcion, cantidad: l.cantidad, precio: nuevo } : { tipo: l.tipo, descripcion: l.descripcion, cantidad: l.cantidad, base: nuevo }) : x,
+                      ),
+                    )
+                  }
+                />
+              ) : (
+                <span className="num hidden text-right sm:block">{unidad(l).toFixed(2)}</span>
+              )}
+              <span className={cn("num font-semibold", precioDirecto && editable ? "text-[13px] text-tinta-2 sm:text-right sm:text-[15px] sm:text-tinta" : "text-right")}>
+                {precioDirecto && editable ? <span className="sm:hidden">Total </span> : null}
+                {(preciosConIgv ? l.total : l.subtotal).toFixed(2)}
+              </span>
+              <span className={cn("flex justify-end gap-1 sm:col-span-1", !(precioDirecto && editable) && "col-span-2")}>
                 {quitando === i ? (
                   <>
                     <Boton type="button" tamano="chico" variante="peligro" disabled={pendiente} onClick={() => quitar(i)}>
@@ -208,7 +240,10 @@ export function TablaLineas({
         )}
         {editando === "nueva" ? <li>{filaEdicion(guardarNueva)}</li> : null}
       </ul>
-      {editable && editando === null ? (
+      {editable && agregarFijo ? (
+        <FilaAgregar sugerencias={sugerencias} pendiente={pendiente} preciosConIgv={preciosConIgv} alAgregar={(nueva) => guardar(destinoNuevo, destinoNuevo ? [...deLaCotizacion(destinoNuevo), nueva] : [nueva])} />
+      ) : null}
+      {editable && !agregarFijo && editando === null ? (
         <button
           type="button"
           onClick={() => {
@@ -225,6 +260,99 @@ export function TablaLineas({
       {!editable && motivoBloqueo ? <p className="text-[13px] text-tinta-3">{motivoBloqueo}</p> : null}
       <Aviso texto={error} tono="error" />
     </div>
+  );
+}
+
+/** Precio escrito directo en la fila: se guarda al salir del campo o con Enter, solo si cambió. */
+function CampoPrecio({ valor, etiqueta, deshabilitado, alGuardar }: { valor: number; etiqueta: string; deshabilitado: boolean; alGuardar: (nuevo: number) => void }) {
+  const [texto, setTexto] = useState(valor.toFixed(2));
+  const confirmar = () => {
+    const nuevo = aNumero(texto);
+    if (texto.trim() === "" || nuevo < 0) return setTexto(valor.toFixed(2));
+    if (Math.abs(nuevo - valor) > 0.004) alGuardar(r2(nuevo));
+  };
+  return (
+    <span className="relative">
+      <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-[12px] text-tinta-3">S/</span>
+      <Entrada
+        aria-label={etiqueta}
+        value={texto}
+        disabled={deshabilitado}
+        onChange={(e) => setTexto(e.target.value.replace(/[^\d.,]/g, ""))}
+        onBlur={confirmar}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
+        inputMode="decimal"
+        className="num h-10 w-28 pl-7 text-right sm:w-full"
+      />
+    </span>
+  );
+}
+
+/** Fila fija para agregar: qué es, tipo, cantidad, precio y «+». */
+function FilaAgregar({
+  sugerencias,
+  pendiente,
+  preciosConIgv,
+  alAgregar,
+}: {
+  sugerencias: { nombre: string; tipo: "servicio" | "repuesto"; precio: number | null }[];
+  pendiente: boolean;
+  preciosConIgv: boolean;
+  alAgregar: (l: { tipo: "servicio" | "repuesto"; descripcion: string; cantidad: number; base?: number; precio?: number }) => void;
+}) {
+  const [f, setF] = useState<Borrador>({ tipo: "servicio", descripcion: "", cantidad: "1", base: "" });
+  const valido = f.descripcion.trim().length >= 2 && aNumero(f.cantidad) > 0 && f.base !== "";
+  return (
+    <form
+      className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] gap-2 rounded-xl border border-dashed border-borde p-2 sm:grid-cols-[minmax(0,1fr)_4.5rem_7rem_auto]"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!valido) return;
+        const cantidad = aNumero(f.cantidad);
+        const monto = aNumero(f.base);
+        alAgregar(preciosConIgv ? { tipo: f.tipo, descripcion: f.descripcion.trim(), cantidad, precio: monto } : { tipo: f.tipo, descripcion: f.descripcion.trim(), cantidad, base: monto });
+        setF({ tipo: f.tipo, descripcion: "", cantidad: "1", base: "" });
+      }}
+    >
+      <Entrada
+        aria-label="Agregar un trabajo o producto"
+        placeholder="Agregar un trabajo o producto…"
+        value={f.descripcion}
+        list={sugerencias.length ? `fila-${f.tipo}` : undefined}
+        onChange={(e) => {
+          const valor = e.target.value;
+          const base = sugerencias.find((x) => x.tipo === f.tipo && x.nombre.toLowerCase() === valor.trim().toLowerCase());
+          setF({ ...f, descripcion: valor, base: base?.precio != null && f.base === "" ? base.precio.toFixed(2) : f.base });
+        }}
+        className="col-span-3 h-11 sm:col-span-4"
+        maxLength={200}
+        autoComplete="off"
+      />
+      {sugerencias.length ? (
+        <datalist id={`fila-${f.tipo}`}>
+          {sugerencias.filter((x) => x.tipo === f.tipo).map((x) => (
+            <option key={x.nombre} value={x.nombre} />
+          ))}
+        </datalist>
+      ) : null}
+      <Selector aria-label="Tipo de lo que agregas" value={f.tipo} onChange={(e) => setF({ ...f, tipo: e.target.value as Borrador["tipo"] })} className="col-span-3 h-11 text-[13px] sm:col-span-1">
+        <option value="servicio">Servicio / mano de obra</option>
+        <option value="repuesto">Repuesto / producto</option>
+      </Selector>
+      <Entrada aria-label="Cantidad a agregar" value={f.cantidad} onChange={(e) => setF({ ...f, cantidad: e.target.value.replace(/[^\d.,]/g, "") })} inputMode="decimal" className="num h-11 px-2 text-right" />
+      <span className="relative">
+        <span className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-[12px] text-tinta-3">S/</span>
+        <Entrada aria-label="Precio a agregar (S/)" value={f.base} onChange={(e) => setF({ ...f, base: e.target.value.replace(/[^\d.,]/g, "") })} inputMode="decimal" placeholder="0.00" className="num h-11 pl-7 text-right" />
+      </span>
+      <Boton type="submit" tamano="icono" disabled={pendiente || !valido} aria-label="Agregar a la orden" className="h-11 w-11">
+        <Plus />
+      </Boton>
+    </form>
   );
 }
 

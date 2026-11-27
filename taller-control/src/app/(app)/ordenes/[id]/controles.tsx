@@ -458,7 +458,7 @@ export function SubirFotos({ ordenId, etapa }: { ordenId: string; etapa: "ingres
 }
 
 /** Botón y ventana para poner o cambiar la hora prometida al cliente. */
-export function CambiarEntrega({ ordenId, actual, ahora, cliente }: { ordenId: string; actual: { dia: string; hora: string } | null; ahora: string; cliente: string }) {
+export function CambiarEntrega({ ordenId, actual, ahora, cliente, compacto = false }: { ordenId: string; actual: { dia: string; hora: string } | null; ahora: string; cliente: string; compacto?: boolean }) {
   const [abierta, setAbierta] = useState(false);
   const [valor, setValor] = useState<ValorEntrega>({ dia: actual?.dia ?? "", hora: actual?.hora ?? "", porDefinir: false });
   const [r, setR] = useState<Resultado>({});
@@ -474,8 +474,8 @@ export function CambiarEntrega({ ordenId, actual, ahora, cliente }: { ordenId: s
         }
       }}
     >
-      <Boton type="button" variante="secundario" onClick={() => setAbierta(true)} className="mt-4 w-full sm:w-auto">
-        {actual ? "Cambiar hora" : "Poner hora de entrega"}
+      <Boton type="button" variante="secundario" tamano={compacto ? "chico" : "normal"} onClick={() => setAbierta(true)} className={compacto ? "" : "mt-4 w-full sm:w-auto"}>
+        {actual ? (compacto ? "Cambiar" : "Cambiar hora") : compacto ? "Poner hora" : "Poner hora de entrega"}
       </Boton>
       <ContenidoVentana
         titulo={actual ? "Cambiar la hora de entrega" : "Hora de entrega"}
