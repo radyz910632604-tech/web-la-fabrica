@@ -63,6 +63,7 @@ export const VERSIONES: Version[] = [
     sql: "select exists (select 1 from pg_trigger where tgname = 'ordenes_ingreso_cerrado')",
   },
   { version: "20261116000030", nombre: "Cobro mixto sin duplicados", sql: columna("pagos", "cobro_id"), rest: ["pagos", "cobro_id"] },
+  { version: "20261116000031", nombre: "Precio al agregar a la orden", sql: columna("cotizacion_items", "creado_por"), rest: ["cotizacion_items", "creado_por"] },
 ];
 
 export const versionDe = (archivo: string) => /^(\d{14})_/.exec(archivo)?.[1] ?? null;
