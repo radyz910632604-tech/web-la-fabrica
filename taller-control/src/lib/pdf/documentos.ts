@@ -272,15 +272,15 @@ export async function pdfRecibo(ctx: Contexto, id: string): Promise<Pdf> {
   if (!r) return null;
   const [{ data: o }, { data: cots }, { data: pagos }, nombres] = await Promise.all([
     supabase.from("ordenes_trabajo").select("numero, creado_por, kilometraje_ingreso, firma_entrega_ruta, firma_entrega_en, vehiculos (placa, marca, modelo, anio, color, carroceria), clientes (nombre, celular, tipo_documento, numero_documento)").eq("id", r.orden_id).maybeSingle(),
-    supabase.from("cotizaciones").select("cotizacion_items (tipo, descripcion, cantidad, precio_unitario_total, subtotal_sin_igv, total)").eq("orden_id", r.orden_id).eq("estado", "aprobada").order("version"),
-    supabase.from("pagos").select("medio, tipo").eq("orden_id", r.orden_id).eq("estado", "confirmado").neq("tipo", "devolucion"),
+    supabase.from("cotizaciones").select("descuento, cotizacion_items (tipo, descripcion, cantidad, precio_unitario_total, subtotal_sin_igv, total)").eq("orden_id", r.orden_id).eq("estado", "aprobada").order("version"),
+    supabase.from("pagos").select("medio, tipo, monto").eq("orden_id", r.orden_id).eq("estado", "confirmado"),
     nombresPersonal(ctx.taller.id),
   ]);
   const v = uno(o?.vehiculos);
   const cl = uno(o?.clientes);
   const tasa = n(r.tasa_igv);
   const { taller, pie } = await base(ctx);
-  const d = await Documento.crear(taller, "Recibo", `N° ${r.numero}`, pie, {
+  const d = await Documento.crear(taller, "Recibo interno", `N° ${r.numero}`, pie, {
     marcaAgua: r.estado === "anulado" ? "ANULADO" : "ORIGINAL",
     cabecera: [
       ["Número orden", o ? String(o.numero).padStart(6, "0") : null],
@@ -307,15 +307,24 @@ export async function pdfRecibo(ctx: Contexto, id: string): Promise<Pdf> {
   d.ultimaLinea();
   // Si el cliente firmó en pantalla al recibir su carro, esa firma va en el recibo.
   const firmaCliente = r.estado === "anulado" ? null : await firma(d, o?.firma_entrega_ruta);
-  d.cierre("Recibe conforme (Cliente)", gruposTotales(n(r.subtotal_sin_igv), n(r.igv), n(r.total), tasa), ["Total", soles(n(r.total))], {
+  const descuento = (cots ?? []).reduce((a, c) => a + n((c as { descuento?: number | string | null }).descuento ?? 0), 0);
+  d.cierre("Recibe conforme (Cliente)", gruposTotales(n(r.subtotal_sin_igv), n(r.igv), n(r.total), tasa, descuento), ["Total", soles(n(r.total))], {
     firmaImagen: firmaCliente,
     firmaDetalle: firmaCliente && o?.firma_entrega_en ? fechaCorta(o.firma_entrega_en) : null,
   });
-  const medios = [...new Set((pagos ?? []).map((p) => MEDIOS[p.medio as MedioPago]))];
+  // Lo pagado por medio (las devoluciones restan) y lo que falta.
+  const porMedio = new Map<string, number>();
+  for (const p of pagos ?? []) porMedio.set(p.medio, (porMedio.get(p.medio) ?? 0) + (p.tipo === "devolucion" ? -n(p.monto) : n(p.monto)));
+  const pagado = [...porMedio.values()].reduce((a, x) => a + x, 0);
+  const saldoPendiente = Math.round((n(r.total) - pagado) * 100) / 100;
+  const medios = [...porMedio.entries()].filter(([, m]) => Math.abs(m) > 0.009).map(([medio, m]) => `${MEDIOS[medio as MedioPago]} ${soles(m)}`);
   d.lineasEnRecuadro([
-    ["Método de pago", medios.length ? medios.join(" + ") : "Pendiente de pago"],
+    ["Métodos de pago", medios.length ? medios.join(" + ") : "Pendiente de pago"],
+    ["Importe pagado", soles(pagado)],
+    [saldoPendiente < -0.009 ? "Saldo a favor" : "Saldo pendiente", soles(Math.abs(saldoPendiente))],
     ["Monto en letras", montoEnLetras(n(r.total))],
   ]);
+  d.parrafo("Comprobante interno de pago del taller. No es boleta ni factura electrónica y no reemplaza al comprobante emitido por la SUNAT.", { tam: 7.5, color: "tenue" });
   const asesor = o?.creado_por ? nombres.get(o.creado_por) : null;
   d.nota([r.observaciones, asesor ? `ASESOR ${asesor.split(" ")[0].toUpperCase()}` : null, r.estado === "anulado" ? `ANULADO: ${r.motivo_anulacion}` : null].filter(Boolean).join(" · ") || "—", "Observaciones");
   return { bytes: await d.bytes(), archivo: `recibo-${r.numero}.pdf` };
