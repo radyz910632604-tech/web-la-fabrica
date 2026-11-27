@@ -23,7 +23,20 @@ const aNumero = (t: string) => {
  * Cobrar una orden: uno o varios medios a la vez (pago mixto). La suma se ve en vivo,
  * pero quien decide es la base (saldo real, todo o nada, sin duplicar).
  */
-export function FormCobro({ ordenId, saldo, conPrecio }: { ordenId: string; saldo: number; conPrecio: boolean }) {
+export function FormCobro({
+  ordenId,
+  saldo,
+  conPrecio,
+  alListo,
+  textoBoton = "Registrar cobro de",
+}: {
+  ordenId: string;
+  saldo: number;
+  conPrecio: boolean;
+  /** Avisa que el cobro quedó registrado (con el saldo que queda). */
+  alListo?: (saldo: number) => void;
+  textoBoton?: string;
+}) {
   const router = useRouter();
   const [lineas, setLineas] = useState<Linea[]>(() => [nuevaLinea(saldo > 0 ? saldo.toFixed(2) : "")]);
   // Un código por cobro: si se envía dos veces (doble toque, conexión lenta), la base no lo repite.
@@ -55,6 +68,7 @@ export function FormCobro({ ordenId, saldo, conPrecio }: { ordenId: string; sald
         const nuevoSaldo = r.saldo ?? 0;
         setCobroId(crypto.randomUUID());
         setLineas([nuevaLinea(nuevoSaldo > 0 ? nuevoSaldo.toFixed(2) : "")]);
+        alListo?.(nuevoSaldo);
         router.refresh();
       }
     });
@@ -147,7 +161,7 @@ export function FormCobro({ ordenId, saldo, conPrecio }: { ordenId: string; sald
         </p>
       ) : null}
       <Boton type="submit" disabled={enviando || suma <= 0} className="h-14 w-full text-[16px]">
-        {enviando ? "Registrando…" : `Registrar cobro de ${formatearSoles(suma)}`}
+        {enviando ? "Registrando…" : `${textoBoton} ${formatearSoles(suma)}`}
       </Boton>
     </form>
   );

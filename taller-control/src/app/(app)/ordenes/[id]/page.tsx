@@ -241,14 +241,14 @@ export default async function Orden({ params, searchParams }: { params: Promise<
                 </span>
                 {estadoPago(dinero) !== "pagada" && estadoPago(dinero) !== "a_favor" ? (
                   <Boton asChild>
-                    <Link href={`/ordenes/${o.id}/cobrar`}>
+                    <Link href={`/caja/cobro?orden=${o.id}`}>
                       <Banknote />
                       Cobrar
                     </Link>
                   </Boton>
                 ) : (
                   <Boton asChild variante="secundario">
-                    <Link href={`/ordenes/${o.id}/cobrar`}>
+                    <Link href={`/caja/cobro?orden=${o.id}`}>
                       <Banknote />
                       Ver cobro
                     </Link>

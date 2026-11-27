@@ -230,7 +230,7 @@ export default async function ResumenCaja({ searchParams }: { searchParams: Prom
                 const neto = montoNeto({ tipo: p.tipo, monto: n(p.monto) });
                 return (
                   <li key={p.id} className="flex items-center gap-3 border-b border-regla py-2.5 last:border-0">
-                    <Link href={`/ordenes/${p.orden_id}/cobrar`} className="min-w-0 flex-1 hover:underline">
+                    <Link href={`/caja/cobro?orden=${p.orden_id}`} className="min-w-0 flex-1 hover:underline">
                       <span className="block text-[15px] font-medium">
                         {o ? numeroOrden(o.numero) : "Orden"}
                         {placa ? ` · ${placa}` : ""} · {MEDIOS[p.medio as MedioPago]}
