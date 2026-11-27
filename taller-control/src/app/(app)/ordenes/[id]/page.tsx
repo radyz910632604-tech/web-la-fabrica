@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarCheck, Phone } from "lucide-react";
+import { ArrowLeft, CalendarCheck, Pencil, Phone } from "lucide-react";
 import { Placa } from "@/components/marca/placa";
 import { GarantiaChip } from "@/components/taller/lista-ordenes";
+import { Boton } from "@/components/ui/boton";
 import { EnlacePdf } from "@/components/ui/enlace-pdf";
 import { Estado } from "@/components/ui/estado";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
@@ -12,7 +13,7 @@ import { diaEnLima, formatearMomento } from "@/lib/formato";
 import { CAJA, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
-import { catalogo, nombresPersonal, personalConRol } from "@/lib/taller/consultas";
+import { catalogo, nombresPersonal, responsablesDeOrden, tecnicosMecanicos } from "@/lib/taller/consultas";
 import { configDinero, dineroDeOrden } from "@/lib/taller/dinero-consultas";
 import { CARROCERIAS, COLOR_ESTADO, NOMBRE_COMBUSTIBLE, enTrabajo, etiquetaOrden, nombreEstado, NOMBRE_ESTADO, numeroOrden, TRANSMISIONES, type EstadoOrden } from "@/lib/taller/estados";
 import { listarRepuestos } from "@/lib/taller/inventario-consultas";
@@ -53,9 +54,9 @@ export default async function Orden({ params, searchParams }: { params: Promise<
     supabase.from("orden_avances").select("id, texto, autor_id, creado_en").eq("orden_id", id).order("creado_en", { ascending: false }),
     supabase.from("archivos").select("id, ruta, etapa, creado_en").eq("orden_id", id).eq("tipo", "foto").order("creado_en"),
     nombresPersonal(ctx.taller.id),
-    tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]) ? personalConRol(ctx.taller.id, "tecnico") : Promise.resolve([]),
+    tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]) ? tecnicosMecanicos(ctx.taller.id) : Promise.resolve([]),
     tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]) ? catalogo(ctx.taller.id) : Promise.resolve([]),
-    esGestorOrden ? personalConRol(ctx.taller.id, "asesor") : Promise.resolve([] as { id: string; nombre: string }[]),
+    esGestorOrden ? responsablesDeOrden(ctx.taller.id) : Promise.resolve([] as { id: string; nombre: string }[]),
   ]);
 
   const rutasFirma = [o.firma_ingreso_ruta, o.firma_entrega_ruta].filter(Boolean) as string[];
@@ -193,6 +194,15 @@ export default async function Orden({ params, searchParams }: { params: Promise<
             />
           ) : null}
           <div className="flex flex-wrap gap-2 md:ml-auto">
+            {/* Mientras el carro está en el taller, la orden se corrige (entregada o anulada, ya no). */}
+            {tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]) && !o.anulada && estado !== "entregado" ? (
+              <Boton asChild variante="secundario">
+                <Link href={`/ordenes/${o.id}/editar`}>
+                  <Pencil />
+                  Editar orden
+                </Link>
+              </Boton>
+            ) : null}
             <EnlacePdf href={`/pdf/orden/${o.id}`} texto="Orden de trabajo" boton />
             {esGestorOrden && !o.anulada ? <AnularOrden ordenId={o.id} /> : null}
           </div>

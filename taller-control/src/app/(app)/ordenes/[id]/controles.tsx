@@ -155,7 +155,7 @@ export function AsignarTecnico({ ordenId, tecnicoId, tecnicos }: { ordenId: stri
   return (
     <div className="flex flex-col gap-1.5 sm:max-w-sm">
       <label htmlFor="tecnico" className="text-sm font-medium text-tinta-2">
-        Lo trabaja
+        Técnico mecánico
       </label>
       <Selector
         id="tecnico"
@@ -186,7 +186,7 @@ export function AsignarAsesor({ ordenId, asesorId, asesores }: { ordenId: string
   return (
     <div className="flex flex-col gap-1.5 sm:max-w-sm">
       <label htmlFor="asesor" className="text-sm font-medium text-tinta-2">
-        Asesor de la orden
+        Asesor o recepción responsable
       </label>
       <Selector
         id="asesor"
@@ -197,7 +197,7 @@ export function AsignarAsesor({ ordenId, asesorId, asesores }: { ordenId: string
           iniciar(async () => setR(await asignarAsesor(ordenId, valor)));
         }}
       >
-        <option value="">Sin asesor</option>
+        <option value="">Sin responsable</option>
         {asesores.map((t) => (
           <option key={t.id} value={t.id}>
             {t.nombre}

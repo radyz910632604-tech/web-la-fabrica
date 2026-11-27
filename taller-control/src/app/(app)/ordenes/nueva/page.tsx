@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
-import { catalogo, personalConRol } from "@/lib/taller/consultas";
+import { catalogo, tecnicosMecanicos } from "@/lib/taller/consultas";
 import { FormularioIngreso } from "./formulario";
 
 export const metadata = { title: "Nuevo ingreso" };
@@ -14,7 +14,7 @@ export default async function NuevoIngreso({ searchParams }: { searchParams: Pro
 
   const [servicios, tecnicos, cita] = await Promise.all([
     catalogo(ctx.taller.id),
-    personalConRol(ctx.taller.id, "tecnico"),
+    tecnicosMecanicos(ctx.taller.id),
     citaId
       ? clienteServidor().then((s) =>
           s.from("citas").select("id, nombre_cliente, celular, servicio").eq("id", citaId).eq("empresa_id", ctx.taller.id).maybeSingle(),

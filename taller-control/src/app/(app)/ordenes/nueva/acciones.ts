@@ -115,7 +115,7 @@ const esquemaIngreso = z.object({
   }),
   combustible: z.preprocess(vacioANulo, z.coerce.number().int().refine((v) => [0, 25, 50, 75, 100].includes(v)).nullable()),
   kilometraje: z.preprocess(vacioANulo, z.coerce.number().int().min(0, "No puede ser negativo.").max(3_000_000).nullable()),
-  servicios: z.array(z.object({ id: z.string().nullable(), descripcion: z.string().trim().min(2).max(160) })).min(1, "Elige al menos un servicio."),
+  servicios: z.array(z.object({ id: z.string().nullable(), descripcion: z.string().trim().min(2).max(160) })), // opcional: se puede agregar después en la orden
   observaciones: z.preprocess(vacioANulo, z.string().trim().max(2000).nullable()),
   tecnicoId: z.preprocess(vacioANulo, z.string().uuid().nullable()),
   citaId: z.preprocess(vacioANulo, z.string().uuid().nullable()),
@@ -140,7 +140,7 @@ export async function registrarIngreso(datos: unknown): Promise<ResultadoIngreso
     for (const i of r.error.issues) errores[i.path.join(".")] ??= i.message;
     // La hora de entrega se revisa igual, para mostrar todos los errores de una vez.
     const e = esquemaIngreso.shape.entrega.safeParse((datos as { entrega?: unknown } | null)?.entrega);
-    const entrega = e.success ? validarEntrega(e.data, new Date()) : null;
+    const entrega = e.success && (e.data.dia || e.data.hora) ? validarEntrega(e.data, new Date()) : null;
     if (entrega && "error" in entrega) errores.entrega = entrega.error;
     return { errores };
   }
@@ -156,14 +156,58 @@ export async function registrarIngreso(datos: unknown): Promise<ResultadoIngreso
   if (tipo !== "ninguno" && !(d.cliente.numeroDocumento && DOCUMENTO[tipo].test(d.cliente.numeroDocumento))) {
     errores["cliente.numeroDocumento"] = MENSAJE_DOC[tipo];
   }
-  const entrega = validarEntrega(d.entrega, new Date());
+  // La hora de entrega es opcional: si no se eligió nada, queda «por definir» y se pone después en la orden.
+  const sinHora = !d.entrega.dia && !d.entrega.hora;
+  const entrega = validarEntrega(sinHora ? { dia: "", hora: "", porDefinir: true } : d.entrega, new Date());
   if ("error" in entrega) errores.entrega = entrega.error;
   if (Object.keys(errores).length > 0 || placa.estado === "invalida" || !celular || "error" in entrega) return { errores };
 
   const supabase = await clienteServidor();
   const empresa = ctx.taller.id;
 
+  const guardado = await guardarClienteYCarro(supabase, empresa, d, celular, placa.placa);
+  if ("error" in guardado) return { error: guardado.error };
+  const { clienteId, vehiculoId } = guardado;
+
+  // 3. Orden y servicios
+  const { data: orden, error: errorOrden } = await supabase
+    .from("ordenes_trabajo")
+    .insert({
+      empresa_id: empresa,
+      vehiculo_id: vehiculoId,
+      cliente_id: clienteId,
+      kilometraje_ingreso: d.kilometraje,
+      observaciones_ingreso: d.observaciones,
+      tecnico_id: d.tecnicoId,
+      cita_id: d.citaId,
+      entrega_prometida: entrega.instante?.toISOString() ?? null,
+      nivel_combustible: d.combustible,
+    })
+    .select("id")
+    .single();
+  if (errorOrden || !orden) return { error: "No se pudo abrir la orden. Intenta otra vez." };
+
+  const { error: errorServicios } = d.servicios.length
+    ? await supabase.from("orden_servicios").insert(d.servicios.map((s) => ({ empresa_id: empresa, orden_id: orden.id, servicio_id: s.id, descripcion: s.descripcion })))
+    : { error: null };
+  if (errorServicios) return { ordenId: orden.id, error: "La orden se abrió, pero no se guardaron los servicios. Agrégalos en la orden." };
+
+  revalidatePath("/", "layout");
+  return { ordenId: orden.id };
+}
+
+type Ingreso = z.infer<typeof esquemaIngreso>;
+
+/** Crea o actualiza al cliente (por celular) y al carro (por placa). Lo usan el ingreso y la edición. */
+async function guardarClienteYCarro(
+  supabase: Awaited<ReturnType<typeof clienteServidor>>,
+  empresa: string,
+  d: Ingreso,
+  celular: string,
+  placa: string,
+): Promise<{ clienteId: string; vehiculoId: string } | { error: string }> {
   // 1. Cliente (por celular)
+  const tipo = d.cliente.tipoDocumento;
   const datosCliente = {
     nombre: d.cliente.nombre,
     tipo_documento: tipo,
@@ -185,42 +229,99 @@ export async function registrarIngreso(datos: unknown): Promise<ResultadoIngreso
   // 2. Carro (por placa)
   const { transmision, ...restoVehiculo } = d.vehiculo;
   const datosVehiculo = { ...restoVehiculo, ...(transmision !== undefined ? { transmision } : {}), cliente_id: clienteId };
-  const { data: vehiculoExistente } = await supabase.from("vehiculos").select("id").eq("empresa_id", empresa).eq("placa", placa.placa).maybeSingle();
+  const { data: vehiculoExistente } = await supabase.from("vehiculos").select("id").eq("empresa_id", empresa).eq("placa", placa).maybeSingle();
   let vehiculoId = vehiculoExistente?.id as string | undefined;
   if (vehiculoId) {
     const { error } = await supabase.from("vehiculos").update(datosVehiculo).eq("id", vehiculoId);
     if (error) return { error: "No se pudo actualizar el carro." };
   } else {
-    const { data, error } = await supabase.from("vehiculos").insert({ empresa_id: empresa, placa: placa.placa, ...datosVehiculo }).select("id").single();
+    const { data, error } = await supabase.from("vehiculos").insert({ empresa_id: empresa, placa: placa, ...datosVehiculo }).select("id").single();
     if (error || !data) return { error: "No se pudo guardar el carro." };
     vehiculoId = data.id;
   }
 
-  // 3. Orden y servicios
-  const { data: orden, error: errorOrden } = await supabase
-    .from("ordenes_trabajo")
-    .insert({
-      empresa_id: empresa,
-      vehiculo_id: vehiculoId,
-      cliente_id: clienteId,
-      kilometraje_ingreso: d.kilometraje,
-      observaciones_ingreso: d.observaciones,
-      tecnico_id: d.tecnicoId,
-      cita_id: d.citaId,
-      entrega_prometida: entrega.instante?.toISOString() ?? null,
-      nivel_combustible: d.combustible,
-    })
-    .select("id")
-    .single();
-  if (errorOrden || !orden) return { error: "No se pudo abrir la orden. Intenta otra vez." };
+  return { clienteId: clienteId!, vehiculoId: vehiculoId! };
+}
 
-  const { error: errorServicios } = await supabase
-    .from("orden_servicios")
-    .insert(d.servicios.map((s) => ({ empresa_id: empresa, orden_id: orden.id, servicio_id: s.id, descripcion: s.descripcion })));
-  if (errorServicios) return { ordenId: orden.id, error: "La orden se abrió, pero no se guardaron los servicios. Agrégalos en la orden." };
+/** Revisa los datos del formulario (lo mismo que en el ingreso, sin la hora de entrega). */
+function revisar(d: Ingreso) {
+  const errores: Record<string, string> = {};
+  const placa = validarPlaca(d.placa);
+  if (placa.estado === "invalida") errores.placa = "Escribe la placa del carro, por ejemplo ABC-123.";
+  if (placa.estado === "revisar" && !d.placaConfirmada) errores.placa = "Esa placa no tiene el formato de siempre. Revísala y marca que es correcta.";
+  const celular = normalizarCelular(d.cliente.celular);
+  if (!celular) errores["cliente.celular"] = "Celular de 9 dígitos, por ejemplo 987 654 321.";
+  const tipo = d.cliente.tipoDocumento;
+  if (tipo !== "ninguno" && !(d.cliente.numeroDocumento && DOCUMENTO[tipo].test(d.cliente.numeroDocumento))) errores["cliente.numeroDocumento"] = MENSAJE_DOC[tipo];
+  return { errores, placa, celular };
+}
+
+/**
+ * Corrige una orden mientras el carro sigue en el taller: cliente, carro, kilometraje,
+ * observaciones, nivel, técnico y servicios. Entregada o anulada ya no se toca
+ * (la base también lo impide). Con la sesión de quien edita.
+ */
+export async function editarIngreso(ordenId: string, datos: unknown): Promise<ResultadoIngreso> {
+  const ctx = await exigirRegistro();
+  const r = esquemaIngreso.safeParse(datos);
+  if (!r.success) {
+    const errores: Record<string, string> = {};
+    for (const i of r.error.issues) errores[i.path.join(".")] ??= i.message;
+    return { errores };
+  }
+  const d = r.data;
+  const { errores, placa, celular } = revisar(d);
+  if (Object.keys(errores).length > 0 || placa.estado === "invalida" || !celular) return { errores };
+
+  const supabase = await clienteServidor();
+  const empresa = ctx.taller.id;
+  const { data: orden } = await supabase.from("ordenes_trabajo").select("id, estado, anulada, kilometraje_ingreso").eq("id", ordenId).eq("empresa_id", empresa).maybeSingle();
+  if (!orden) return { error: "No se encontró la orden." };
+  if (orden.anulada) return { error: "La orden está anulada: ya no se edita." };
+  if (orden.estado === "entregado") return { error: "El carro ya se entregó: la orden ya no se edita." };
+
+  const guardado = await guardarClienteYCarro(supabase, empresa, d, celular, placa.placa);
+  if ("error" in guardado) return { error: guardado.error };
+
+  const { error, count } = await supabase
+    .from("ordenes_trabajo")
+    .update(
+      {
+        vehiculo_id: guardado.vehiculoId,
+        cliente_id: guardado.clienteId,
+        kilometraje_ingreso: d.kilometraje,
+        observaciones_ingreso: d.observaciones,
+        tecnico_id: d.tecnicoId,
+        nivel_combustible: d.combustible,
+      },
+      { count: "exact" },
+    )
+    .eq("id", ordenId);
+  if (error || count !== 1) return { error: error?.code === "42501" ? error.message : "No se pudo guardar la orden." };
+  // El kilometraje del carro sube si el corregido es mayor.
+  if (d.kilometraje != null) {
+    await supabase.from("vehiculos").update({ kilometraje_actual: d.kilometraje }).eq("id", guardado.vehiculoId).or(`kilometraje_actual.is.null,kilometraje_actual.lt.${d.kilometraje}`);
+  }
+
+  // Servicios: se quitan los que ya no están y se agregan los nuevos; los que siguen no se tocan.
+  const { data: actuales } = await supabase.from("orden_servicios").select("id, servicio_id, descripcion").eq("orden_id", ordenId);
+  const clave = (s: { id?: string | null; servicio_id?: string | null; descripcion: string }) => `${s.servicio_id ?? s.id ?? ""}|${s.descripcion.trim().toLowerCase()}`;
+  const nuevos = new Map(d.servicios.map((s) => [clave({ servicio_id: s.id, descripcion: s.descripcion }), s]));
+  const quitar = (actuales ?? []).filter((a) => !nuevos.has(clave(a))).map((a) => a.id);
+  for (const a of actuales ?? []) nuevos.delete(clave(a));
+  if (quitar.length) {
+    const { error: e } = await supabase.from("orden_servicios").delete().in("id", quitar);
+    if (e) return { error: "Se guardó la orden, pero no se pudieron quitar algunos servicios." };
+  }
+  if (nuevos.size) {
+    const { error: e } = await supabase
+      .from("orden_servicios")
+      .insert([...nuevos.values()].map((s) => ({ empresa_id: empresa, orden_id: ordenId, servicio_id: s.id, descripcion: s.descripcion, es_adicional: true })));
+    if (e) return { error: "Se guardó la orden, pero no se agregaron los servicios nuevos." };
+  }
 
   revalidatePath("/", "layout");
-  return { ordenId: orden.id };
+  return { ordenId };
 }
 
 /** Sube una foto (ya reducida en el celular) a la orden. */

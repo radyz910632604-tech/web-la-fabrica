@@ -166,3 +166,17 @@ export async function personalConRol(empresaId: string, rol: string): Promise<{ 
   const { data } = await supabase.rpc("personal_con_rol", { p_empresa: empresaId, p_rol: rol });
   return ((data ?? []) as { perfil_id: string; nombre: string }[]).map((p) => ({ id: p.perfil_id, nombre: p.nombre }));
 }
+
+/** Técnicos mecánicos: quien tiene el rol técnico y no es de recepción (recepción no trabaja carros). */
+export async function tecnicosMecanicos(empresaId: string): Promise<{ id: string; nombre: string }[]> {
+  const [tecnicos, recepcion] = await Promise.all([personalConRol(empresaId, "tecnico"), personalConRol(empresaId, "recepcion")]);
+  const deRecepcion = new Set(recepcion.map((p) => p.id));
+  return tecnicos.filter((t) => !deRecepcion.has(t.id));
+}
+
+/** Responsables de la orden ante el cliente: asesores y recepción (sin repetir). */
+export async function responsablesDeOrden(empresaId: string): Promise<{ id: string; nombre: string }[]> {
+  const [asesores, recepcion] = await Promise.all([personalConRol(empresaId, "asesor"), personalConRol(empresaId, "recepcion")]);
+  const vistos = new Map([...asesores, ...recepcion].map((p) => [p.id, p]));
+  return [...vistos.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+}

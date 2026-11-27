@@ -57,6 +57,11 @@ export const VERSIONES: Version[] = [
     nombre: "Combustible Bi-GLP y Bi-GNV",
     sql: "select exists (select 1 from pg_constraint where conname = 'vehiculos_combustible_check' and pg_get_constraintdef(oid) like '%bi_glp%')",
   },
+  {
+    version: "20261116000029",
+    nombre: "Orden editable hasta la entrega",
+    sql: "select exists (select 1 from pg_trigger where tgname = 'ordenes_ingreso_cerrado')",
+  },
 ];
 
 export const versionDe = (archivo: string) => /^(\d{14})_/.exec(archivo)?.[1] ?? null;

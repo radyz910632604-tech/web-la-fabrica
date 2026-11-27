@@ -14,13 +14,27 @@ import { CARROCERIAS, COMBUSTIBLES, DOCUMENTOS, NOMBRE_COMBUSTIBLE, ORIGENES_CLI
 import { cuandoEntrega, instanteLima } from "@/lib/taller/entrega";
 import { reducirFoto } from "@/lib/taller/fotos";
 import { cn } from "@/lib/utils";
-import { buscarCelular, buscarPlaca, registrarIngreso, subirFoto, type ClienteConocido, type VehiculoConocido } from "./acciones";
+import { buscarCelular, buscarPlaca, editarIngreso, registrarIngreso, subirFoto, type ClienteConocido, type VehiculoConocido } from "./acciones";
 
 type Props = {
   servicios: { id: string; nombre: string }[];
   tecnicos: { id: string; nombre: string }[];
   cita: { id: string; nombre: string; celular: string; servicio: string } | null;
   ahora: string;
+  /** Si viene, el formulario corrige esta orden en vez de abrir una nueva. */
+  edicion?: Edicion;
+};
+
+export type Edicion = {
+  ordenId: string;
+  placa: string;
+  cliente: { nombre: string; celular: string; tipoDocumento: string; numeroDocumento: string; origen: string; aceptaMensajes: boolean };
+  vehiculo: { marca: string; modelo: string; anio: string; color: string; combustible: string; carroceria: string };
+  kilometraje: string;
+  nivel: string;
+  observaciones: string;
+  tecnicoId: string;
+  servicios: { id: string | null; descripcion: string }[];
 };
 
 type Foto = { clave: string; archivo: File; vista: string };
@@ -33,37 +47,40 @@ const NIVELES = [
   ["100", "Lleno"],
 ] as const;
 
-export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
+export function FormularioIngreso({ servicios, tecnicos, cita, ahora, edicion }: Props) {
   const router = useRouter();
   const [enviando, iniciar] = useTransition();
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [error, setError] = useState<string>();
   const [progreso, setProgreso] = useState<string>();
 
-  const [placa, setPlaca] = useState("");
-  const [placaConfirmada, setPlacaConfirmada] = useState(false);
+  const [placa, setPlaca] = useState(edicion?.placa ?? "");
+  const [placaConfirmada, setPlacaConfirmada] = useState(Boolean(edicion));
   const [conocido, setConocido] = useState<VehiculoConocido | null | undefined>(undefined);
 
-  const [cliente, setCliente] = useState({
+  const [cliente, setCliente] = useState(
+    edicion?.cliente ?? {
     nombre: cita?.nombre ?? "",
     celular: cita ? formatearCelular(cita.celular) : "",
     tipoDocumento: "ninguno",
     numeroDocumento: "",
     origen: cita ? "redes" : "otro",
     aceptaMensajes: false,
-  });
+  },
+  );
   const [clienteConocido, setClienteConocido] = useState<ClienteConocido | null>(null);
-  const [vehiculo, setVehiculo] = useState({ marca: "", modelo: "", anio: "", color: "", combustible: "", carroceria: "" });
-  const [nivel, setNivel] = useState<string>("");
-  const [kilometraje, setKilometraje] = useState("");
+  const [vehiculo, setVehiculo] = useState(edicion?.vehiculo ?? { marca: "", modelo: "", anio: "", color: "", combustible: "", carroceria: "" });
+  const [nivel, setNivel] = useState<string>(edicion?.nivel ?? "");
+  const [kilometraje, setKilometraje] = useState(edicion?.kilometraje ?? "");
   const [elegidos, setElegidos] = useState<{ id: string | null; descripcion: string }[]>(() => {
+    if (edicion) return edicion.servicios;
     if (!cita) return [];
     const delCatalogo = servicios.find((s) => s.nombre.toLowerCase() === cita.servicio.toLowerCase());
     return [{ id: delCatalogo?.id ?? null, descripcion: delCatalogo?.nombre ?? cita.servicio }];
   });
   const [otro, setOtro] = useState("");
-  const [observaciones, setObservaciones] = useState("");
-  const [tecnicoId, setTecnicoId] = useState("");
+  const [observaciones, setObservaciones] = useState(edicion?.observaciones ?? "");
+  const [tecnicoId, setTecnicoId] = useState(edicion?.tecnicoId ?? "");
   const [entrega, setEntrega] = useState<ValorEntrega>({ dia: "", hora: "", porDefinir: false });
   const [fotos, setFotos] = useState<Foto[]>([]);
   const entradaFotos = useRef<HTMLInputElement>(null);
@@ -137,6 +154,34 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
     e.preventDefault();
     setError(undefined);
     iniciar(async () => {
+      if (edicion) {
+        const r = await editarIngreso(edicion.ordenId, {
+          placa,
+          placaConfirmada,
+          cliente,
+          vehiculo,
+          kilometraje,
+          servicios: elegidos,
+          observaciones,
+          tecnicoId,
+          citaId: "",
+          entrega: { dia: "", hora: "", porDefinir: true },
+          combustible: nivel,
+        });
+        if (r.errores) {
+          setErrores(r.errores);
+          document.querySelector("[aria-invalid=true]")?.scrollIntoView({ block: "center", behavior: "smooth" });
+          return;
+        }
+        setErrores({});
+        if (r.error) {
+          setError(r.error);
+          return;
+        }
+        router.push(`/ordenes/${edicion.ordenId}`);
+        router.refresh();
+        return;
+      }
       const r = await registrarIngreso({
         placa,
         placaConfirmada,
@@ -397,7 +442,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
       <div className="flex min-w-0 flex-col gap-4 xl:col-span-5">
         {/* 4. Servicios */}
         <Tarjeta aria-labelledby="t-servicios">
-          <CabeceraTarjeta id="t-servicios" titulo="Servicio a realizar" detalle="Toca uno o varios" />
+          <CabeceraTarjeta id="t-servicios" titulo="Servicio a realizar" detalle={edicion ? "Toca para quitar o agregar" : "Toca uno o varios. Opcional: se puede agregar después"} />
           <div className="flex flex-wrap gap-2" role="group" aria-label="Servicios del taller">
             {servicios.map((s) => {
               const activo = elegidos.some((e) => e.id === s.id);
@@ -457,9 +502,10 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
           {errores.servicios ? <p className="mt-2 text-sm text-negativo">{errores.servicios}</p> : null}
         </Tarjeta>
 
-        {/* 5. Entrega prometida */}
-        <Tarjeta aria-labelledby="t-entrega">
-          <CabeceraTarjeta id="t-entrega" titulo="¿Cuándo se lo entregas?" detalle="El día y la hora que le prometes al cliente" />
+        {/* 5. Entrega prometida (al editar, se cambia en la orden con «Cambiar hora») */}
+        {edicion ? null : (
+          <Tarjeta aria-labelledby="t-entrega">
+          <CabeceraTarjeta id="t-entrega" titulo="¿Cuándo se lo entregas?" detalle="Opcional. Si aún no sabes, déjalo y ponlo después en la orden" />
           <ElegirEntrega
             valor={entrega}
             onChange={(v) => {
@@ -475,7 +521,10 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
             error={errores.entrega}
           />
         </Tarjeta>
+        )}
 
+        {edicion ? null : (
+          <>
         {/* 7. Fotos */}
         <Tarjeta aria-labelledby="t-fotos">
           <CabeceraTarjeta id="t-fotos" titulo="Fotos del ingreso" detalle="Opcional. Puedes agregarlas después desde la orden" />
@@ -515,8 +564,10 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
             </li>
           </ul>
         </Tarjeta>
+          </>
+        )}
 
-        {resultadoPlaca && resultadoPlaca.estado !== "invalida" ? (
+        {!edicion && resultadoPlaca && resultadoPlaca.estado !== "invalida" ? (
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-tinta-2">
             Vas a registrar <Placa placa={resultadoPlaca.placa} /> con {elegidos.length} {elegidos.length === 1 ? "servicio" : "servicios"} y {fotos.length}{" "}
             {fotos.length === 1 ? "foto" : "fotos"}
@@ -529,7 +580,7 @@ export function FormularioIngreso({ servicios, tecnicos, cita, ahora }: Props) {
           </p>
         ) : null}
         <Boton type="submit" disabled={enviando} className="h-14 w-full text-[16px]">
-          {enviando ? (progreso ?? "Registrando…") : "Registrar ingreso"}
+          {enviando ? (progreso ?? (edicion ? "Guardando…" : "Registrando…")) : edicion ? "Guardar cambios" : "Registrar ingreso"}
         </Boton>
       </div>
     </form>
