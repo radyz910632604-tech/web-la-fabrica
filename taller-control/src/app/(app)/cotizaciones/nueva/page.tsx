@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { EditorCotizacion } from "@/components/caja/editor-cotizacion";
-import { CAJA, tieneAlguno } from "@/lib/roles";
+import { CAJA, esGestor, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { listarOrdenes } from "@/lib/taller/consultas";
@@ -32,6 +32,7 @@ export default async function NuevaCotizacionPagina({ searchParams }: { searchPa
         <h1 className="mt-3 text-[26px] leading-tight font-semibold tracking-[-0.025em] md:text-[32px]">Nueva cotización</h1>
       </header>
       <EditorCotizacion
+        puedeDescontar={esGestor(ctx.roles)}
         ordenes={abiertas.map((o) => ({ id: o.id, etiqueta: etiquetaOrden({ numero: o.numero, placa: o.placa, cliente: o.cliente }) }))}
         ordenFija={orden ?? null}
         tasaIgv={tasaIgv}

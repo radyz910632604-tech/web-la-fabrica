@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { EditorCotizacion } from "@/components/caja/editor-cotizacion";
-import { CAJA, tieneAlguno } from "@/lib/roles";
+import { CAJA, esGestor, tieneAlguno } from "@/lib/roles";
 import { obtenerContexto } from "@/lib/sesion";
 import { detalleCotizacion } from "@/lib/taller/cotizaciones-consultas";
 import { configDinero } from "@/lib/taller/dinero-consultas";
@@ -27,6 +27,7 @@ export default async function EditarCotizacion({ params }: { params: Promise<{ i
         {c.ordenId ? <p className="mt-1.5 text-[15px] text-tinta-2">Es de una orden: al guardar queda una versión nueva y esta queda anulada, a la vista.{c.estado === "aprobada" ? " Sigue aprobada." : ""}</p> : null}
       </header>
       <EditorCotizacion
+        puedeDescontar={esGestor(ctx.roles)}
         inicial={{
           id: c.id,
           ordenId: c.ordenId,

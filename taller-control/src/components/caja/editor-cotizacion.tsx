@@ -46,7 +46,10 @@ export function EditorCotizacion({
   ordenFija,
   tasaIgv,
   servicios = [],
+  puedeDescontar = true,
 }: {
+  /** El descuento lo autoriza gerencia o administración (la base también lo exige). */
+  puedeDescontar?: boolean;
   inicial?: InicialCotizacion;
   ordenes: { id: string; etiqueta: string }[];
   ordenFija?: string | null;
@@ -205,10 +208,12 @@ export function EditorCotizacion({
             id="t-desc"
             titulo="Descuento"
             accion={
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <Casilla checked={conDescuento} onCheckedChange={(v) => setConDescuento(v === true)} aria-label="Agregar descuento" />
-                Agregar
-              </label>
+              puedeDescontar ? (
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <Casilla checked={conDescuento} onCheckedChange={(v) => setConDescuento(v === true)} aria-label="Agregar descuento" />
+                  Agregar
+                </label>
+              ) : undefined
             }
           />
           {conDescuento ? (
@@ -233,7 +238,7 @@ export function EditorCotizacion({
               <Campo etiqueta="Motivo">{(p) => <Entrada {...p} value={descMotivo} onChange={(e) => setDescMotivo(e.target.value)} placeholder="Cliente frecuente" maxLength={200} />}</Campo>
             </div>
           ) : (
-            <p className="text-sm text-tinta-2">Sin descuento.</p>
+            <p className="text-sm text-tinta-2">{puedeDescontar ? "Sin descuento." : "Sin descuento. Los descuentos los autoriza gerencia o administración."}</p>
           )}
         </Tarjeta>
         <Tarjeta aria-labelledby="t-total">
