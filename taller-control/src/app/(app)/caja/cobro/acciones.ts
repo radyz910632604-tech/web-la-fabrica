@@ -21,8 +21,10 @@ const esquemaLineas = z.object({
         tipo: z.enum(["servicio", "repuesto"]),
         descripcion: z.string().trim().min(2, "Escribe la descripción.").max(200),
         cantidad: z.coerce.number({ error: "Revisa la cantidad." }).positive("La cantidad debe ser mayor que cero.").max(9999),
-        base: z.coerce.number({ error: "Revisa el precio." }).min(0, "El precio no puede ser negativo.").max(9_999_999),
-      }),
+        base: z.coerce.number({ error: "Revisa el precio." }).min(0, "El precio no puede ser negativo.").max(9_999_999).optional(),
+        // Precio CON IGV por unidad (la orden lo usa así); se guarda exacto.
+        precio: z.coerce.number({ error: "Revisa el precio." }).min(0, "El precio no puede ser negativo.").max(9_999_999).optional(),
+      }).refine((l) => l.base != null || l.precio != null, "Escribe el precio."),
     )
     .max(60),
 });
@@ -41,7 +43,7 @@ export async function guardarLineas(datos: unknown): Promise<Resultado> {
   const { error } = await supabase.rpc("editar_lineas_orden", {
     p_orden: r.data.orden,
     p_cotizacion: r.data.cotizacion,
-    p_items: r.data.lineas.map((l) => ({ ...l, base: Math.round(l.base * 100) / 100 })),
+    p_items: r.data.lineas.map((l) => (l.precio != null ? { tipo: l.tipo, descripcion: l.descripcion, cantidad: l.cantidad, precio: Math.round(l.precio * 100) / 100 } : { tipo: l.tipo, descripcion: l.descripcion, cantidad: l.cantidad, base: l.base })),
     p_con_igv: r.data.conIgv,
     p_aprobar: true,
   });

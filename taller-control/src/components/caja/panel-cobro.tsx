@@ -12,7 +12,7 @@ import { formatearSoles } from "@/lib/formato";
 import { cn } from "@/lib/utils";
 
 /** Una línea de la orden tal como la ve la caja: precio SIN IGV por unidad. */
-export type LineaCaja = { cotizacion: string; aprobada: boolean; tipo: "servicio" | "repuesto"; descripcion: string; cantidad: number; base: number; subtotal: number };
+export type LineaCaja = { cotizacion: string; aprobada: boolean; tipo: "servicio" | "repuesto"; descripcion: string; cantidad: number; base: number; subtotal: number; total: number };
 type Borrador = { tipo: "servicio" | "repuesto"; descripcion: string; cantidad: string; base: string };
 
 const aNumero = (t: string) => {
@@ -35,7 +35,25 @@ function Aviso({ texto, tono }: { texto?: string; tono: "error" | "ok" }) {
  * papelera, «Agregar servicio»). Cada cambio guarda una versión nueva de la cotización con
  * quién la hizo; lo que se deja en caja queda aprobado en persona.
  */
-export function TablaLineas({ ordenId, lineas, conIgv, editable, motivoBloqueo }: { ordenId: string; lineas: LineaCaja[]; conIgv: boolean; editable: boolean; motivoBloqueo?: string }) {
+export function TablaLineas({
+  ordenId,
+  lineas,
+  conIgv,
+  editable,
+  motivoBloqueo,
+  preciosConIgv = false,
+  sugerencias = [],
+}: {
+  /** Nombres del catálogo o del inventario con su precio base (en la misma unidad que la tabla). */
+  sugerencias?: { nombre: string; tipo: "servicio" | "repuesto"; precio: number | null }[];
+  ordenId: string;
+  lineas: LineaCaja[];
+  conIgv: boolean;
+  editable: boolean;
+  motivoBloqueo?: string;
+  /** En la orden: precio y total CON IGV (lo que paga el cliente). En caja: sin IGV, con el interruptor aparte. */
+  preciosConIgv?: boolean;
+}) {
   const router = useRouter();
   const [editando, setEditando] = useState<number | "nueva" | null>(null);
   const [borrador, setBorrador] = useState<Borrador>({ tipo: "servicio", descripcion: "", cantidad: "1", base: "" });
@@ -46,10 +64,13 @@ export function TablaLineas({ ordenId, lineas, conIgv, editable, motivoBloqueo }
   // A qué cotización va una línea nueva: la última aprobada; si no hay, la última vigente; si no, una nueva.
   const destinoNuevo = [...lineas].reverse().find((l) => l.aprobada)?.cotizacion ?? lineas.at(-1)?.cotizacion ?? null;
 
-  function guardar(cotizacion: string | null, nuevas: Omit<LineaCaja, "cotizacion" | "aprobada" | "subtotal">[]) {
+  type Envio = { tipo: "servicio" | "repuesto"; descripcion: string; cantidad: number; base?: number; precio?: number };
+  const comoEnvio = (l: LineaCaja | Envio): Envio => ("cotizacion" in l ? { tipo: l.tipo, descripcion: l.descripcion, cantidad: l.cantidad, base: l.base } : l);
+  const unidad = (l: LineaCaja) => (preciosConIgv ? r2(l.total / l.cantidad) : l.base);
+  function guardar(cotizacion: string | null, nuevas: (LineaCaja | Envio)[]) {
     setError(undefined);
     iniciar(async () => {
-      const r = await guardarLineas({ orden: ordenId, cotizacion, conIgv, lineas: nuevas.map((l) => ({ tipo: l.tipo, descripcion: l.descripcion, cantidad: l.cantidad, base: l.base })) });
+      const r = await guardarLineas({ orden: ordenId, cotizacion, conIgv, lineas: nuevas.map(comoEnvio) });
       if (r.error) return setError(r.error);
       setEditando(null);
       setQuitando(null);
@@ -57,7 +78,10 @@ export function TablaLineas({ ordenId, lineas, conIgv, editable, motivoBloqueo }
     });
   }
   const deLaCotizacion = (cot: string) => lineas.filter((l) => l.cotizacion === cot);
-  const desdeBorrador = () => ({ tipo: borrador.tipo, descripcion: borrador.descripcion.trim(), cantidad: aNumero(borrador.cantidad), base: aNumero(borrador.base) });
+  const desdeBorrador = (): Envio =>
+    preciosConIgv
+      ? { tipo: borrador.tipo, descripcion: borrador.descripcion.trim(), cantidad: aNumero(borrador.cantidad), precio: aNumero(borrador.base) }
+      : { tipo: borrador.tipo, descripcion: borrador.descripcion.trim(), cantidad: aNumero(borrador.cantidad), base: aNumero(borrador.base) };
   const valido = borrador.descripcion.trim().length >= 2 && aNumero(borrador.cantidad) > 0 && borrador.base !== "";
 
   function guardarEdicion(i: number) {
@@ -79,12 +103,32 @@ export function TablaLineas({ ordenId, lineas, conIgv, editable, motivoBloqueo }
 
   const filaEdicion = (alGuardar: () => void) => (
     <div className="flex flex-col gap-2 rounded-xl bg-positivo-fondo/60 p-2.5">
-      <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-2 sm:grid-cols-[7.5rem_minmax(0,1fr)_4.5rem_7rem]">
+      <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] gap-2 sm:grid-cols-[11rem_minmax(0,1fr)_4.5rem_7rem]">
         <Selector aria-label="Tipo" value={borrador.tipo} onChange={(e) => setBorrador({ ...borrador, tipo: e.target.value as Borrador["tipo"] })} className="col-span-2 h-11 text-sm sm:col-span-1">
-          <option value="servicio">Servicio</option>
-          <option value="repuesto">Producto</option>
+          <option value="servicio">Servicio / mano de obra</option>
+          <option value="repuesto">Repuesto / producto</option>
         </Selector>
-        <Entrada aria-label="Descripción" value={borrador.descripcion} onChange={(e) => setBorrador({ ...borrador, descripcion: e.target.value })} autoFocus className="h-11" maxLength={200} />
+        <Entrada
+          aria-label="Descripción"
+          value={borrador.descripcion}
+          onChange={(e) => {
+            const valor = e.target.value;
+            const base = sugerencias.find((x) => x.tipo === borrador.tipo && x.nombre.toLowerCase() === valor.trim().toLowerCase());
+            setBorrador({ ...borrador, descripcion: valor, base: base?.precio != null && borrador.base === "" ? base.precio.toFixed(2) : borrador.base });
+          }}
+          list={sugerencias.length ? `sug-${borrador.tipo}` : undefined}
+          placeholder={borrador.tipo === "servicio" ? "Servicio o mano de obra" : "Repuesto o producto"}
+          autoFocus
+          className="h-11"
+          maxLength={200}
+        />
+        {sugerencias.length ? (
+          <datalist id={`sug-${borrador.tipo}`}>
+            {sugerencias.filter((x) => x.tipo === borrador.tipo).map((x) => (
+              <option key={x.nombre} value={x.nombre} />
+            ))}
+          </datalist>
+        ) : null}
         <Entrada aria-label="Cantidad" value={borrador.cantidad} onChange={(e) => setBorrador({ ...borrador, cantidad: e.target.value.replace(/[^\d.,]/g, "") })} inputMode="decimal" className="num h-11 px-3 text-right" />
         <Entrada aria-label="Precio (S/)" value={borrador.base} onChange={(e) => setBorrador({ ...borrador, base: e.target.value.replace(/[^\d.,]/g, "") })} inputMode="decimal" placeholder="0.00" className="num col-span-2 h-11 px-3 text-right sm:col-span-1" />
       </div>
@@ -107,8 +151,8 @@ export function TablaLineas({ ordenId, lineas, conIgv, editable, motivoBloqueo }
       <div className="hidden grid-cols-[minmax(0,1fr)_3.5rem_6.5rem_6.5rem_5.5rem] gap-2 px-2 text-[12px] font-medium tracking-wide text-tinta-3 uppercase sm:grid">
         <span>Servicio</span>
         <span className="text-right">Cant.</span>
-        <span className="text-right">Precio (S/)</span>
-        <span className="text-right">Subtotal</span>
+        <span className="text-right">{preciosConIgv ? "Precio c/IGV" : "Precio (S/)"}</span>
+        <span className="text-right">{preciosConIgv ? "Total" : "Subtotal"}</span>
         <span />
       </div>
       {lineas.length === 0 && editando !== "nueva" ? <p className="rounded-xl bg-interna px-3 py-3 text-[15px] text-tinta-2">Sin servicios con precio todavía.</p> : null}
@@ -123,12 +167,12 @@ export function TablaLineas({ ordenId, lineas, conIgv, editable, motivoBloqueo }
                 {l.tipo === "repuesto" ? <span className="ml-1.5 text-[12px] text-tinta-3">Producto</span> : null}
                 {!l.aprobada ? <span className="ml-1.5 rounded-full bg-aviso-fondo px-2 py-0.5 text-[11px] text-aviso">Por aprobar</span> : null}
                 <span className="num block text-[12px] text-tinta-3 sm:hidden">
-                  {l.cantidad} × {formatearSoles(l.base)}
+                  {l.cantidad} × {formatearSoles(unidad(l))}
                 </span>
               </span>
               <span className="num hidden text-right sm:block">{l.cantidad}</span>
-              <span className="num hidden text-right sm:block">{l.base.toFixed(2)}</span>
-              <span className="num text-right font-semibold">{l.subtotal.toFixed(2)}</span>
+              <span className="num hidden text-right sm:block">{unidad(l).toFixed(2)}</span>
+              <span className="num text-right font-semibold">{(preciosConIgv ? l.total : l.subtotal).toFixed(2)}</span>
               <span className="col-span-2 flex justify-end gap-1 sm:col-span-1">
                 {quitando === i ? (
                   <>
@@ -145,7 +189,7 @@ export function TablaLineas({ ordenId, lineas, conIgv, editable, motivoBloqueo }
                       type="button"
                       aria-label={`Editar ${l.descripcion}`}
                       onClick={() => {
-                        setBorrador({ tipo: l.tipo, descripcion: l.descripcion, cantidad: String(l.cantidad), base: l.base.toFixed(2) });
+                        setBorrador({ tipo: l.tipo, descripcion: l.descripcion, cantidad: String(l.cantidad), base: unidad(l).toFixed(2) });
                         setEditando(i);
                         setError(undefined);
                       }}

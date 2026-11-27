@@ -43,8 +43,11 @@ export function TarjetaDinero({
   entregada,
   hoy,
   puedeCotizar = true,
+  soloDetalle = false,
 }: {
   puedeCotizar?: boolean;
+  /** Solo las secciones (cotizaciones, recibo, comprobantes, pagos), sin tarjeta ni totales: para una pestaña. */
+  soloDetalle?: boolean;
   d: DineroOrden;
   ordenId: string;
   etiqueta: string;
@@ -56,40 +59,7 @@ export function TarjetaDinero({
   const opcion = [{ id: ordenId, etiqueta, saldo: d.saldo, entregada }];
   // Con recibo, boleta o factura vigente, los precios ya no se cambian (primero se anula).
   const documentada = d.recibos.some((r) => r.estado !== "anulado") || d.comprobantes.some((c) => c.estado === "confirmado");
-  return (
-    <Tarjeta aria-labelledby="t-dinero">
-      <CabeceraTarjeta id="t-dinero" titulo="Dinero" detalle="Cotización, comprobante y pagos" accion={<EnlacePdf href={`/pdf/cuenta/${ordenId}`} texto="Estado de cuenta" />} />
-      <dl className="num grid grid-cols-1 gap-2 sm:grid-cols-3">
-        {[
-          ["A cobrar", d.aCobrar, ""],
-          ["Pagado", d.pagado, ""],
-          [d.saldo < -0.009 ? "A favor" : "Saldo", Math.abs(d.saldo), d.saldo > 0.009 ? (entregada ? "text-negativo" : "") : "text-positivo"],
-        ].map(([n, v, clase]) => (
-          <div key={String(n)} className="flex min-w-0 items-baseline justify-between gap-3 rounded-2xl bg-interna px-4 py-2.5 sm:block sm:px-3 sm:py-3">
-            <dt className="text-[13px] text-tinta-2">{n}</dt>
-            <dd className={cn("text-[17px] font-semibold tracking-[-0.01em] sm:mt-0.5 sm:truncate", String(clase))}>{formatearSoles(Number(v))}</dd>
-          </div>
-        ))}
-      </dl>
-      {d.aCobrar === 0 ? <p className="mt-2 text-sm text-tinta-3">El monto a cobrar sale del comprobante o, si aún no hay, de la cotización aprobada.</p> : null}
-
-      <div className="mt-4 flex flex-col gap-4">
-        <Seccion titulo="Cotizaciones" accion={
-            !entregada && puedeCotizar ? (
-              <Boton asChild variante="secundario" tamano="chico">
-                <Link href={`/cotizaciones/nueva?orden=${ordenId}`}>
-                  <FilePlus2 />
-                  Nueva cotización
-                </Link>
-              </Boton>
-            ) : undefined
-          }
-        >
-          {d.cotizaciones.length === 0 ? (
-            <p className="text-sm text-tinta-2">Sin cotización todavía.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {d.cotizaciones.map((c) => (
+  const itemCotizacion = (c: DineroOrden["cotizaciones"][number]) => (
                 <li key={c.id} className={cn("rounded-2xl bg-interna px-4 py-3", c.estado === "anulada" && "opacity-70")}>
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[15px] font-medium">Versión {c.version}</span>
@@ -137,7 +107,35 @@ export function TarjetaDinero({
                     </div>
                   ) : null}
                 </li>
-              ))}
+              );
+  const secciones = (
+      <div className="mt-4 flex flex-col gap-4">
+        <Seccion titulo="Cotizaciones" accion={
+            !entregada && puedeCotizar ? (
+              <Boton asChild variante="secundario" tamano="chico">
+                <Link href={`/cotizaciones/nueva?orden=${ordenId}`}>
+                  <FilePlus2 />
+                  Nueva cotización
+                </Link>
+              </Boton>
+            ) : undefined
+          }
+        >
+          {d.cotizaciones.length === 0 ? (
+            <p className="text-sm text-tinta-2">Sin cotización todavía.</p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {d.cotizaciones.filter((c) => c.estado !== "anulada" && c.estado !== "rechazada").map(itemCotizacion)}
+              {d.cotizaciones.some((c) => c.estado === "anulada" || c.estado === "rechazada") ? (
+                <li>
+                  <details className="rounded-2xl border border-dashed border-borde px-4 py-2">
+                    <summary className="cursor-pointer text-[13px] text-tinta-2">
+                      Versiones anteriores ({d.cotizaciones.filter((c) => c.estado === "anulada" || c.estado === "rechazada").length}): quedan guardadas con quién las cambió
+                    </summary>
+                    <ul className="mt-2 flex flex-col gap-2">{d.cotizaciones.filter((c) => c.estado === "anulada" || c.estado === "rechazada").map(itemCotizacion)}</ul>
+                  </details>
+                </li>
+              ) : null}
             </ul>
           )}
         </Seccion>
@@ -218,6 +216,26 @@ export function TarjetaDinero({
           )}
         </Seccion>
       </div>
+  );
+  if (soloDetalle) return secciones;
+  return (
+    <Tarjeta aria-labelledby="t-dinero">
+      <CabeceraTarjeta id="t-dinero" titulo="Dinero" detalle="Cotización, comprobante y pagos" accion={<EnlacePdf href={`/pdf/cuenta/${ordenId}`} texto="Estado de cuenta" />} />
+      <dl className="num grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {[
+          ["A cobrar", d.aCobrar, ""],
+          ["Pagado", d.pagado, ""],
+          [d.saldo < -0.009 ? "A favor" : "Saldo", Math.abs(d.saldo), d.saldo > 0.009 ? (entregada ? "text-negativo" : "") : "text-positivo"],
+        ].map(([n, v, clase]) => (
+          <div key={String(n)} className="flex min-w-0 items-baseline justify-between gap-3 rounded-2xl bg-interna px-4 py-2.5 sm:block sm:px-3 sm:py-3">
+            <dt className="text-[13px] text-tinta-2">{n}</dt>
+            <dd className={cn("text-[17px] font-semibold tracking-[-0.01em] sm:mt-0.5 sm:truncate", String(clase))}>{formatearSoles(Number(v))}</dd>
+          </div>
+        ))}
+      </dl>
+      {d.aCobrar === 0 ? <p className="mt-2 text-sm text-tinta-3">El monto a cobrar sale del comprobante o, si aún no hay, de la cotización aprobada.</p> : null}
+
+      {secciones}
     </Tarjeta>
   );
 }

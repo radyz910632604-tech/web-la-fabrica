@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Banknote, CalendarCheck, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, Banknote, Car, ChevronDown, Clock, FileText, MessageCircle, Pencil } from "lucide-react";
 import { Placa } from "@/components/marca/placa";
 import { GarantiaChip } from "@/components/taller/lista-ordenes";
 import { Boton } from "@/components/ui/boton";
@@ -10,7 +10,9 @@ import { Estado } from "@/components/ui/estado";
 import { CabeceraTarjeta, Tarjeta } from "@/components/ui/tarjeta";
 import { formatearCelular } from "@/lib/celulares";
 import { TarjetaDinero, TarjetaRepuestos, TarjetaUtilidad } from "@/components/caja/tarjeta-dinero";
-import { RespuestaCotizacion } from "@/components/caja/cotizaciones";
+import { EmitirRecibo } from "@/components/caja/controles";
+import { AprobarEnCaja, TablaLineas, type LineaCaja } from "@/components/caja/panel-cobro";
+import { Pestanas } from "@/components/ui/pestanas";
 import { estadoPago, NOMBRE_ESTADO_PAGO } from "@/lib/dinero";
 import { diaEnLima, formatearMomento, formatearSoles } from "@/lib/formato";
 import { CAJA, tieneAlguno } from "@/lib/roles";
@@ -23,7 +25,7 @@ import { listarRepuestos } from "@/lib/taller/inventario-consultas";
 import { colorSituacion, cuandoEntrega, partesLima, situacionEntrega, textoSituacion } from "@/lib/taller/entrega";
 import { SacarDelInventario } from "../../inventario/controles";
 import { FirmarCliente } from "@/components/taller/firma-cliente";
-import { AgregarConPrecio, AgregarServicio, PonerPrecio, AnularOrden, AsignarAsesor, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, FormDiagnostico, SubirFotos } from "./controles";
+import { AgregarServicio, PonerPrecio, AnularOrden, AsignarAsesor, AsignarTecnico, BotonesEstado, CambiarEntrega, FormAvance, FormDiagnostico, SubirFotos } from "./controles";
 import { guardarFirma } from "./firma-acciones";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -99,22 +101,47 @@ export default async function Orden({ params, searchParams }: { params: Promise<
     ...(catPrecios ?? []).map((x) => ({ nombre: x.nombre, tipo: "servicio" as const, precio: x.precio_referencial == null ? null : Number(x.precio_referencial) })),
     ...(repPrecios ?? []).map((x) => ({ nombre: x.nombre, tipo: "repuesto" as const, precio: x.precio_venta_sin_igv == null ? null : Math.round(Number(x.precio_venta_sin_igv) * (1 + tasa) * 100) / 100 })),
   ];
-  const cotVigentes = verDinero && dinero ? dinero.cotizaciones.filter((c) => ["borrador", "enviada", "aprobada"].includes(c.estado)) : [];
-  const lineasPrecio = cotVigentes.flatMap((c) => c.items.map((i) => ({ ...i, aprobada: c.estado === "aprobada" })));
-  const usadas = new Set<number>();
-  const precioDe = (descripcion: string) => {
-    // La línea con el mismo nombre (primero la aprobada); cada línea se usa una vez.
-    const orden = lineasPrecio.map((l, k) => [l, k] as const).sort((a, b) => Number(b[0].aprobada) - Number(a[0].aprobada));
-    const hit = orden.find(([l, k]) => !usadas.has(k) && l.tipo !== "repuesto" && l.descripcion.trim().toLowerCase() === descripcion.trim().toLowerCase());
-    if (!hit) return null;
-    usadas.add(hit[1]);
-    return hit[0];
-  };
-  const preciosServicios = new Map((servicios ?? []).map((sv) => [sv.id, verDinero ? precioDe(sv.descripcion) : null]));
-  const otrasLineas = lineasPrecio.filter((_, k) => !usadas.has(k));
-  const totalAprobado = cotVigentes.filter((c) => c.estado === "aprobada").reduce((a, c) => a + c.total, 0);
-  const porAprobar = cotVigentes.filter((c) => c.estado !== "aprobada");
-  const totalPorAprobar = porAprobar.reduce((a, c) => a + c.total, 0);
+  // Servicios y productos con precio: de las cotizaciones vigentes (una sola fuente del total).
+  const { data: cotsCrudas } = verDinero
+    ? await supabase
+        .from("cotizaciones")
+        .select("id, estado, version, cotizacion_items (id, tipo, descripcion, cantidad, subtotal_sin_igv, total, creado_en)")
+        .eq("orden_id", o.id)
+        .in("estado", ["borrador", "enviada", "aprobada"])
+        .order("version")
+    : { data: [] as never[] };
+  type ItemCot = { id: string; tipo: "servicio" | "repuesto"; descripcion: string; cantidad: number; subtotal_sin_igv: number; total: number; creado_en: string | null };
+  const lineas: LineaCaja[] = (cotsCrudas ?? []).flatMap((cot) =>
+    ((cot.cotizacion_items ?? []) as ItemCot[])
+      .sort((x, y) => String(x.creado_en).localeCompare(String(y.creado_en)) || x.id.localeCompare(y.id))
+      .map((i) => ({
+        cotizacion: cot.id,
+        aprobada: cot.estado === "aprobada",
+        tipo: i.tipo,
+        descripcion: i.descripcion,
+        cantidad: Number(i.cantidad),
+        base: Math.round((Number(i.subtotal_sin_igv) / Number(i.cantidad)) * 100) / 100,
+        subtotal: Number(i.subtotal_sin_igv),
+        total: Number(i.total),
+      })),
+  );
+  const conPrecio = new Set(lineas.filter((l) => l.tipo === "servicio").map((l) => l.descripcion.trim().toLowerCase()));
+  const sinPrecio = (servicios ?? []).filter((sv) => !conPrecio.has(sv.descripcion.trim().toLowerCase()));
+  const porAprobar = (cotsCrudas ?? []).filter((cot) => cot.estado !== "aprobada");
+  const totalPorAprobar = lineas.filter((l) => !l.aprobada).reduce((x, l) => x + l.total, 0);
+  const documentada = Boolean(dinero && (dinero.recibos.some((r) => r.estado !== "anulado") || dinero.comprobantes.some((cp) => cp.estado === "confirmado")));
+  const pagada = Boolean(dinero && dinero.aCobrar > 0.009 && dinero.saldo <= 0.009 && dinero.pagado > 0.009);
+  const preciosEditables = ponePrecios && !documentada && (esGestorOrden || !pagada);
+  const bloqueoPrecios = !verDinero || o.anulada
+    ? undefined
+    : documentada
+      ? "Ya tiene recibo, boleta o factura: para cambiar precios, primero anúlalo."
+      : estado === "entregado"
+        ? "El carro ya se entregó."
+        : pagada && !esGestorOrden
+          ? "La orden ya está pagada: el ajuste lo autoriza gerencia o administración."
+          : undefined;
+  const reciboVigente = dinero?.recibos.find((r) => r.estado !== "anulado") ?? null;
 
   const ahora = new Date();
   const prometida = o.entrega_prometida ? new Date(o.entrega_prometida) : null;
@@ -207,100 +234,114 @@ export default async function Orden({ params, searchParams }: { params: Promise<
       </Tarjeta>
     ) : null;
 
-  return (
-    <div className="flex min-w-0 flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <Link href={ctx.roles.includes("tecnico") && !gestiona ? "/mis-trabajos" : "/ordenes"} className="inline-flex w-fit items-center gap-1.5 text-sm text-tinta-2 hover:text-tinta">
-          <ArrowLeft className="size-4" aria-hidden />
-          {ctx.roles.includes("tecnico") && !gestiona ? "Mis trabajos" : "Órdenes"}
+  const celularWa = c?.celular ? c.celular.replace(/\D/g, "") : "";
+  const pago = verDinero && dinero && !o.anulada ? estadoPago(dinero) : null;
+  const colorPago: Record<string, string> = { sin_precio: "bg-hundida text-tinta-2", pendiente: "bg-aviso-fondo text-aviso", parcial: "bg-aviso-fondo text-aviso", pagada: "bg-positivo-fondo text-positivo", a_favor: "bg-positivo-fondo text-positivo" };
+  const firmaPendiente = tomaIngreso || tomaEntrega;
+  const historialEstados = (
+    <div className="flex flex-col gap-3">
+      <ol className="flex flex-col">
+        {(historial ?? []).map((h) => (
+          <li key={h.id} className="flex gap-3 border-t border-regla py-3 first:border-t-0 first:pt-0">
+            <Estado color={COLOR_ESTADO[h.estado_nuevo as EstadoOrden]} texto="" className="mt-1.5" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[15px] font-medium">{NOMBRE_ESTADO[h.estado_nuevo as EstadoOrden]}</p>
+              {h.nota ? <p className="text-[14px] text-tinta-2">{h.nota}</p> : null}
+              <p className="text-[13px] text-tinta-3">
+                {nombres.get(h.cambiado_por ?? "") ?? "Sistema"} · {formatearMomento(new Date(h.cambiado_en), ahora)}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+      {v?.placa ? (
+        <Link href={`/vehiculos/${v.placa}`} className="text-sm font-medium underline-offset-4 hover:underline">
+          Ver todo el historial del carro
         </Link>
-        <div className="flex flex-wrap items-center gap-3">
-          <Placa placa={v?.placa ?? ""} className="h-9 px-3 text-[17px]" />
-          <h1 className="text-[26px] leading-tight font-semibold tracking-[-0.025em] md:text-[32px]">{numeroOrden(o.numero)}</h1>
-          <Estado color={COLOR_ESTADO[estado]} texto={nombreEstado(estado, o.facturado_en)} className="rounded-full bg-tarjeta px-3 py-1.5 text-[15px] shadow-reposo" />
+      ) : null}
+    </div>
+  );
+  const sinTarjeta = "[&>section]:rounded-none [&>section]:bg-transparent [&>section]:p-0 [&>section]:shadow-none";
+
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      <Link href={ctx.roles.includes("tecnico") && !gestiona ? "/mis-trabajos" : "/ordenes"} className="inline-flex w-fit items-center gap-1.5 text-sm text-tinta-2 hover:text-tinta">
+        <ArrowLeft className="size-4" aria-hidden />
+        {ctx.roles.includes("tecnico") && !gestiona ? "Mis trabajos" : "Órdenes"}
+      </Link>
+
+      {/* 1. Franja superior: lo esencial de la orden y accesos rápidos */}
+      <Tarjeta aria-labelledby="t-orden" className="flex flex-col gap-3 py-4 md:py-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h1 id="t-orden" className="rounded-xl bg-interna px-3 py-1.5 text-[20px] leading-tight font-semibold tracking-[-0.02em] md:text-[22px]">
+            {numeroOrden(o.numero)}
+          </h1>
+          <Placa placa={v?.placa ?? ""} className="h-9 px-3 text-[16px]" />
+          <Estado color={COLOR_ESTADO[estado]} texto={nombreEstado(estado, o.facturado_en)} className="rounded-full bg-interna px-3 py-1.5 text-[14px]" />
           {o.es_reingreso_garantia ? <GarantiaChip /> : null}
           {prometida && estado !== "entregado" ? (
-            <Estado
-              color={colorSituacion(situacion)}
-              texto={`Entrega ${cuandoEntrega(prometida, ahora)}`}
-              className="rounded-full bg-tarjeta px-3 py-1.5 text-[15px] shadow-reposo"
-            />
+            <span className="flex items-center gap-2 text-[14px]">
+              <Clock className="size-4 text-tinta-2" aria-hidden />
+              <Estado color={colorSituacion(situacion)} texto={`Entrega ${cuandoEntrega(prometida, ahora)}`} />
+            </span>
           ) : null}
-          <div className="flex flex-wrap gap-2 md:ml-auto">
-            {/* Estado de pago y paso a caja: para quien cobra. */}
-            {verDinero && dinero && !o.anulada ? (
-              <>
-                <span
-                  className={cn(
-                    "inline-flex min-h-11 items-center rounded-full px-4 text-[14px] font-medium",
-                    { sin_precio: "bg-hundida text-tinta-2", pendiente: "bg-aviso-fondo text-aviso", parcial: "bg-aviso-fondo text-aviso", pagada: "bg-positivo-fondo text-positivo", a_favor: "bg-positivo-fondo text-positivo" }[estadoPago(dinero)],
-                  )}
-                >
-                  {NOMBRE_ESTADO_PAGO[estadoPago(dinero)]}
-                  {dinero.saldo > 0.009 && dinero.aCobrar > 0 ? ` · debe ${formatearSoles(dinero.saldo)}` : ""}
-                </span>
-                {estadoPago(dinero) !== "pagada" && estadoPago(dinero) !== "a_favor" ? (
-                  <Boton asChild>
-                    <Link href={`/caja/cobro?orden=${o.id}`}>
-                      <Banknote />
-                      Cobrar
-                    </Link>
-                  </Boton>
-                ) : (
-                  <Boton asChild variante="secundario">
-                    <Link href={`/caja/cobro?orden=${o.id}`}>
-                      <Banknote />
-                      Ver cobro
-                    </Link>
-                  </Boton>
-                )}
-              </>
+          {c ? (
+            <span className="flex min-w-0 items-center gap-2 text-[14px] text-tinta-2">
+              <span className="truncate">
+                <Link href={`/clientes/${c.id}`} className="font-medium text-tinta underline-offset-4 hover:underline">
+                  {c.nombre}
+                </Link>
+              </span>
+              <span className="num select-all">{formatearCelular(c.celular)}</span>
+            </span>
+          ) : null}
+          <span className="flex flex-wrap gap-2 md:ml-auto">
+            {celularWa ? (
+              <Boton asChild variante="secundario" tamano="chico">
+                <a href={`https://wa.me/${celularWa.length === 9 ? `51${celularWa}` : celularWa}`} target="_blank" rel="noreferrer">
+                  <MessageCircle />
+                  WhatsApp
+                </a>
+              </Boton>
             ) : null}
-            {/* Mientras el carro está en el taller, la orden se corrige (entregada o anulada, ya no). */}
-            {tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]) && !o.anulada && estado !== "entregado" ? (
-              <Boton asChild variante="secundario">
-                <Link href={`/ordenes/${o.id}/editar`}>
-                  <Pencil />
-                  Editar orden
+            {v?.placa ? (
+              <Boton asChild variante="secundario" tamano="chico">
+                <Link href={`/vehiculos/${v.placa}`}>
+                  <Car />
+                  Ficha vehículo
                 </Link>
               </Boton>
             ) : null}
-            <EnlacePdf href={`/pdf/orden/${o.id}`} texto="Orden de trabajo" boton />
-            {esGestorOrden && !o.anulada ? <AnularOrden ordenId={o.id} /> : null}
-          </div>
+          </span>
         </div>
+        <p className="text-[14px] text-tinta-2">
+          {datosCarro.join(" · ") || "Carro sin datos"} · Ingresó {formatearMomento(new Date(o.ingresado_en), ahora).toLowerCase()}
+          {o.kilometraje_ingreso != null ? ` con ${o.kilometraje_ingreso.toLocaleString("es-PE")} km` : ""}
+          {o.tecnico_id ? ` · Lo trabaja ${nombres.get(o.tecnico_id) ?? "un técnico"}` : " · Sin técnico"}
+          {o.cita_id ? " · Llegó por una cita de redes" : ""}
+        </p>
         {o.anulada ? (
           <p role="alert" className="rounded-2xl bg-negativo-fondo px-4 py-3 text-[15px] text-negativo">
             Orden anulada{o.motivo_anulacion ? `: ${o.motivo_anulacion}` : ""}. Ya no sale en las listas ni cuenta en reportes.
           </p>
         ) : null}
-        <p className="text-[15px] text-tinta-2 md:text-base">
-          {datosCarro.join(" · ") || "Carro sin datos"} · Ingresó {formatearMomento(new Date(o.ingresado_en), ahora).toLowerCase()}
-          {o.kilometraje_ingreso != null ? ` con ${o.kilometraje_ingreso.toLocaleString("es-PE")} km` : ""}
-          {o.tecnico_id ? ` · Lo trabaja ${nombres.get(o.tecnico_id) ?? "un técnico"}` : " · Sin técnico"}
-        </p>
         {fallidas ? (
           <p role="alert" className="rounded-2xl bg-aviso-fondo px-4 py-3 text-sm text-aviso">
-            {fallidas} {fallidas === "1" ? "foto no se pudo subir" : "fotos no se pudieron subir"}. Agrégalas de nuevo abajo.
+            {fallidas} {fallidas === "1" ? "foto no se pudo subir" : "fotos no se pudieron subir"}. Agrégalas de nuevo en Fotos.
           </p>
         ) : null}
-      </header>
+      </Tarjeta>
 
       <div className="grid min-w-0 gap-4 xl:grid-cols-12">
+        {/* 2. Columna principal: lo operativo */}
         <div className="flex min-w-0 flex-col gap-4 xl:col-span-7">
-          {/* En celular la hora prometida va arriba; en computadora, en la columna derecha. */}
-          <div className="contents xl:hidden">{tarjetaEntrega("t-entrega-movil")}</div>
           {puedeTrabajar ? (
             <Tarjeta aria-labelledby="t-estado">
-              <CabeceraTarjeta id="t-estado" titulo="Cambiar estado" detalle="Un toque. Si quieres, deja una nota." />
+              <CabeceraTarjeta id="t-estado" titulo="Estado y responsables" />
               {gestiona && estado !== "entregado" ? (
-                <div className="mb-4">
+                <div className="mb-4 grid gap-4 sm:grid-cols-2">
                   <AsignarTecnico ordenId={o.id} tecnicoId={o.tecnico_id ?? ""} tecnicos={tecnicos} />
-                  {esGestorOrden ? (
-                    <div className="mt-4">
-                      <AsignarAsesor ordenId={o.id} asesorId={o.asesor_id ?? ""} asesores={asesores} />
-                    </div>
-                  ) : null}
+                  {esGestorOrden ? <AsignarAsesor ordenId={o.id} asesorId={o.asesor_id ?? ""} asesores={asesores} /> : null}
                 </div>
               ) : null}
               <BotonesEstado ordenId={o.id} estado={estado} esTecnico={!gestiona} sinTecnico={!o.tecnico_id} />
@@ -312,101 +353,85 @@ export default async function Orden({ params, searchParams }: { params: Promise<
             </Tarjeta>
           ) : null}
 
-          <Tarjeta aria-labelledby="t-servicios">
-            <CabeceraTarjeta id="t-servicios" titulo="Servicios" detalle={`${servicios?.length ?? 0} ${servicios?.length === 1 ? "servicio" : "servicios"}`} />
-            <ul className="flex flex-col gap-2">
-              {(servicios ?? []).map((s) => {
-                const pr = preciosServicios.get(s.id);
-                return (
-                  <li key={s.id} className="flex items-center justify-between gap-3 rounded-2xl bg-interna px-4 py-3 text-[15px]">
-                    <span className="min-w-0">
-                      {s.descripcion}
-                      {s.es_adicional ? <span className="ml-2 rounded-full bg-tarjeta px-2.5 py-0.5 text-[12px] text-tinta-2">Adicional</span> : null}
-                      {pr && pr.cantidad !== 1 ? <span className="num block text-[13px] text-tinta-3">{pr.cantidad} × {formatearSoles(pr.precio)}</span> : null}
-                    </span>
-                    {verDinero ? (
-                      pr ? (
-                        <span className="flex shrink-0 flex-col items-end">
-                          <span className="num font-semibold">{formatearSoles(pr.total)}</span>
-                          <span className={cn("text-[12px]", pr.aprobada ? "text-positivo" : "text-aviso")}>{pr.aprobada ? "Aprobado" : "Por aprobar"}</span>
+          <Tarjeta aria-labelledby="t-servicios" className="flex flex-col gap-3">
+            <CabeceraTarjeta
+              id="t-servicios"
+              titulo="Servicios"
+              detalle={verDinero ? "Con el precio que paga el cliente (IGV incluido)" : `${servicios?.length ?? 0} ${servicios?.length === 1 ? "servicio" : "servicios"}`}
+            />
+            {verDinero ? (
+              <>
+                {sinPrecio.length ? (
+                  <ul className="flex flex-col gap-1.5">
+                    {sinPrecio.map((sv) => (
+                      <li key={sv.id} className="flex items-center justify-between gap-3 rounded-xl bg-interna px-3 py-2.5 text-[15px]">
+                        <span className="min-w-0">
+                          {sv.descripcion}
+                          <span className="ml-1.5 text-[12px] text-tinta-3">Sin precio</span>
                         </span>
-                      ) : ponePrecios ? (
-                        <PonerPrecio ordenId={o.id} descripcion={s.descripcion} base={sugerenciasPrecio.find((x) => x.tipo === "servicio" && x.nombre.toLowerCase() === s.descripcion.toLowerCase())?.precio ?? null} />
-                      ) : (
-                        <span className="shrink-0 text-[13px] text-tinta-3">Sin precio</span>
-                      )
-                    ) : null}
-                  </li>
-                );
-              })}
-              {otrasLineas.map((l, k) => (
-                <li key={`l${k}`} className="flex items-center justify-between gap-3 rounded-2xl bg-interna px-4 py-3 text-[15px]">
-                  <span className="min-w-0">
-                    {l.descripcion}
-                    <span className="num block text-[13px] text-tinta-3">
-                      {l.tipo === "repuesto" ? "Producto" : "Servicio"} · {l.cantidad} × {formatearSoles(l.precio)}
-                    </span>
-                  </span>
-                  <span className="flex shrink-0 flex-col items-end">
-                    <span className="num font-semibold">{formatearSoles(l.total)}</span>
-                    <span className={cn("text-[12px]", l.aprobada ? "text-positivo" : "text-aviso")}>{l.aprobada ? "Aprobado" : "Por aprobar"}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {verDinero && cotVigentes.length ? (
-              <div className="mt-3 flex flex-col gap-2 border-t border-regla pt-3">
-                <dl className="num flex flex-wrap gap-x-5 gap-y-1 text-[15px]">
-                  <div className="flex gap-2">
-                    <dt className="text-tinta-2">Aprobado</dt>
-                    <dd className="font-semibold text-positivo">{formatearSoles(totalAprobado)}</dd>
+                        {preciosEditables ? (
+                          <PonerPrecio ordenId={o.id} descripcion={sv.descripcion} base={sugerenciasPrecio.find((x) => x.tipo === "servicio" && x.nombre.toLowerCase() === sv.descripcion.toLowerCase())?.precio ?? null} />
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <TablaLineas ordenId={o.id} lineas={lineas} conIgv editable={preciosEditables} motivoBloqueo={bloqueoPrecios} preciosConIgv sugerencias={sugerenciasPrecio} />
+                {porAprobar.length ? (
+                  <div className="flex flex-wrap items-center gap-2 rounded-xl bg-aviso-fondo px-3 py-2 text-[14px] text-aviso">
+                    Por aprobar: {formatearSoles(totalPorAprobar)} (no cuenta en el total hasta que el cliente lo apruebe).
+                    {porAprobar.map((cot) => (
+                      <AprobarEnCaja key={cot.id} cotizacion={cot.id} />
+                    ))}
                   </div>
-                  {totalPorAprobar > 0 ? (
-                    <div className="flex gap-2">
-                      <dt className="text-tinta-2">Por aprobar</dt>
-                      <dd className="font-semibold text-aviso">{formatearSoles(totalPorAprobar)}</dd>
-                    </div>
-                  ) : null}
-                </dl>
-                {porAprobar.map((c) => (
-                  <div key={c.id} className="flex flex-col gap-1">
-                    <p className="text-[13px] text-tinta-3">
-                      Cotización versión {c.version} · {formatearSoles(c.total)} · ¿el cliente la aprobó?
-                    </p>
-                    <RespuestaCotizacion id={c.id} ordenId={o.id} estado={c.estado} />
-                  </div>
-                ))}
-              </div>
-            ) : null}
-            {ponePrecios ? (
-              <AgregarConPrecio ordenId={o.id} sugerencias={sugerenciasPrecio} />
-            ) : gestiona && estado !== "entregado" ? (
-              <AgregarServicio ordenId={o.id} sugerencias={servCatalogo.map((s) => s.nombre)} />
-            ) : null}
+                ) : null}
+              </>
+            ) : (
+              <>
+                <ul className="flex flex-col gap-2">
+                  {(servicios ?? []).map((sv) => (
+                    <li key={sv.id} className="flex items-center justify-between gap-3 rounded-xl bg-interna px-4 py-3 text-[15px]">
+                      {sv.descripcion}
+                      {sv.es_adicional ? <span className="rounded-full bg-tarjeta px-2.5 py-0.5 text-[12px] text-tinta-2">Adicional</span> : null}
+                    </li>
+                  ))}
+                </ul>
+                {gestiona && estado !== "entregado" ? <AgregarServicio ordenId={o.id} sugerencias={servCatalogo.map((sv) => sv.nombre)} /> : null}
+              </>
+            )}
+          </Tarjeta>
+
+          <Plegable titulo="Diagnóstico y observaciones" detalle={o.diagnostico ? (o.diagnostico_en ? `Actualizado ${formatearMomento(new Date(o.diagnostico_en), ahora).toLowerCase()}` : "Con diagnóstico") : "Sin diagnóstico todavía"} abierto={!verDinero}>
             {o.observaciones_ingreso ? (
-              <div className="mt-4">
+              <div className="mb-4">
                 <h3 className="mb-1 text-sm font-medium text-tinta-2">Observaciones de ingreso</h3>
                 <p className="text-[15px] whitespace-pre-line">{o.observaciones_ingreso}</p>
               </div>
             ) : null}
-          </Tarjeta>
-
-          <Tarjeta aria-labelledby="t-diagnostico">
-            <CabeceraTarjeta
-              id="t-diagnostico"
-              titulo="Diagnóstico"
-              detalle={o.diagnostico_en ? `Actualizado ${formatearMomento(new Date(o.diagnostico_en), ahora).toLowerCase()}` : "Lo que encontró el taller"}
-            />
-            {o.diagnostico ? (
-              <p className="text-[15px] whitespace-pre-line">{o.diagnostico}</p>
-            ) : !puedeTrabajar ? (
-              <p className="text-sm text-tinta-2">Todavía no hay diagnóstico.</p>
-            ) : null}
+            <h3 className="mb-1 text-sm font-medium text-tinta-2">Diagnóstico</h3>
+            {o.diagnostico ? <p className="text-[15px] whitespace-pre-line">{o.diagnostico}</p> : <p className="text-sm text-tinta-2">Todavía no hay diagnóstico.</p>}
             {puedeTrabajar && estado !== "entregado" ? <FormDiagnostico ordenId={o.id} actual={o.diagnostico} /> : null}
-          </Tarjeta>
+          </Plegable>
 
-          <Tarjeta aria-labelledby="t-fotos">
-            <CabeceraTarjeta id="t-fotos" titulo="Fotos" detalle={`${fotos.length} ${fotos.length === 1 ? "foto" : "fotos"}`} />
+          <Plegable titulo="Avances" detalle={`${(avances ?? []).length} ${(avances ?? []).length === 1 ? "avance" : "avances"}`} abierto={!verDinero}>
+            {puedeTrabajar && estado !== "entregado" ? <FormAvance ordenId={o.id} /> : null}
+            {(avances ?? []).length > 0 ? (
+              <ol className="mt-4 flex flex-col gap-3">
+                {(avances ?? []).map((a) => (
+                  <li key={a.id} className="rounded-2xl bg-interna px-4 py-3">
+                    <p className="text-[15px] whitespace-pre-line">{a.texto}</p>
+                    <p className="mt-1 text-[13px] text-tinta-3">
+                      {nombres.get(a.autor_id ?? "") ?? "Alguien del taller"} · {formatearMomento(new Date(a.creado_en), ahora)}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-4 text-sm text-tinta-2">Todavía no hay avances.</p>
+            )}
+          </Plegable>
+
+          <Plegable titulo="Fotos" detalle={`${fotos.length} ${fotos.length === 1 ? "foto" : "fotos"}`} abierto={Boolean(fallidas)}>
             {fotos.length > 0 ? (
               <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {fotos.map((f) =>
@@ -425,109 +450,147 @@ export default async function Orden({ params, searchParams }: { params: Promise<
               <p className="rounded-2xl border border-dashed border-control px-4 py-4 text-sm text-tinta-2">Todavía no hay fotos de este carro.</p>
             )}
             {puedeTrabajar ? <SubirFotos ordenId={o.id} etapa={estado === "en_taller" || estado === "en_diagnostico" ? "ingreso" : estado === "listo" || estado === "entregado" ? "entrega" : "proceso"} /> : null}
-          </Tarjeta>
-
-          <Tarjeta aria-labelledby="t-avances">
-            <CabeceraTarjeta id="t-avances" titulo="Avances" detalle="Lo que se va haciendo en el carro" />
-            {puedeTrabajar && estado !== "entregado" ? <FormAvance ordenId={o.id} /> : null}
-            {(avances ?? []).length > 0 ? (
-              <ol className="mt-4 flex flex-col gap-3">
-                {(avances ?? []).map((a) => (
-                  <li key={a.id} className="rounded-2xl bg-interna px-4 py-3">
-                    <p className="text-[15px] whitespace-pre-line">{a.texto}</p>
-                    <p className="mt-1 text-[13px] text-tinta-3">
-                      {nombres.get(a.autor_id ?? "") ?? "Alguien del taller"} · {formatearMomento(new Date(a.creado_en), ahora)}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="mt-4 text-sm text-tinta-2">Todavía no hay avances.</p>
-            )}
-          </Tarjeta>
+          </Plegable>
         </div>
 
+        {/* 3. Columna lateral: dinero y lo secundario */}
         <div className="flex min-w-0 flex-col gap-4 xl:col-span-5">
-          <div className="hidden xl:contents">{tarjetaEntrega("t-entrega")}</div>
-
-          {c ? (
-            <Tarjeta aria-labelledby="t-cliente">
-              <CabeceraTarjeta id="t-cliente" titulo="Cliente" />
-              <p className="text-[17px] font-medium">
-                <Link href={`/clientes/${c.id}`} className="underline-offset-4 hover:underline">
-                  {c.nombre}
-                </Link>
+          {dinero && verDinero ? (
+            <Tarjeta aria-labelledby="t-dinero-resumen" className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 id="t-dinero-resumen" className="text-[17px] font-semibold">
+                  Dinero
+                </h2>
+                {pago ? <span className={cn("rounded-full px-3 py-1 text-[13px] font-medium", colorPago[pago])}>{NOMBRE_ESTADO_PAGO[pago]}</span> : null}
+              </div>
+              <dl className="num grid grid-cols-3 divide-x divide-regla rounded-2xl bg-interna py-3">
+                {[
+                  ["A cobrar", dinero.aCobrar, ""],
+                  ["Pagado", dinero.pagado, "text-positivo"],
+                  [dinero.saldo < -0.009 ? "A favor" : "Saldo", Math.abs(dinero.saldo), dinero.saldo > 0.009 ? "text-negativo" : "text-positivo"],
+                ].map(([nombre, valor, clase]) => (
+                  <div key={String(nombre)} className="min-w-0 px-3">
+                    <dt className="text-[13px] text-tinta-2">{nombre}</dt>
+                    <dd className={cn("text-[17px] font-semibold tracking-[-0.01em] sm:text-[19px]", String(clase))}>{formatearSoles(Number(valor))}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="text-[13px] text-tinta-3">
+                {dinero.comprobantes.some((cp) => cp.estado === "confirmado")
+                  ? "El monto a cobrar sale de la boleta o factura registrada."
+                  : dinero.aCobrar > 0
+                    ? "El monto a cobrar sale de los servicios y productos aprobados."
+                    : "Todavía no hay precios aprobados: ponlos en Servicios."}
               </p>
-              <p className="mt-1 flex items-center gap-2 text-[15px] text-tinta-2">
-                <Phone className="size-4" aria-hidden />
-                <span className="num select-all">{formatearCelular(c.celular)}</span>
-              </p>
-              {o.cita_id ? (
-                <p className="mt-3 flex items-center gap-2 rounded-2xl bg-positivo-fondo px-3 py-2 text-sm text-positivo">
-                  <CalendarCheck className="size-4" aria-hidden />
-                  Llegó por una cita de redes.
-                </p>
+              {!o.anulada ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Boton asChild className="w-full">
+                    <Link href={`/caja/cobro?orden=${o.id}`}>
+                      <Banknote />
+                      {pago === "pagada" || pago === "a_favor" ? "Ver cobro" : "Registrar pago"}
+                    </Link>
+                  </Boton>
+                  {reciboVigente ? (
+                    <Boton asChild variante="secundario" className="w-full">
+                      <a href={`/pdf/recibo/${reciboVigente.id}`} target="_blank" rel="noreferrer">
+                        <FileText />
+                        Ver comprobante
+                      </a>
+                    </Boton>
+                  ) : dinero.aCobrar > 0 && !dinero.comprobantes.some((cp) => cp.estado === "confirmado") ? (
+                    <span className="[&>button]:h-12 [&>button]:w-full">
+                      <EmitirRecibo ordenId={o.id} total={formatearSoles(dinero.aCobrar)} />
+                    </span>
+                  ) : null}
+                </div>
               ) : null}
             </Tarjeta>
           ) : null}
 
-          {dinero && verDinero ? (
-            <TarjetaDinero
-              puedeCotizar={verDinero}
-              d={dinero}
-              ordenId={o.id}
-              etiqueta={etiquetaOrden({ numero: o.numero, placa: v?.placa ?? "", cliente: c?.nombre })}
-              entregada={estado === "entregado"}
-              servicios={(servicios ?? []).map((s) => s.descripcion)}
-              hoy={diaEnLima(ahora)}
+          {tarjetaEntrega("t-entrega")}
+          {firmaPendiente ? tarjetaFirmas : null}
+
+          <Tarjeta aria-label="Más de la orden">
+            <Pestanas
+              etiqueta="Más de la orden"
+              pestanas={[
+                ...(dinero && verDinero
+                  ? [
+                      {
+                        id: "cotizaciones",
+                        titulo: "Cotizaciones y pagos",
+                        contenido: (
+                          <TarjetaDinero
+                            soloDetalle
+                            puedeCotizar={verDinero}
+                            d={dinero}
+                            ordenId={o.id}
+                            etiqueta={etiquetaOrden({ numero: o.numero, placa: v?.placa ?? "", cliente: c?.nombre })}
+                            entregada={estado === "entregado"}
+                            hoy={diaEnLima(ahora)}
+                          />
+                        ),
+                      },
+                    ]
+                  : []),
+                ...(dinero && (gestiona || ctx.roles.includes("almacen"))
+                  ? [
+                      {
+                        id: "repuestos",
+                        titulo: "Repuestos",
+                        contenido: (
+                          <div className={sinTarjeta}>
+                            <TarjetaRepuestos
+                              d={dinero}
+                              ordenId={o.id}
+                              registra={mueveInventario}
+                              delInventario={o.estado !== "entregado" ? <SacarDelInventario ordenId={o.id} repuestos={conStock.map((r) => ({ id: r.id, codigo: r.codigo, nombre: r.nombre, stock: r.stock, unidad: r.unidad }))} /> : undefined}
+                            />
+                          </div>
+                        ),
+                      },
+                    ]
+                  : []),
+                { id: "historial", titulo: "Historial", contenido: historialEstados },
+                ...(!firmaPendiente && tarjetaFirmas ? [{ id: "firmas", titulo: "Firmas", contenido: <div className={sinTarjeta}>{tarjetaFirmas}</div> }] : []),
+                ...(dinero && config && verUtilidad ? [{ id: "utilidad", titulo: "Utilidad", contenido: <div className={sinTarjeta}><TarjetaUtilidad d={dinero} margenMinimo={config.margenMinimo} /></div> }] : []),
+              ]}
             />
-          ) : null}
-          {dinero && (gestiona || ctx.roles.includes("almacen")) ? <TarjetaRepuestos
-              d={dinero}
-              ordenId={o.id}
-              registra={mueveInventario}
-              delInventario={o.estado !== "entregado" ? <SacarDelInventario ordenId={o.id} repuestos={conStock.map((r) => ({ id: r.id, codigo: r.codigo, nombre: r.nombre, stock: r.stock, unidad: r.unidad }))} /> : undefined}
-            /> : null}
-          {dinero && config ? <TarjetaUtilidad d={dinero} margenMinimo={config.margenMinimo} /> : null}
-
-          {!gestiona || estado === "entregado" ? (
-            <Tarjeta aria-labelledby="t-tecnico">
-              <CabeceraTarjeta id="t-tecnico" titulo="Lo trabajó" />
-              <p className="text-[15px]">{o.tecnico_id ? (nombres.get(o.tecnico_id) ?? "Asignado") : "Sin asignar"}</p>
-            </Tarjeta>
-          ) : null}
-
-          {tarjetaFirmas}
-
-          <Tarjeta aria-labelledby="t-historial">
-            <CabeceraTarjeta
-              id="t-historial"
-              titulo="Historial de estados"
-              accion={
-                v?.placa ? (
-                  <Link href={`/vehiculos/${v.placa}`} className="text-sm font-medium underline-offset-4 hover:underline">
-                    Historial del carro
-                  </Link>
-                ) : null
-              }
-            />
-            <ol className="flex flex-col">
-              {(historial ?? []).map((h) => (
-                <li key={h.id} className="flex gap-3 border-t border-regla py-3 first:border-t-0 first:pt-0">
-                  <Estado color={COLOR_ESTADO[h.estado_nuevo as EstadoOrden]} texto="" className="mt-1.5" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-medium">{NOMBRE_ESTADO[h.estado_nuevo as EstadoOrden]}</p>
-                    {h.nota ? <p className="text-[14px] text-tinta-2">{h.nota}</p> : null}
-                    <p className="text-[13px] text-tinta-3">
-                      {nombres.get(h.cambiado_por ?? "") ?? "Sistema"} · {formatearMomento(new Date(h.cambiado_en), ahora)}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ol>
           </Tarjeta>
+
+          <Plegable titulo="Más acciones" detalle="Editar, imprimir o anular la orden">
+            <div className="flex flex-wrap gap-2">
+              {tieneAlguno(ctx.roles, ["gerencia", "administrador", "asesor"]) && !o.anulada && estado !== "entregado" ? (
+                <Boton asChild variante="secundario">
+                  <Link href={`/ordenes/${o.id}/editar`}>
+                    <Pencil />
+                    Editar orden
+                  </Link>
+                </Boton>
+              ) : null}
+              <EnlacePdf href={`/pdf/orden/${o.id}`} texto="Orden de trabajo" boton />
+              {esGestorOrden && !o.anulada ? <AnularOrden ordenId={o.id} /> : null}
+            </div>
+            {!gestiona || estado === "entregado" ? <p className="mt-3 text-[14px] text-tinta-2">Lo trabajó: {o.tecnico_id ? (nombres.get(o.tecnico_id) ?? "Asignado") : "Sin asignar"}</p> : null}
+          </Plegable>
         </div>
       </div>
     </div>
+  );
+}
+
+/** Bloque plegable con el mismo aspecto que una tarjeta: para lo que no se usa a cada rato. */
+function Plegable({ titulo, detalle, abierto, children }: { titulo: string; detalle?: string; abierto?: boolean; children: React.ReactNode }) {
+  return (
+    <details open={abierto} className="group rounded-tarjeta bg-tarjeta shadow-reposo">
+      <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 md:px-6 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span className="block text-[16px] font-semibold tracking-[-0.01em]">{titulo}</span>
+          {detalle ? <span className="block text-[13px] text-tinta-3">{detalle}</span> : null}
+        </span>
+        <ChevronDown className="size-5 shrink-0 text-tinta-2 transition-transform duration-200 group-open:rotate-180" aria-hidden />
+      </summary>
+      <div className="px-5 pb-5 md:px-6">{children}</div>
+    </details>
   );
 }

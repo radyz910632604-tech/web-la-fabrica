@@ -205,17 +205,17 @@ async function cargarDetalle(empresaId: string, id: string, gestor: boolean) {
     nombresPersonal(empresaId),
     supabase
       .from("cotizaciones")
-      .select("id, version, estado, tasa_igv, subtotal_sin_igv, igv, total, descuento, descuento_motivo, cotizacion_items (id, tipo, descripcion, cantidad, subtotal_sin_igv, creado_en)")
+      .select("id, version, estado, tasa_igv, subtotal_sin_igv, igv, total, descuento, descuento_motivo, cotizacion_items (id, tipo, descripcion, cantidad, subtotal_sin_igv, total, creado_en)")
       .eq("orden_id", o.id)
       .in("estado", ["borrador", "enviada", "aprobada"])
       .order("version"),
     supabase.from("pagos").select("id, creado_por, devuelve_pago_id, monto, estado").eq("orden_id", o.id),
     supabase.from("cajas").select("id").eq("empresa_id", empresaId).eq("tipo_caja", "recepcion").eq("estado", "abierta").maybeSingle(),
   ]);
-  type Item = { id: string; tipo: "servicio" | "repuesto"; descripcion: string; cantidad: number; subtotal_sin_igv: number; creado_en: string | null };
+  type Item = { id: string; tipo: "servicio" | "repuesto"; descripcion: string; cantidad: number; subtotal_sin_igv: number; total: number; creado_en: string | null };
   const vigentes = (cots ?? []).map((c) => ({ ...c, items: ((c.cotizacion_items ?? []) as Item[]).sort((a, b) => String(a.creado_en).localeCompare(String(b.creado_en)) || a.id.localeCompare(b.id)) }));
   const lineas: LineaCaja[] = vigentes.flatMap((c) =>
-    c.items.map((i) => ({ cotizacion: c.id, aprobada: c.estado === "aprobada", tipo: i.tipo, descripcion: i.descripcion, cantidad: n(i.cantidad), base: Math.round((n(i.subtotal_sin_igv) / n(i.cantidad)) * 100) / 100, subtotal: n(i.subtotal_sin_igv) })),
+    c.items.map((i) => ({ cotizacion: c.id, aprobada: c.estado === "aprobada", tipo: i.tipo, descripcion: i.descripcion, cantidad: n(i.cantidad), base: Math.round((n(i.subtotal_sin_igv) / n(i.cantidad)) * 100) / 100, subtotal: n(i.subtotal_sin_igv), total: n(i.total) })),
   );
   const aprobadas = vigentes.filter((c) => c.estado === "aprobada");
   const porAprobar = vigentes.filter((c) => c.estado !== "aprobada");
